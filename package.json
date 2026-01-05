@@ -1,0 +1,25 @@
+{
+  "name": "mrwebdefence-console",
+  "version": "1.0.0",
+  "description": "MrWebDefence Console - Scripts and tooling for MrWebDefence system",
+  "private": true,
+  "volta": {
+    "node": "20.18.0",
+    "pnpm": "9.15.0"
+  },
+  "scripts": {
+    "backend:dev": "./scripts/backend/dev.sh",
+    "backend:test": "./scripts/backend/test.sh",
+    "backend:lint": "./scripts/backend/lint.sh",
+    "backend:build": "./scripts/backend/build.sh",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mrwebdefence",
+    "console",
+    "scripts"
+  ],
+  "author": "",
+  "license": "ISC"
+}
+
