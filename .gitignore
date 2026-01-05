@@ -1,0 +1,4 @@
+# .gitignore
+
+# JIRA認証情報設定ファイル（機密情報のため除外）
+scripts/jira/config.local.sh
