@@ -1,4 +1,5 @@
 # .gitignore
 
 # JIRA認証情報設定ファイル（機密情報のため除外）
+# このファイルにはJIRA_EMAILとJIRA_API_TOKENが含まれるため、Gitにコミットしない
 scripts/jira/config.local.sh

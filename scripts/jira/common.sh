@@ -9,6 +9,17 @@ if [ -f "${SCRIPT_DIR}/config.sh" ]; then
   source "${SCRIPT_DIR}/config.sh"
 fi
 
+# ローカル設定ファイルの読み込み（存在する場合）
+# config.local.shは.gitignoreに含まれているため、各開発者が個別に作成する
+if [ -f "${SCRIPT_DIR}/config.local.sh" ]; then
+  source "${SCRIPT_DIR}/config.local.sh"
+fi
+
+# JIRA_BASE_URLのデフォルト値
+if [ -z "$JIRA_BASE_URL" ]; then
+  JIRA_BASE_URL="https://kencom2400.atlassian.net"
+fi
+
 # 認証情報の確認
 check_jira_auth() {
   if [ -z "$JIRA_EMAIL" ] || [ -z "$JIRA_API_TOKEN" ]; then
