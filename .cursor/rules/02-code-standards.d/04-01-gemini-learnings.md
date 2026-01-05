@@ -10996,3 +10996,96 @@ extend-ignore = ["E203", "E266", "W503"]
 **参照**: PR #60 - Issue #23: CI/CDパイプラインの構築（Gemini Code Assistレビュー指摘 - 第2回）
 
 ---
+
+### 13-XX. 設定ファイルの読み込み順序と.gitignoreの整合性（PR #31）
+
+**学習元**: PR #31 - MWD-27: config.local.shを.gitignoreに追加（Gemini Code Assistレビュー指摘）
+
+#### 設定ファイルの読み込み順序を確認する
+
+**問題**: `.gitignore`に追加した設定ファイルが、実際のスクリプトで読み込まれていない
+
+**❌ 悪い例**: 設定ファイルを`.gitignore`に追加したが、スクリプトで読み込んでいない
+
+```bash
+# .gitignore
+scripts/jira/config.local.sh
+
+# scripts/jira/common.sh
+if [ -f "${SCRIPT_DIR}/config.sh" ]; then
+  source "${SCRIPT_DIR}/config.sh"
+fi
+# config.local.shの読み込みがない
+```
+
+**問題点**:
+- `.gitignore`に追加した設定ファイルが実際に使用されない
+- 開発者が設定ファイルを作成しても機能しない
+- 設定ファイルの存在意義が不明確になる
+
+**✅ 良い例**: `.gitignore`に追加した設定ファイルも読み込む
+
+```bash
+# .gitignore
+# JIRA認証情報設定ファイル（機密情報のため除外）
+# このファイルにはJIRA_EMAILとJIRA_API_TOKENが含まれるため、Gitにコミットしない
+scripts/jira/config.local.sh
+
+# scripts/jira/common.sh
+# 設定ファイルの読み込み
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "${SCRIPT_DIR}/config.sh" ]; then
+  source "${SCRIPT_DIR}/config.sh"
+fi
+
+# ローカル設定ファイルの読み込み（存在する場合）
+# config.local.shは.gitignoreに含まれているため、各開発者が個別に作成する
+if [ -f "${SCRIPT_DIR}/config.local.sh" ]; then
+  source "${SCRIPT_DIR}/config.local.sh"
+fi
+```
+
+**理由**:
+- `.gitignore`に追加した設定ファイルが実際に機能する
+- 開発者が設定ファイルを作成すれば、すぐに使用できる
+- 設定ファイルの目的が明確になる
+
+#### .gitignoreのコメントを明確にする
+
+**❌ 悪い例**: コメントが簡潔すぎて、なぜ除外するのか不明確
+
+```gitignore
+# .gitignore
+scripts/jira/config.local.sh
+```
+
+**問題点**:
+- なぜこのファイルを除外するのか不明確
+- どのような情報が含まれるのか不明
+- 新規開発者が理解しにくい
+
+**✅ 良い例**: 除外理由と含まれる情報を明記
+
+```gitignore
+# .gitignore
+
+# JIRA認証情報設定ファイル（機密情報のため除外）
+# このファイルにはJIRA_EMAILとJIRA_API_TOKENが含まれるため、Gitにコミットしない
+scripts/jira/config.local.sh
+```
+
+**理由**:
+- 除外理由が明確になる
+- 含まれる機密情報の種類が分かる
+- 新規開発者も理解しやすい
+
+### 実装チェックリスト
+
+- [ ] `.gitignore`に追加した設定ファイルが、実際のスクリプトで読み込まれているか確認
+- [ ] 設定ファイルの読み込み順序を確認（グローバル設定 → ローカル設定）
+- [ ] `.gitignore`のコメントに除外理由と含まれる情報を明記
+- [ ] 設定ファイルのデフォルト値が適切に設定されているか確認
+
+**参照**: PR #31 - MWD-27: config.local.shを.gitignoreに追加（Gemini Code Assistレビュー指摘）
+
+---
