@@ -106,7 +106,7 @@ jobs:
 
       - name: Rebuild native modules
         working-directory: apps/backend
-        run: pnpm rebuild bcrypt
+        run: npm rebuild bcrypt
 
       - name: Run unit tests
         working-directory: apps/backend
@@ -149,7 +149,7 @@ jobs:
 
       - name: Rebuild native modules
         working-directory: apps/backend
-        run: pnpm rebuild bcrypt
+        run: npm rebuild bcrypt
 
       - name: Run E2E tests
         working-directory: apps/backend
