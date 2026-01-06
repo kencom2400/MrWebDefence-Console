@@ -104,6 +104,10 @@ jobs:
         working-directory: apps/backend
         run: pnpm install
 
+      - name: Rebuild native modules
+        working-directory: apps/backend
+        run: pnpm rebuild bcrypt
+
       - name: Run unit tests
         working-directory: apps/backend
         run: pnpm run test
@@ -142,6 +146,10 @@ jobs:
       - name: Install dependencies
         working-directory: apps/backend
         run: pnpm install
+
+      - name: Rebuild native modules
+        working-directory: apps/backend
+        run: pnpm rebuild bcrypt
 
       - name: Run E2E tests
         working-directory: apps/backend
