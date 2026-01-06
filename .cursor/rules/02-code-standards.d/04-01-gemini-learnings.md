@@ -11487,3 +11487,110 @@ curl -X POST http://localhost:3001/api/v1/auth/login \
 **参照**: PR #31 - MWD-27: ユーザー認証機能実装（Gemini Code Assistレビュー指摘 - 第3回）
 
 ---
+
+## 13-18. Docker Compose環境構築のベストプラクティス（PR #32）
+
+**学習元**: PR #32 - MWD-92: Local環境構築（Docker Compose）: MrWebDefence-Console（Gemini Code Assistレビュー指摘）
+
+### 1. 本番環境Dockerイメージのセキュリティ
+
+**問題**: 本番環境のDockerイメージがrootユーザーで実行される
+
+**❌ 悪い例**: rootユーザーで実行
+
+```dockerfile
+FROM node:20.18.0-alpine AS production
+# ...
+WORKDIR /app
+# ...
+CMD ["pnpm", "run", "start:prod"]
+```
+
+**✅ 良い例**: 非rootユーザーで実行
+
+```dockerfile
+FROM node:20.18.0-alpine AS production
+# ...
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+WORKDIR /app
+# ...
+# Change ownership to non-root user
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
+
+CMD ["pnpm", "run", "start:prod"]
+```
+
+**理由**:
+- セキュリティリスクを軽減（コンテナ侵害時の影響範囲を限定）
+- ベストプラクティスに準拠
+- 本番環境での運用安全性が向上
+
+### 2. Docker Compose設定の簡潔性
+
+**問題**: docker-compose.ymlに冗長な設定がある
+
+**❌ 悪い例**: 冗長な設定
+
+```yaml
+services:
+  backend:
+    build:
+      target: development
+    # ...
+    working_dir: /app
+    command: pnpm run start:dev
+```
+
+`working_dir`と`command`はDockerfileで既に定義されているため、docker-compose.ymlで重複定義する必要はない。
+
+**✅ 良い例**: 必要最小限の設定
+
+```yaml
+services:
+  backend:
+    build:
+      target: development
+    # ...
+    # working_dirとcommandはDockerfileで定義済みのため削除
+```
+
+**理由**:
+- 設定の重複を排除
+- メンテナンス性の向上
+- Dockerfileを単一の真実の源（Single Source of Truth）として扱える
+
+### 3. スクリプトの一貫性
+
+**問題**: 複数のスクリプト間で一貫性がない
+
+**✅ 良い例**: 一貫したパターン
+
+すべてのスクリプトで以下を統一：
+- `set -e`でエラー時に即座に停止
+- ヘルプ表示機能（`-h`または`--help`）
+- 引数解析の統一的なパターン
+- エラーメッセージの統一的な形式
+- 進捗表示の統一的な形式
+
+**理由**:
+- 開発者がスクリプトを理解しやすい
+- メンテナンスが容易
+- 新しいスクリプト作成時のテンプレートとして使用可能
+
+### Docker Compose実装チェックリスト
+
+- [ ] 本番環境のDockerイメージは非rootユーザーで実行する
+- [ ] docker-compose.ymlの設定は必要最小限にする（Dockerfileで定義済みの設定は重複しない）
+- [ ] スクリプト間で一貫性を保つ（エラーハンドリング、ヘルプ表示、引数解析など）
+- [ ] セキュリティベストプラクティスに準拠する（非rootユーザー、最小権限の原則）
+- [ ] 設定の重複を避け、Dockerfileを単一の真実の源として扱う
+
+**参照**: PR #32 - MWD-92: Local環境構築（Docker Compose）: MrWebDefence-Console（Gemini Code Assistレビュー指摘）
+
+---

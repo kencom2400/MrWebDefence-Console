@@ -26,8 +26,6 @@ services:
       - /app/node_modules
       # Mount data directory for JSON file storage
       - ./apps/backend/data:/app/data
-    working_dir: /app
-    command: pnpm run start:dev
     restart: unless-stopped
     networks:
       - mrwebdefence-network

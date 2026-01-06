@@ -40,6 +40,10 @@ FROM node:20.18.0-alpine AS production
 # Install pnpm
 RUN npm install -g pnpm@9.15.0
 
+# Create non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
 # Set working directory
 WORKDIR /app
 
@@ -51,6 +55,12 @@ RUN pnpm install --frozen-lockfile --prod
 
 # Copy built application from build stage
 COPY --from=build /app/dist ./dist
+
+# Change ownership to non-root user
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
 
 # Expose port
 EXPOSE 3001
