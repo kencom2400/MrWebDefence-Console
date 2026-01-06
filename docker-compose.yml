@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: mrwebdefence-console-backend
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-86400}
+      - BCRYPT_SALT_ROUNDS=${BCRYPT_SALT_ROUNDS:-10}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+    volumes:
+      # Mount source code for hot reload
+      - ./apps/backend/src:/app/src
+      - ./apps/backend/test:/app/test
+      - ./apps/backend/tsconfig.json:/app/tsconfig.json
+      - ./apps/backend/nest-cli.json:/app/nest-cli.json
+      # Exclude node_modules from volume mount (use container's node_modules)
+      - /app/node_modules
+      # Mount data directory for JSON file storage
+      - ./apps/backend/data:/app/data
+    restart: unless-stopped
+    networks:
+      - mrwebdefence-network
+
+networks:
+  mrwebdefence-network:
+    driver: bridge
+

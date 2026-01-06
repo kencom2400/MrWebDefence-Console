@@ -6,9 +6,19 @@ This repository is part of the MrWebDefence system.
 
 ### 前提条件
 
-- Voltaがインストールされていること
+- DockerとDocker Composeがインストールされていること（Docker Composeを使用する場合）
+- または、Voltaがインストールされていること（ローカル開発の場合）
 
-Voltaのインストール方法:
+#### Docker Composeのインストール
+
+Docker Desktopをインストールすると、Docker Composeも含まれます。
+
+- [Docker Desktop for Mac](https://www.docker.com/products/docker-desktop)
+- [Docker Desktop for Windows](https://www.docker.com/products/docker-desktop)
+- [Docker Engine for Linux](https://docs.docker.com/engine/install/)
+
+#### Voltaのインストール（ローカル開発の場合）
+
 ```bash
 curl https://get.volta.sh | bash
 ```
@@ -16,6 +26,73 @@ curl https://get.volta.sh | bash
 インストール後、シェルを再起動してください。
 
 ### 環境のセットアップ
+
+#### 方法1: Docker Composeを使用（推奨）
+
+Docker Composeを使用すると、環境構築が簡単で一貫性が保たれます。
+
+```bash
+# 環境変数ファイルを作成（.env.exampleを参考に）
+cp .env.example .env
+
+# 必要に応じて.envファイルを編集
+# JWT_SECRETなどの機密情報を設定
+
+# Docker Composeでサービスを起動
+docker-compose up -d
+
+# ログを確認
+docker-compose logs -f backend
+
+# サービスを停止
+docker-compose down
+```
+
+**Docker Composeの主なコマンド**:
+
+```bash
+# サービスを起動（バックグラウンド）
+docker-compose up -d
+
+# サービスを起動（フォアグラウンド、ログ表示）
+docker-compose up
+
+# サービスを停止
+docker-compose down
+
+# サービスを停止（ボリュームも削除）
+docker-compose down -v
+
+# ログを確認
+docker-compose logs -f backend
+
+# コンテナ内でコマンドを実行
+docker-compose exec backend sh
+
+# イメージを再ビルド
+docker-compose build --no-cache
+```
+
+**便利なスクリプト**:
+
+```bash
+# サービスを起動（スクリプト使用）
+./scripts/docker/start.sh              # バックグラウンドで起動
+./scripts/docker/start.sh -f          # フォアグラウンドで起動（ログ表示）
+./scripts/docker/start.sh -b          # イメージを再ビルドしてから起動
+
+# サービスを停止（スクリプト使用）
+./scripts/docker/stop.sh               # サービスを停止（ボリュームは保持）
+./scripts/docker/stop.sh -v            # サービスを停止し、ボリュームも削除
+
+# 環境をリセット（スクリプト使用）
+./scripts/docker/reset.sh              # 停止→ボリューム削除→再ビルド→起動
+./scripts/docker/reset.sh -f           # 確認なしでリセット
+```
+
+バックエンドAPIは `http://localhost:3001` で利用可能です。
+
+#### 方法2: ローカル開発環境
 
 このプロジェクトはVoltaを使用してNode.jsとpnpmのバージョンを管理しています。
 
@@ -37,6 +114,18 @@ pnpm install
 ### バックエンド開発
 
 #### 開発サーバーの起動
+
+**Docker Composeを使用する場合**:
+
+```bash
+# サービスを起動
+docker-compose up -d
+
+# ログを確認
+docker-compose logs -f backend
+```
+
+**ローカル環境で開発する場合**:
 
 ```bash
 # 方法1: スクリプトを使用（推奨）
