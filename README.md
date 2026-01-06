@@ -140,4 +140,35 @@ curl -X POST http://localhost:3001/api/v1/auth/login \
 - `400 Bad Request`: バリデーションエラー
 - `401 Unauthorized`: 認証エラー（メールアドレスまたはパスワードが間違っている）
 
+## CI/CD
+
+### CIパイプライン
+
+`main`または`develop`ブランチへのpushやPull Request時に以下が自動実行されます：
+
+#### 1. Lint（静的解析）
+
+- ESLintによるコードスタイルチェック
+- TypeScriptの型チェック
+- Node.js 20.18.0、pnpm 9.15.0で実行
+
+#### 2. Build（ビルドテスト）
+
+- バックエンドのビルド
+- TypeScriptのコンパイル確認
+- Node.js 20.18.0、pnpm 9.15.0で実行
+
+#### 3. Unit Tests（ユニットテスト）
+
+- バックエンドのユニットテスト
+- テストカバレッジレポートの生成
+- カバレッジレポートはアーティファクトとして保存
+
+#### 4. E2E Tests（E2Eテスト）
+
+- バックエンドのE2Eテスト
+- 実際のHTTPリクエストを使用した統合テスト
+
+**注意**: ドキュメントのみの変更（`.md`ファイル、`docs/`ディレクトリなど）ではCIはスキップされます。
+
 詳細は [Voltaバージョン管理設計書](docs/development/volta-version-management.md) と [実装設計書](docs/detailed-design/MWD-27_user-authentication/README.md) を参照してください。
