@@ -73,6 +73,23 @@ docker-compose exec backend sh
 docker-compose build --no-cache
 ```
 
+**便利なスクリプト**:
+
+```bash
+# サービスを起動（スクリプト使用）
+./scripts/docker/start.sh              # バックグラウンドで起動
+./scripts/docker/start.sh -f          # フォアグラウンドで起動（ログ表示）
+./scripts/docker/start.sh -b          # イメージを再ビルドしてから起動
+
+# サービスを停止（スクリプト使用）
+./scripts/docker/stop.sh               # サービスを停止（ボリュームは保持）
+./scripts/docker/stop.sh -v            # サービスを停止し、ボリュームも削除
+
+# 環境をリセット（スクリプト使用）
+./scripts/docker/reset.sh              # 停止→ボリューム削除→再ビルド→起動
+./scripts/docker/reset.sh -f           # 確認なしでリセット
+```
+
 バックエンドAPIは `http://localhost:3001` で利用可能です。
 
 #### 方法2: ローカル開発環境
