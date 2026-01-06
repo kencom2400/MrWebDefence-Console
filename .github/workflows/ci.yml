@@ -27,6 +27,9 @@ jobs:
       - name: Install Volta
         uses: volta-cli/action@v4
 
+      - name: Install pnpm via Volta
+        run: volta install pnpm
+
       - name: Verify versions
         run: |
           node --version
@@ -52,6 +55,9 @@ jobs:
       - name: Install Volta
         uses: volta-cli/action@v4
 
+      - name: Install pnpm via Volta
+        run: volta install pnpm
+
       - name: Verify versions
         run: |
           node --version
@@ -76,6 +82,9 @@ jobs:
 
       - name: Install Volta
         uses: volta-cli/action@v4
+
+      - name: Install pnpm via Volta
+        run: volta install pnpm
 
       - name: Verify versions
         run: |
@@ -109,6 +118,9 @@ jobs:
 
       - name: Install Volta
         uses: volta-cli/action@v4
+
+      - name: Install pnpm via Volta
+        run: volta install pnpm
 
       - name: Verify versions
         run: |
