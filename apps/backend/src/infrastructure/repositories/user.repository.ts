@@ -68,7 +68,29 @@ export class UserRepository implements IUserRepository {
   private async loadUsers(): Promise<User[]> {
     try {
       const data: string = await fs.readFile(this.dataFilePath, 'utf-8');
-      const userDataList: UserData[] = JSON.parse(data) as UserData[];
+      const rawDataList: unknown = JSON.parse(data);
+
+      // データが配列であることを確認
+      if (!Array.isArray(rawDataList)) {
+        throw new Error('User data is not an array');
+      }
+
+      // 各要素がUserDataの構造を持っているか簡易チェック
+      const userDataList: UserData[] = rawDataList.map((item: unknown) => {
+        if (
+          typeof item !== 'object' ||
+          item === null ||
+          !('id' in item) ||
+          !('email' in item) ||
+          !('hashedPassword' in item) ||
+          !('createdAt' in item) ||
+          !('updatedAt' in item)
+        ) {
+          throw new Error('Invalid user data structure');
+        }
+        return item as UserData;
+      });
+
       return userDataList.map((data: UserData) =>
         User.reconstruct(
           data.id,

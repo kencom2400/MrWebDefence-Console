@@ -22,14 +22,30 @@ import { JwtService } from '../infrastructure/services/jwt.service';
     },
     {
       provide: 'PasswordService',
-      useClass: PasswordService,
+      useFactory: (): PasswordService => {
+        const saltRounds: number = process.env.BCRYPT_SALT_ROUNDS
+          ? parseInt(process.env.BCRYPT_SALT_ROUNDS, 10)
+          : 10;
+        return new PasswordService(saltRounds);
+      },
     },
     {
       provide: 'JwtService',
       useFactory: (): JwtService => {
-        const secret: string = process.env.JWT_SECRET || 'default-secret-key-change-in-production';
-        const expiresIn: number = parseInt(process.env.JWT_EXPIRES_IN || '86400', 10);
-        return new JwtService(secret, expiresIn);
+        const secret: string | undefined = process.env.JWT_SECRET;
+        if (process.env.NODE_ENV === 'production' && !secret) {
+          throw new Error(
+            'FATAL: JWT_SECRET environment variable must be set in production.',
+          );
+        }
+        const expiresIn: number = parseInt(
+          process.env.JWT_EXPIRES_IN || '86400',
+          10,
+        );
+        return new JwtService(
+          secret || 'default-secret-key-change-in-production',
+          expiresIn,
+        );
       },
     },
   ],

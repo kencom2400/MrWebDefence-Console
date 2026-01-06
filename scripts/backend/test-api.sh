@@ -33,9 +33,15 @@ echo "   URL: ${BASE_URL}"
 echo "   Test User: ${TEST_USER_EMAIL}"
 echo ""
 
+# 安全な一時ファイルを作成
+TMP_LOG_FILE=$(mktemp /tmp/backend-server.XXXXXX.log)
+
+# スクリプト終了時に一時ファイルを必ず削除する
+trap 'rm -f "${TMP_LOG_FILE}"; kill $SERVER_PID 2>/dev/null || true' EXIT
+
 # サーバーをバックグラウンドで起動
 echo "🚀 サーバーを起動中..."
-pnpm run start:dev > /tmp/backend-server.log 2>&1 &
+pnpm run start:dev > "${TMP_LOG_FILE}" 2>&1 &
 SERVER_PID=$!
 
 # サーバーの起動を待機
@@ -44,9 +50,20 @@ MAX_RETRIES=30
 RETRY_COUNT=0
 
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-  if curl -s -f "${BASE_URL}/api/v1/auth/login" > /dev/null 2>&1; then
-    echo "✅ サーバーが起動しました"
-    break
+  # TCPポートのリスニングを確認（より確実な方法）
+  if command -v nc > /dev/null 2>&1; then
+    if nc -z localhost "${PORT}" 2>/dev/null; then
+      echo "✅ サーバーが起動しました"
+      break
+    fi
+  else
+    # ncが利用できない場合はcurlでヘルスチェックエンドポイントを確認
+    # 注意: ログインエンドポイントはPOSTのみなので、GETリクエストは404になる
+    # そのため、ルートパスやヘルスチェックエンドポイントを使用する
+    if curl -s -f "${BASE_URL}/" > /dev/null 2>&1; then
+      echo "✅ サーバーが起動しました"
+      break
+    fi
   fi
   RETRY_COUNT=$((RETRY_COUNT + 1))
   if [ $((RETRY_COUNT % 5)) -eq 0 ]; then
@@ -57,8 +74,8 @@ done
 
 if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
   echo "❌ サーバーの起動に失敗しました（タイムアウト）"
-  echo "ログを確認: tail -20 /tmp/backend-server.log"
-  tail -20 /tmp/backend-server.log 2>/dev/null || echo "ログファイルが見つかりません"
+  echo "ログを確認: tail -20 ${TMP_LOG_FILE}"
+  tail -20 "${TMP_LOG_FILE}" 2>/dev/null || echo "ログファイルが見つかりません"
   kill $SERVER_PID 2>/dev/null || true
   exit 1
 fi

@@ -5,7 +5,7 @@
  */
 
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Logger } from '@nestjs/common';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
@@ -28,8 +28,8 @@ async function bootstrap(): Promise<void> {
 
   const port: number = parseInt(process.env.PORT || '3001', 10);
   await app.listen(port);
-
-  console.log(`Application is running on: http://localhost:${port}`);
+  
+  new Logger('Bootstrap').log(`Application is running on: http://localhost:${port}`);
 }
 
 void bootstrap();

@@ -63,7 +63,7 @@ export class LoginUseCase {
     return {
       accessToken,
       tokenType: 'Bearer',
-      expiresIn: 86400, // 24時間（秒）
+      expiresIn: this.jwtService.getExpiresIn(),
     };
   }
 }

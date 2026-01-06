@@ -36,6 +36,14 @@ export class JwtService {
   }
 
   /**
+   * JWTトークンの有効期限（秒）を取得する
+   * @returns 有効期限（秒）
+   */
+  public getExpiresIn(): number {
+    return this.expiresIn;
+  }
+
+  /**
    * JWTトークンを検証する
    * @param token JWTトークン
    * @returns 検証されたペイロード、検証に失敗した場合はnull

@@ -11089,3 +11089,401 @@ scripts/jira/config.local.sh
 **参照**: PR #31 - MWD-27: config.local.shを.gitignoreに追加（Gemini Code Assistレビュー指摘）
 
 ---
+
+### 13-YY. セキュリティと堅牢性の改善（PR #31 - MWD-27）
+
+**学習元**: PR #31 - MWD-27: ユーザー認証機能実装（Gemini Code Assistレビュー指摘）
+
+#### 1. 本番環境でのデフォルト値の使用禁止
+
+**問題**: 本番環境でデフォルトのJWTシークレットキーが使用される可能性がある
+
+**❌ 悪い例**: デフォルト値が本番環境でも使用される
+
+```typescript
+const secret: string = process.env.JWT_SECRET || 'default-secret-key-change-in-production';
+return new JwtService(secret, expiresIn);
+```
+
+**問題点**:
+- 本番環境で予測可能なシークレットキーが使用される
+- 攻撃者がJWTを偽造する可能性がある
+- 重大なセキュリティ脆弱性
+
+**✅ 良い例**: 本番環境では必須環境変数を強制
+
+```typescript
+const secret: string | undefined = process.env.JWT_SECRET;
+if (process.env.NODE_ENV === 'production' && !secret) {
+  throw new Error('FATAL: JWT_SECRET environment variable must be set in production.');
+}
+return new JwtService(secret || 'default-secret-key-change-in-production', expiresIn);
+```
+
+**理由**:
+- 本番環境での誤設定を防止
+- セキュリティリスクを排除
+- 起動時に問題を検出
+
+#### 2. 安全な一時ファイルの作成
+
+**問題**: 予測可能な名前の一時ファイルはシンボリックリンク攻撃のリスクがある
+
+**❌ 悪い例**: 固定パスで一時ファイルを作成
+
+```bash
+cat > /tmp/create-user.mjs << 'EOF'
+# ...
+EOF
+node /tmp/create-user.mjs "${EMAIL}" "${PASSWORD}"
+rm -f /tmp/create-user.mjs
+```
+
+**問題点**:
+- `/tmp`ディレクトリは他のユーザーも書き込み可能
+- 悪意のあるユーザーがシンボリックリンクを事前に作成する可能性
+- 意図しないファイルを上書きされるリスク
+
+**✅ 良い例**: `mktemp`で安全な一時ファイルを作成
+
+```bash
+# 安全な一時ファイルを作成
+TMP_SCRIPT_FILE=$(mktemp /tmp/create-user.XXXXXX.mjs)
+
+# スクリプト終了時に一時ファイルを必ず削除する
+trap 'rm -f "${TMP_SCRIPT_FILE}"' EXIT
+
+cat > "${TMP_SCRIPT_FILE}" << 'EOF'
+# ...
+EOF
+
+node "${TMP_SCRIPT_FILE}" "${EMAIL}" "${PASSWORD}"
+# trapで削除されるため、明示的な削除は不要
+```
+
+**理由**:
+- ランダムなファイル名で競合を防止
+- シンボリックリンク攻撃を防止
+- スクリプト中断時も確実に削除
+
+#### 3. 設定値の一貫性の確保
+
+**問題**: ハードコードされた値と設定値が不一致になる可能性
+
+**❌ 悪い例**: 複数箇所で同じ値をハードコード
+
+```typescript
+// JwtService
+private readonly expiresIn: number = 86400;
+
+// LoginUseCase
+return {
+  accessToken,
+  tokenType: 'Bearer',
+  expiresIn: 86400, // ハードコード
+};
+```
+
+**問題点**:
+- 設定を変更しても一部の値が古いまま
+- 一貫性が保てない
+- メンテナンスが困難
+
+**✅ 良い例**: 設定値は1箇所から取得
+
+```typescript
+// JwtService
+public getExpiresIn(): number {
+  return this.expiresIn;
+}
+
+// LoginUseCase
+return {
+  accessToken,
+  tokenType: 'Bearer',
+  expiresIn: this.jwtService.getExpiresIn(), // 設定値から取得
+};
+```
+
+**理由**:
+- 設定値の一貫性が保証される
+- 変更時の影響範囲が明確
+- メンテナンスが容易
+
+#### 4. 型アサーションの安全性向上
+
+**問題**: 安全でない型アサーションはランタイムエラーの原因になる
+
+**❌ 悪い例**: 型アサーションのみで検証しない
+
+```typescript
+const userDataList: UserData[] = JSON.parse(data) as UserData[];
+```
+
+**問題点**:
+- ファイルが破損している場合に検出できない
+- 予期しない構造でもエラーにならない
+- ランタイムエラーの原因
+
+**✅ 良い例**: データ構造を検証してから型アサーション
+
+```typescript
+const rawDataList: unknown = JSON.parse(data);
+
+// データが配列であることを確認
+if (!Array.isArray(rawDataList)) {
+  throw new Error('User data is not an array');
+}
+
+// 各要素がUserDataの構造を持っているか簡易チェック
+const userDataList: UserData[] = rawDataList.map((item: unknown) => {
+  if (
+    typeof item !== 'object' ||
+    item === null ||
+    !('id' in item) ||
+    !('email' in item) ||
+    !('hashedPassword' in item) ||
+    !('createdAt' in item) ||
+    !('updatedAt' in item)
+  ) {
+    throw new Error('Invalid user data structure');
+  }
+  return item as UserData;
+});
+```
+
+**理由**:
+- データの整合性が保証される
+- 早期にエラーを検出
+- より堅牢な実装
+
+#### 5. レースコンディションへの注意
+
+**問題**: ファイルベースの永続化では競合状態が発生する可能性
+
+**❌ 悪い例**: ロックなしでファイルを読み書き
+
+```typescript
+public async save(user: User): Promise<User> {
+  const users: User[] = await this.loadUsers();
+  // ... 更新処理 ...
+  await this.saveUsers(users);
+  return user;
+}
+```
+
+**問題点**:
+- 複数のリクエストが同時に実行されるとデータが失われる
+- 一方の更新がもう一方の更新によって上書きされる
+
+**✅ 良い例**: コメントで注意喚起（将来の改善として）
+
+```typescript
+/**
+ * ユーザーを保存する
+ * 
+ * 注意: 現在の実装はJSONファイルベースのため、複数のリクエストが同時に実行された場合に
+ * 競合状態（レースコンディション）が発生する可能性があります。
+ * 本番環境で使用する場合は、ファイルロック（proper-lockfile等）の実装または
+ * データベース（PostgreSQL、SQLite等）への移行を検討してください。
+ */
+public async save(user: User): Promise<User> {
+  // ...
+}
+```
+
+**理由**:
+- 問題点を明確に文書化
+- 将来の改善方針を示す
+- 本番環境での使用時の注意を喚起
+
+### 実装チェックリスト
+
+- [ ] 本番環境でデフォルト値が使用されないように検証を追加
+- [ ] 一時ファイルは`mktemp`で安全に作成し、`trap`で確実に削除
+- [ ] 設定値は1箇所から取得し、ハードコードを避ける
+- [ ] 型アサーションの前にデータ構造を検証
+- [ ] ファイルベースの永続化ではレースコンディションに注意し、コメントで文書化
+
+**参照**: PR #31 - MWD-27: ユーザー認証機能実装（Gemini Code Assistレビュー指摘）
+
+---
+
+### 13-ZZ. セキュリティパラメータの外部化とロギング改善（PR #31 - MWD-27）
+
+**学習元**: PR #31 - MWD-27: ユーザー認証機能実装（Gemini Code Assistレビュー指摘 - 第3回）
+
+#### 1. セキュリティパラメータの外部化
+
+**問題**: セキュリティ関連のパラメータ（bcryptのソルトラウンド数など）がハードコードされている
+
+**❌ 悪い例**: ハードコードされたセキュリティパラメータ
+
+```typescript
+export class PasswordService {
+  private readonly saltRounds: number = 10; // ハードコード
+}
+```
+
+**問題点**:
+- セキュリティ強度を柔軟に調整できない
+- 将来的なセキュリティ要件の変更に対応しにくい
+- 環境ごとに異なる設定ができない
+
+**✅ 良い例**: 環境変数で設定可能にする
+
+```typescript
+export class PasswordService {
+  private readonly saltRounds: number;
+
+  constructor(saltRounds: number = 10) {
+    this.saltRounds = saltRounds;
+  }
+}
+
+// auth.module.ts
+{
+  provide: 'PasswordService',
+  useFactory: (): PasswordService => {
+    const saltRounds: number = process.env.BCRYPT_SALT_ROUNDS
+      ? parseInt(process.env.BCRYPT_SALT_ROUNDS, 10)
+      : 10;
+    return new PasswordService(saltRounds);
+  },
+}
+```
+
+**理由**:
+- セキュリティ強度を柔軟に調整可能
+- 環境ごとに異なる設定が可能
+- 将来的な要件変更に対応しやすい
+
+#### 2. サーバー起動待機ロジックの改善
+
+**問題**: HTTPエンドポイントへのGETリクエストで起動確認すると、POSTのみ許可されているエンドポイントでは404になり、正しく検知できない
+
+**❌ 悪い例**: POSTエンドポイントにGETリクエストを送信
+
+```bash
+if curl -s -f "${BASE_URL}/api/v1/auth/login" > /dev/null 2>&1; then
+  echo "✅ サーバーが起動しました"
+fi
+```
+
+**問題点**:
+- POSTのみ許可されているエンドポイントにGETを送ると404エラー
+- サーバーが起動していても検知できない
+- タイムアウトしてしまう
+
+**✅ 良い例**: TCPポートのリスニングを確認
+
+```bash
+# ncコマンドでTCPポートのリスニングを確認
+if command -v nc > /dev/null 2>&1; then
+  if nc -z localhost "${PORT}" 2>/dev/null; then
+    echo "✅ サーバーが起動しました"
+    break
+  fi
+else
+  # ncが利用できない場合は代替方法を使用
+  if curl -s -f "${BASE_URL}/" > /dev/null 2>&1; then
+    echo "✅ サーバーが起動しました"
+    break
+  fi
+fi
+```
+
+**理由**:
+- より確実にサーバーの起動を検知
+- HTTPメソッドに依存しない
+- エンドポイントの実装に依存しない
+
+#### 3. ロギングの改善
+
+**問題**: `console.log`は本番環境のロギングには機能が不足している
+
+**❌ 悪い例**: console.logを使用
+
+```typescript
+console.log(`Application is running on: http://localhost:${port}`);
+```
+
+**問題点**:
+- ログレベルの制御ができない
+- フォーマットが統一されない
+- 構造化されたログ出力ができない
+
+**✅ 良い例**: NestJS標準のLoggerを使用
+
+```typescript
+import { Logger } from '@nestjs/common';
+
+new Logger('Bootstrap').log(`Application is running on: http://localhost:${port}`);
+```
+
+**理由**:
+- ログレベルの制御が可能
+- フォーマットが統一される
+- 構造化されたログ出力が可能
+- NestJSの標準的な方法
+
+#### 4. ドキュメントと実装の整合性
+
+**問題**: 設計書に記載されているクラスが実装に存在しない
+
+**❌ 悪い例**: 設計書と実装が不一致
+
+```markdown
+### 2. Application Layer
+- **LoginUseCase**: ログイン処理のユースケース
+- **AuthenticationService**: 認証関連のビジネスロジック
+```
+
+実装では`AuthenticationService`が存在せず、`LoginUseCase`がその責務を担っている。
+
+**✅ 良い例**: 設計書と実装を一致させる
+
+```markdown
+### 2. Application Layer
+- **LoginUseCase**: ログイン処理のユースケース（認証ロジックを含む）
+```
+
+**理由**:
+- ドキュメントと実装の整合性が保たれる
+- 開発者が混乱しない
+- メンテナンスが容易
+
+#### 5. ドキュメントの正確性
+
+**問題**: ドキュメントのポート番号が実装と異なる
+
+**❌ 悪い例**: 間違ったポート番号
+
+```bash
+curl -X POST http://localhost:3000/api/v1/auth/login \
+```
+
+実装ではデフォルトポートが3001。
+
+**✅ 良い例**: 実装と一致したポート番号
+
+```bash
+curl -X POST http://localhost:3001/api/v1/auth/login \
+```
+
+**理由**:
+- ドキュメントの正確性が保たれる
+- 開発者がコピー&ペーストで即座に使用できる
+- 混乱を防ぐ
+
+### 実装チェックリスト
+
+- [ ] セキュリティパラメータは環境変数で設定可能にする
+- [ ] サーバー起動待機はTCPポートのリスニングを確認する（HTTPエンドポイントに依存しない）
+- [ ] ロギングにはNestJS標準のLoggerを使用する
+- [ ] 設計書と実装の整合性を保つ
+- [ ] ドキュメントのポート番号やURLが実装と一致しているか確認
+
+**参照**: PR #31 - MWD-27: ユーザー認証機能実装（Gemini Code Assistレビュー指摘 - 第3回）
+
+---

@@ -68,8 +68,7 @@ Onion Architecture（オニオンアーキテクチャ）に従い、レイヤ�
 
 ### 2. Application Layer
 
-- **LoginUseCase**: ログイン処理のユースケース
-- **AuthenticationService**: 認証関連のビジネスロジック
+- **LoginUseCase**: ログイン処理のユースケース（認証ロジックを含む）
 
 ### 3. Domain Layer
 

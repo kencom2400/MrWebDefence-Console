@@ -99,9 +99,6 @@ pnpm backend:build
 ```bash
 # テスト用ユーザーを作成
 ./scripts/backend/create-test-user.sh test@example.com password123
-
-# 環境変数で指定することも可能
-TEST_USER_EMAIL=test@example.com TEST_USER_PASSWORD=password123 ./scripts/backend/create-test-user.sh test@example.com password123
 ```
 
 #### API動作確認

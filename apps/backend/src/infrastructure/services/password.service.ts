@@ -8,7 +8,11 @@
 import * as bcrypt from 'bcrypt';
 
 export class PasswordService {
-  private readonly saltRounds: number = 10;
+  private readonly saltRounds: number;
+
+  constructor(saltRounds: number = 10) {
+    this.saltRounds = saltRounds;
+  }
 
   /**
    * パスワードをハッシュ化する

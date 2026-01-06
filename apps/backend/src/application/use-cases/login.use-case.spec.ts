@@ -32,6 +32,7 @@ describe('LoginUseCase', () => {
     mockJwtService = {
       generateToken: jest.fn(),
       verifyToken: jest.fn(),
+      getExpiresIn: jest.fn().mockReturnValue(86400),
     } as any;
 
     loginUseCase = new LoginUseCase(mockUserRepository, mockPasswordService, mockJwtService);

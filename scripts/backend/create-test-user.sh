@@ -21,8 +21,14 @@ if [ ! -d "node_modules" ]; then
   pnpm install
 fi
 
+# 安全な一時ファイルを作成
+TMP_SCRIPT_FILE=$(mktemp /tmp/create-user.XXXXXX.mjs)
+
+# スクリプト終了時に一時ファイルを必ず削除する
+trap 'rm -f "${TMP_SCRIPT_FILE}"' EXIT
+
 # Node.jsスクリプトでユーザーを作成
-cat > /tmp/create-user.mjs << 'EOF'
+cat > "${TMP_SCRIPT_FILE}" << 'EOF'
 import * as bcrypt from 'bcrypt';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -118,8 +124,7 @@ echo "   Email: ${EMAIL}"
 echo ""
 
 # Node.jsスクリプトを実行
-node /tmp/create-user.mjs "${EMAIL}" "${PASSWORD}"
+node "${TMP_SCRIPT_FILE}" "${EMAIL}" "${PASSWORD}"
 
-# 一時ファイルを削除
-rm -f /tmp/create-user.mjs
+# trapで削除されるため、明示的な削除は不要
 

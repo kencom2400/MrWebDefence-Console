@@ -32,11 +32,6 @@ classDiagram
         +execute(email: string, password: string): Promise~LoginResult~
     }
     
-    class AuthenticationService {
-        +validateCredentials(email: string, password: string): Promise~User~
-        +generateToken(user: User): string
-    }
-    
     %% Domain Layer
     class User {
         +id: string
