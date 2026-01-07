@@ -453,7 +453,7 @@ source scripts/jira/config.sh
 
 1. **手動でステータスを変更**
    ```bash
-   ./scripts/jira/projects/set-issue-in-progress.sh <issue_key>
+   ./scripts/jira/transition-issue.sh <issue_key> "In Progress"
    ```
 
 2. **JiraのUIから変更**
