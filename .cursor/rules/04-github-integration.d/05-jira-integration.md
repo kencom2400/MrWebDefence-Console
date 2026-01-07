@@ -147,6 +147,10 @@ Backlog → To Do → In Progress → Done
 - **Backlog**: チケット作成時（自動設定）
 - **To Do**: 次に取り組むチケットとして選択した時
 - **In Progress**: 実際の作業を開始した時
+  - **🚨 CRITICAL: `@start-task`コマンド実行時は必ず「In Progress」に変更**
+  - タスク開始時には必ずステータスを「In Progress」（日本語: 「進行中」）に変更すること
+  - `start-task.sh`スクリプトが自動的にステータスを変更するが、失敗した場合は手動で変更する
+  - ステータス変更に失敗した場合は警告を表示するが、作業は継続可能
 - **Done**: 作業が完了し、PRがマージされた時
 
 ## 3. フィールド定義の取得方法
@@ -403,6 +407,78 @@ source scripts/jira/config.sh
 ```bash
 ./scripts/jira/transition-issue.sh <issue_key> <status_name>
 ```
+
+## 9.5. @start-task コマンド（Jira統合）
+
+### 🚨 CRITICAL: タスク開始時のステータス変更
+
+**`@start-task`コマンド実行時は、必ずステータスを「In Progress」に変更すること**
+
+#### 必須事項
+
+1. **ステータス変更は必須**
+   - タスク開始時には必ずステータスを「In Progress」（日本語: 「進行中」）に変更すること
+   - `start-task.sh`スクリプトが自動的にステータスを変更する
+   - ステータス変更に失敗した場合は警告を表示するが、作業は継続可能
+
+2. **実行タイミング**
+   - ブランチ作成後、作業開始前に必ずステータスを変更
+   - ステータス変更は`start-task.sh`スクリプト内で自動実行される
+
+3. **ステータス変更の確認**
+   - ステータス変更が成功したかどうかを確認する
+   - 失敗した場合は手動で変更するか、JiraのUIから変更する
+
+#### start-task.sh スクリプトの動作
+
+```bash
+# 最優先Issueを自動選択して開始
+./scripts/jira/workflow/start-task.sh
+
+# 特定のIssueを指定して開始
+./scripts/jira/workflow/start-task.sh MWD-123
+```
+
+**スクリプトが実行する処理:**
+
+1. Issue情報の取得と確認
+2. 自分にアサイン（未アサインの場合）
+3. mainブランチの最新化
+4. フィーチャーブランチの作成（`feature/{ISSUE_KEY}-{タイトル}`）
+5. **🚨 CRITICAL: Jiraのステータスを「In Progress」に変更**
+   - `set-issue-in-progress.sh`スクリプトを呼び出してステータスを変更
+   - ステータス変更に失敗した場合は警告を表示するが、作業は継続可能
+
+#### ステータス変更が失敗した場合の対処
+
+1. **手動でステータスを変更**
+   ```bash
+   ./scripts/jira/projects/set-issue-in-progress.sh <issue_key>
+   ```
+
+2. **JiraのUIから変更**
+   - JiraのIssueページにアクセス
+   - ステータスを「進行中」（In Progress）に手動で変更
+
+3. **遷移可能なステータスを確認**
+   ```bash
+   ./scripts/jira/projects/get-transitions.sh <issue_key>
+   ```
+
+#### AIアシスタントへの指示
+
+`@start-task`コマンドを受け取った際は、以下を必ず実行してください：
+
+1. **`required_permissions: ['all']`を指定して実行**
+   - サンドボックス環境の制限により、ネットワーク接続やGit操作が失敗するため
+
+2. **ステータス変更の確認**
+   - スクリプト実行後、ステータスが「In Progress」に変更されたか確認
+   - 警告が表示された場合は、手動でステータスを変更する
+
+3. **作業開始前の確認**
+   - ブランチが正しく作成されたか確認
+   - ステータスが「In Progress」になっているか確認
 
 ## 10. セキュリティのベストプラクティス
 
