@@ -20,7 +20,8 @@
   - GitHub Projects: 「🚧 In Progress」
   - Jira: 「In Progress」（日本語: 「進行中」）
   - **必須**: チケット開始時には必ずステータスを「In Progress」に変更すること
-  - ステータス変更に失敗した場合は警告を表示するが、作業は継続可能
+  - `start-task.sh`スクリプトが自動でステータスを変更するため、手動での変更は原則不要です。
+  - 変更に失敗した場合は警告が表示されます。その際は手動での変更が必要ですが、作業自体は継続可能です。
 
 **🔴 絶対禁止事項:**
 
@@ -57,14 +58,14 @@
 ```typescript
 // ✅ 正しい実行方法（Jiraプロジェクトの場合）
 run_terminal_cmd({
-  command: 'bash scripts/jira/workflow/start-task.sh',
-  required_permissions: ['all'],
+  command: "bash scripts/jira/workflow/start-task.sh",
+  required_permissions: ["all"],
 });
 
 // ✅ 正しい実行方法（GitHubプロジェクトの場合）
 run_terminal_cmd({
-  command: 'bash scripts/github/workflow/start-task.sh',
-  required_permissions: ['all'],
+  command: "bash scripts/github/workflow/start-task.sh",
+  required_permissions: ["all"],
 });
 ```
 
