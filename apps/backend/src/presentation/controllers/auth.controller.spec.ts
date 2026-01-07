@@ -8,15 +8,24 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { AuthController } from './auth.controller';
 import { LoginUseCase, AuthenticationError } from '../../application/use-cases/login.use-case';
+import { LogoutUseCase } from '../../application/use-cases/logout.use-case';
 import { LoginRequestDto } from '../dto/login-request.dto';
+import { JwtService } from '../../infrastructure/services/jwt.service';
+import { ITokenBlacklistRepository } from '../../domain/repositories/token-blacklist.repository.interface';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
 describe('AuthController', () => {
   let controller: AuthController;
   let mockLoginUseCase: jest.Mocked<LoginUseCase>;
+  let mockLogoutUseCase: jest.Mocked<LogoutUseCase>;
 
   beforeEach(async () => {
     // Jest型定義の制約によりany使用
     mockLoginUseCase = {
+      execute: jest.fn(),
+    } as any;
+
+    mockLogoutUseCase = {
       execute: jest.fn(),
     } as any;
 
@@ -27,8 +36,24 @@ describe('AuthController', () => {
           provide: LoginUseCase,
           useValue: mockLoginUseCase,
         },
+        {
+          provide: LogoutUseCase,
+          useValue: mockLogoutUseCase,
+        },
+        {
+          provide: 'JwtService',
+          useValue: {
+            verifyToken: jest.fn(),
+          },
+        },
+        {
+          provide: 'ITokenBlacklistRepository',
+          useValue: {
+            isBlacklisted: jest.fn(),
+          },
+        },
       ],
-    }).compile();
+    }).overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true }).compile();
 
     controller = module.get<AuthController>(AuthController);
   });
@@ -44,7 +69,7 @@ describe('AuthController', () => {
       const expectedResult = {
         accessToken: 'jwt-token',
         tokenType: 'Bearer',
-        expiresIn: 86400,
+        expiresIn: 1800,
       };
 
       mockLoginUseCase.execute.mockResolvedValue(expectedResult);
@@ -72,5 +97,24 @@ describe('AuthController', () => {
       );
     });
   });
-});
 
+  describe('logout', () => {
+    it('正常系: ログアウトに成功する', async () => {
+      // Arrange
+      const mockRequest = {
+        headers: {
+          authorization: 'Bearer valid-token',
+        },
+        user: { sub: 'user-id', email: 'user@example.com' },
+      };
+
+      mockLogoutUseCase.execute.mockResolvedValue(undefined);
+
+      // Act
+      await controller.logout(mockRequest as any);
+
+      // Assert
+      expect(mockLogoutUseCase.execute).toHaveBeenCalledWith('valid-token');
+    });
+  });
+});
