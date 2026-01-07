@@ -1,6 +1,6 @@
 /**
  * Auth E2E Test
- * 
+ *
  * 認証機能のE2Eテスト
  */
 
@@ -34,11 +34,7 @@ describe('AuthController (e2e)', () => {
     await fs.mkdir(dataDir, { recursive: true });
 
     // テスト用ユーザーを保存
-    await fs.writeFile(
-      testDataFile,
-      JSON.stringify([testUser], null, 2),
-      'utf-8',
-    );
+    await fs.writeFile(testDataFile, JSON.stringify([testUser], null, 2), 'utf-8');
 
     // アプリケーションを起動
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -78,7 +74,7 @@ describe('AuthController (e2e)', () => {
         .expect((res: request.Response) => {
           expect(res.body).toHaveProperty('accessToken');
           expect(res.body).toHaveProperty('tokenType', 'Bearer');
-          expect(res.body).toHaveProperty('expiresIn', 86400);
+          expect(res.body).toHaveProperty('expiresIn', 1800);
           expect(typeof res.body.accessToken).toBe('string');
           expect(res.body.accessToken.length).toBeGreaterThan(0);
         });
@@ -155,5 +151,52 @@ describe('AuthController (e2e)', () => {
         });
     });
   });
-});
 
+  describe('Session Management', () => {
+    let accessToken: string;
+
+    it('正常系: ログインして30分有効なトークンを取得する', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: testUserEmail,
+          password: testUserPassword,
+        })
+        .expect(200);
+
+      accessToken = res.body.accessToken;
+      expect(res.body.expiresIn).toBe(1800);
+    });
+
+    it('正常系: 有効なトークンでプロフィールにアクセスできる', () => {
+      return request(app.getHttpServer())
+        .get('/api/v1/auth/profile')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200)
+        .expect((res: request.Response) => {
+          expect(res.body.email).toBe(testUserEmail);
+        });
+    });
+
+    it('異常系: トークンなしでプロフィールにアクセスできない', () => {
+      return request(app.getHttpServer()).get('/api/v1/auth/profile').expect(401);
+    });
+
+    it('正常系: ログアウトする', () => {
+      return request(app.getHttpServer())
+        .post('/api/v1/auth/logout')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+    });
+
+    it('異常系: ログアウト後に同じトークンでプロフィールにアクセスできない', () => {
+      return request(app.getHttpServer())
+        .get('/api/v1/auth/profile')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(401)
+        .expect((res: request.Response) => {
+          expect(res.body.message).toBe('Token is invalidated');
+        });
+    });
+  });
+});
