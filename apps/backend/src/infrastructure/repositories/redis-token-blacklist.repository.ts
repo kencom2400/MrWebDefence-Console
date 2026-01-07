@@ -1,4 +1,4 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import Redis from 'ioredis';
 import { ITokenBlacklistRepository } from '../../domain/repositories/token-blacklist.repository.interface';
 
@@ -6,12 +6,13 @@ import { ITokenBlacklistRepository } from '../../domain/repositories/token-black
 export class RedisTokenBlacklistRepository
   implements ITokenBlacklistRepository, OnModuleInit, OnModuleDestroy
 {
+  private readonly logger = new Logger(RedisTokenBlacklistRepository.name);
   private redisClient: Redis;
 
   constructor() {
     const host = process.env.REDIS_HOST || 'localhost';
     const port = parseInt(process.env.REDIS_PORT || '6379', 10);
-    
+
     this.redisClient = new Redis({
       host,
       port,
@@ -23,10 +24,9 @@ export class RedisTokenBlacklistRepository
     try {
       await this.redisClient.connect();
     } catch (error) {
-      console.error('Failed to connect to Redis:', error);
-      // 本番環境ではここでエラーをスローして起動を止めるべきかもしれないが、
-      // 開発中はRedisがなくても起動するようにするか、あるいはRedis必須とするか。
-      // 今回はRedis必須とする。
+      this.logger.error('Failed to connect to Redis:', error);
+      // Redisがなければ認証機能が正常に動作しないため、起動を失敗させる
+      throw error;
     }
   }
 
@@ -60,4 +60,3 @@ export class RedisTokenBlacklistRepository
     return result === 1;
   }
 }
-

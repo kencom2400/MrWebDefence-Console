@@ -5,6 +5,7 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { JwtService, JwtPayload } from '../../infrastructure/services/jwt.service';
 import { ITokenBlacklistRepository } from '../../domain/repositories/token-blacklist.repository.interface';
 
@@ -18,7 +19,7 @@ export class JwtAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<Request>();
     const token = this.extractTokenFromHeader(request);
 
     if (!token) {
@@ -38,12 +39,13 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     // リクエストにユーザー情報を付与
+    // @ts-ignore
     request['user'] = payload;
 
     return true;
   }
 
-  private extractTokenFromHeader(request: any): string | undefined {
+  private extractTokenFromHeader(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
   }
