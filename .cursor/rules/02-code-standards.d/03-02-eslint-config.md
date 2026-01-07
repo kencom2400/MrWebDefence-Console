@@ -22,21 +22,25 @@ export default tseslint.config(...tseslint.configs.recommendedTypeChecked, {
 
 ```javascript
 // ✅ Next.jsプロジェクトでの推奨設定
-export default tseslint.config(js.configs.recommended, ...tseslint.configs.recommendedTypeChecked, {
-  plugins: {
-    react,
-    'react-hooks': reactHooks,
-    'jsx-a11y': jsxA11y,
-    '@next/next': nextPlugin,
+export default tseslint.config(
+  js.configs.recommended,
+  ...tseslint.configs.recommendedTypeChecked,
+  {
+    plugins: {
+      react,
+      "react-hooks": reactHooks,
+      "jsx-a11y": jsxA11y,
+      "@next/next": nextPlugin,
+    },
+    rules: {
+      ...react.configs.recommended.rules,
+      ...reactHooks.configs.recommended.rules,
+      ...jsxA11y.configs.recommended.rules,
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
+    },
   },
-  rules: {
-    ...react.configs.recommended.rules,
-    ...reactHooks.configs.recommended.rules,
-    ...jsxA11y.configs.recommended.rules,
-    ...nextPlugin.configs.recommended.rules,
-    ...nextPlugin.configs['core-web-vitals'].rules,
-  },
-});
+);
 ```
 
 #### 5-3. 環境別の適切な設定
@@ -46,24 +50,24 @@ export default tseslint.config(js.configs.recommended, ...tseslint.configs.recom
 export default tseslint.config(
   // ソースコード: 厳格な設定
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ["**/*.{ts,tsx}"],
     rules: {
-      '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/explicit-function-return-type': 'warn',
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/explicit-function-return-type": "warn",
     },
   },
 
   // テストコード: 一部緩和
   {
-    files: ['**/__tests__/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'],
+    files: ["**/__tests__/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],
     languageOptions: {
       globals: { ...globals.jest },
     },
     rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/explicit-function-return-type': 'off',
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/explicit-function-return-type": "off",
     },
-  }
+  },
 );
 ```
 
@@ -81,7 +85,7 @@ useEffect(() => {
       const data = await getCategories();
       setCategories(data);
     } catch (err) {
-      console.error('カテゴリの取得に失敗しました:', err); // ユーザーには通知されない
+      console.error("カテゴリの取得に失敗しました:", err); // ユーザーには通知されない
     }
   };
   void fetchCategories();

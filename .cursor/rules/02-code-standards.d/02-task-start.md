@@ -59,14 +59,14 @@
 ```typescript
 // ✅ 正しい実行方法（Jiraプロジェクトの場合）
 run_terminal_cmd({
-  command: 'bash scripts/jira/workflow/start-task.sh',
-  required_permissions: ['all'],
+  command: "bash scripts/jira/workflow/start-task.sh",
+  required_permissions: ["all"],
 });
 
 // ✅ 正しい実行方法（GitHubプロジェクトの場合）
 run_terminal_cmd({
-  command: 'bash scripts/github/workflow/start-task.sh',
-  required_permissions: ['all'],
+  command: "bash scripts/github/workflow/start-task.sh",
+  required_permissions: ["all"],
 });
 ```
 

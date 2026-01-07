@@ -196,7 +196,7 @@ await this.dataSource.transaction(async (entityManager) => {
       if (!existing) {
         await this.repository.create(data, entityManager);
       }
-    })
+    }),
   );
 });
 ```
@@ -248,7 +248,9 @@ export class SubcategoryTreeBuilderService {
 }
 
 export class GetSubcategoriesUseCase {
-  constructor(private readonly treeBuilderService: SubcategoryTreeBuilderService) {}
+  constructor(
+    private readonly treeBuilderService: SubcategoryTreeBuilderService,
+  ) {}
 
   async execute(): Promise<Result> {
     const subcategories = await this.repository.findAll();
@@ -258,7 +260,9 @@ export class GetSubcategoriesUseCase {
 }
 
 export class GetSubcategoriesByCategoryUseCase {
-  constructor(private readonly treeBuilderService: SubcategoryTreeBuilderService) {}
+  constructor(
+    private readonly treeBuilderService: SubcategoryTreeBuilderService,
+  ) {}
 
   async execute(categoryType: CategoryType): Promise<Result> {
     const subcategories = await this.repository.findByCategory(categoryType);
@@ -365,7 +369,7 @@ async classify(@Body() dto: ClassificationRequestDto): Promise<ClassificationRes
 export class TypeOrmRepository implements IRepository {
   constructor(
     @InjectRepository(OrmEntity)
-    private readonly repository: Repository<OrmEntity>
+    private readonly repository: Repository<OrmEntity>,
   ) {}
 
   // ヘルパーメソッドでEntityManagerの処理を一元化
@@ -426,7 +430,7 @@ const history = new History(
   transactionId,
   oldCategory,
   newCategory,
-  new Date() // ← アプリで設定している！
+  new Date(), // ← アプリで設定している！
 );
 ```
 
@@ -445,7 +449,7 @@ const history = new History(
   transactionId,
   oldCategory,
   newCategory,
-  new Date() // アプリで制御
+  new Date(), // アプリで制御
 );
 ```
 
@@ -460,12 +464,12 @@ const history = new History(
 
 ```typescript
 // ❌ コントローラーが複数モジュールのリポジトリに依存
-@Controller('health')
+@Controller("health")
 class HealthController {
   constructor(
     private institutionRepo: IInstitutionRepository,
     private creditCardRepo: ICreditCardRepository,
-    private securitiesRepo: ISecuritiesAccountRepository
+    private securitiesRepo: ISecuritiesAccountRepository,
   ) {}
 }
 ```
@@ -479,7 +483,7 @@ class InstitutionAggregationService {
   constructor(
     private institutionRepo: IInstitutionRepository,
     private creditCardRepo: ICreditCardRepository,
-    private securitiesRepo: ISecuritiesAccountRepository
+    private securitiesRepo: ISecuritiesAccountRepository,
   ) {}
 
   async getAllInstitutions(): Promise<IInstitutionInfo[]> {
@@ -487,10 +491,10 @@ class InstitutionAggregationService {
   }
 }
 
-@Controller('health')
+@Controller("health")
 class HealthController {
   constructor(
-    private aggregationService: InstitutionAggregationService // 1つのサービスに依存
+    private aggregationService: InstitutionAggregationService, // 1つのサービスに依存
   ) {}
 }
 ```
@@ -612,8 +616,8 @@ export class MerchantTypeOrmRepository implements IMerchantRepository {
   async searchByDescription(description: string): Promise<Merchant | null> {
     // DBレベルでLIKE検索やJSON検索を実施
     const result = await this.repository
-      .createQueryBuilder('merchant')
-      .where('merchant.name LIKE :desc', { desc: `%${description}%` })
+      .createQueryBuilder("merchant")
+      .where("merchant.name LIKE :desc", { desc: `%${description}%` })
       .orWhere('JSON_SEARCH(merchant.aliases, "one", :desc) IS NOT NULL', {
         desc: `%${description}%`,
       })
@@ -640,7 +644,7 @@ export class SubcategoryClassifierService {
 
   constructor(
     private readonly subcategoryRepository: ISubcategoryRepository,
-    merchantRepository: IMerchantRepository
+    merchantRepository: IMerchantRepository,
   ) {
     this.merchantMatcher = new MerchantMatcherService(merchantRepository);
     this.keywordMatcher = new KeywordMatcherService();
@@ -663,7 +667,7 @@ export class SubcategoryClassifierService {
   constructor(
     private readonly subcategoryRepository: ISubcategoryRepository,
     private readonly merchantMatcher: MerchantMatcherService,
-    private readonly keywordMatcher: KeywordMatcherService
+    private readonly keywordMatcher: KeywordMatcherService,
   ) {}
 }
 ```
@@ -680,7 +684,7 @@ export class SubcategoryClassifierService {
 // ❌ 悪い例: 各クラスで異なる正規化ロジック
 class MerchantEntity {
   private normalizeText(text: string): string {
-    return text.toLowerCase().replace(/\s+/g, '');
+    return text.toLowerCase().replace(/\s+/g, "");
   }
 }
 
@@ -688,8 +692,10 @@ class KeywordMatcherService {
   private normalizeText(text: string): string {
     return text
       .toLowerCase()
-      .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0))
-      .replace(/[^\w\sぁ-んァ-ヶー一-龯]/g, '')
+      .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) =>
+        String.fromCharCode(s.charCodeAt(0) - 0xfee0),
+      )
+      .replace(/[^\w\sぁ-んァ-ヶー一-龯]/g, "")
       .trim();
   }
 }
@@ -709,9 +715,11 @@ export class TextNormalizer {
   static normalize(text: string): string {
     return text
       .toLowerCase()
-      .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) => String.fromCharCode(s.charCodeAt(0) - 0xfee0))
-      .replace(/[^\w\sぁ-んァ-ヶー一-龯]/g, '')
-      .replace(/\s+/g, '')
+      .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (s) =>
+        String.fromCharCode(s.charCodeAt(0) - 0xfee0),
+      )
+      .replace(/[^\w\sぁ-んァ-ヶー一-龯]/g, "")
+      .replace(/\s+/g, "")
       .trim();
   }
 
@@ -750,7 +758,9 @@ export interface ISubcategoryRepository {
 // 呼び出し側で安全にハンドリング
 const defaultSubcategory = await this.repository.findDefault(mainCategory);
 if (!defaultSubcategory) {
-  throw new Error(`Default subcategory not found for category: ${mainCategory}`);
+  throw new Error(
+    `Default subcategory not found for category: ${mainCategory}`,
+  );
 }
 ```
 
@@ -825,11 +835,11 @@ export class Merchant {
   constructor(
     public readonly id: string,
     public readonly name: string,
-    public readonly confidence: number // プリミティブ型
+    public readonly confidence: number, // プリミティブ型
   ) {
     // バリデーションをエンティティで実装
     if (confidence < 0 || confidence > 1) {
-      throw new Error('Invalid confidence');
+      throw new Error("Invalid confidence");
     }
   }
 
@@ -853,7 +863,7 @@ export class Merchant {
   constructor(
     public readonly id: string,
     public readonly name: string,
-    public readonly confidence: ClassificationConfidence // Value Object
+    public readonly confidence: ClassificationConfidence, // Value Object
   ) {
     // バリデーションはVOが担当
   }
@@ -947,12 +957,12 @@ export class SubcategoryClassifierService {
     if (keywordMatch) {
       const confidenceValue = Math.max(
         keywordMatch.score,
-        SubcategoryClassifierService.MINIMUM_KEYWORD_MATCH_CONFIDENCE
+        SubcategoryClassifierService.MINIMUM_KEYWORD_MATCH_CONFIDENCE,
       );
       // ...
     }
     const defaultConfidence = new ClassificationConfidence(
-      SubcategoryClassifierService.DEFAULT_CLASSIFICATION_CONFIDENCE
+      SubcategoryClassifierService.DEFAULT_CLASSIFICATION_CONFIDENCE,
     );
   }
 }
@@ -1002,12 +1012,13 @@ export class MerchantMatcherService {
 export class MerchantMatcherService {
   public async match(description: string): Promise<Merchant | null> {
     try {
-      const merchant = await this.merchantRepository.searchByDescription(description);
+      const merchant =
+        await this.merchantRepository.searchByDescription(description);
       // 追加の処理やログ出力
       this.logger.debug(`Matched merchant: ${merchant?.name}`);
       return merchant;
     } catch (error) {
-      this.logger.error('Merchant matching failed', error);
+      this.logger.error("Merchant matching failed", error);
       throw new MerchantMatchingException(error);
     }
   }

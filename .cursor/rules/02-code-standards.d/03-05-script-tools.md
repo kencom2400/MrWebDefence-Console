@@ -184,7 +184,7 @@ PROJECT_NUMBER=2 OWNER="other-user" ./script.sh
 **実装例**:
 
 ```typescript
-import { IsBoolean, IsOptional, IsDateString } from 'class-validator';
+import { IsBoolean, IsOptional, IsDateString } from "class-validator";
 
 export class SyncTransactionsDto {
   @IsOptional()
@@ -263,17 +263,17 @@ TS2564: Property 'data' has no initializer and is not definitely assigned in the
 
 ```typescript
 // ✅ Swagger対応: classで定義
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty } from "@nestjs/swagger";
 
 export class SubcategoryResponseDto {
-  @ApiProperty({ description: 'サブカテゴリID', example: 'food_cafe' })
-  id: string = '';
+  @ApiProperty({ description: "サブカテゴリID", example: "food_cafe" })
+  id: string = "";
 
-  @ApiProperty({ description: 'サブカテゴリ名', example: 'カフェ' })
-  name: string = '';
+  @ApiProperty({ description: "サブカテゴリ名", example: "カフェ" })
+  name: string = "";
 
   @ApiProperty({
-    description: '子サブカテゴリ',
+    description: "子サブカテゴリ",
     type: () => [SubcategoryResponseDto],
     required: false,
   })
@@ -345,8 +345,8 @@ export interface ConnectionStatusDto {
 
 ```typescript
 export interface ConnectionStatusDto {
-  status: 'CONNECTED' | 'DISCONNECTED' | 'NEED_REAUTH'; // ✅ 厳密な型
-  institutionType: 'bank' | 'credit-card' | 'securities'; // ✅ 厳密な型
+  status: "CONNECTED" | "DISCONNECTED" | "NEED_REAUTH"; // ✅ 厳密な型
+  institutionType: "bank" | "credit-card" | "securities"; // ✅ 厳密な型
 }
 ```
 
@@ -443,17 +443,17 @@ private toResult(history: ConnectionHistory): ConnectionHistoryResult {
 ```typescript
 // ファイル1: check-connection.dto.ts
 export interface ConnectionStatusDto {
-  status: 'CONNECTED' | 'DISCONNECTED' | 'NEED_REAUTH'; // 型を直接記述
+  status: "CONNECTED" | "DISCONNECTED" | "NEED_REAUTH"; // 型を直接記述
 }
 
 // ファイル2: get-connection-history.dto.ts
 export interface ConnectionHistoryDto {
-  status: 'CONNECTED' | 'DISCONNECTED' | 'NEED_REAUTH'; // 同じ型を重複定義
+  status: "CONNECTED" | "DISCONNECTED" | "NEED_REAUTH"; // 同じ型を重複定義
 }
 
 // ファイル3: connection-status-result.type.ts
 export interface ConnectionStatusResult {
-  status: 'CONNECTED' | 'DISCONNECTED' | 'NEED_REAUTH'; // 同じ型を重複定義
+  status: "CONNECTED" | "DISCONNECTED" | "NEED_REAUTH"; // 同じ型を重複定義
 }
 ```
 
@@ -467,11 +467,14 @@ export interface ConnectionStatusResult {
 
 ```typescript
 // connection.types.ts（共通定義ファイル）
-export type ConnectionStatusType = 'CONNECTED' | 'DISCONNECTED' | 'NEED_REAUTH';
-export type InstitutionType = 'bank' | 'credit-card' | 'securities';
+export type ConnectionStatusType = "CONNECTED" | "DISCONNECTED" | "NEED_REAUTH";
+export type InstitutionType = "bank" | "credit-card" | "securities";
 
 // check-connection.dto.ts
-import type { ConnectionStatusType, InstitutionType } from '../../domain/types/connection.types';
+import type {
+  ConnectionStatusType,
+  InstitutionType,
+} from "../../domain/types/connection.types";
 
 export interface ConnectionStatusDto {
   status: ConnectionStatusType; // 型エイリアスを使用
@@ -479,7 +482,10 @@ export interface ConnectionStatusDto {
 }
 
 // get-connection-history.dto.ts
-import type { ConnectionStatusType, InstitutionType } from '../../domain/types/connection.types';
+import type {
+  ConnectionStatusType,
+  InstitutionType,
+} from "../../domain/types/connection.types";
 
 export interface ConnectionHistoryDto {
   status: ConnectionStatusType; // 型エイリアスを使用

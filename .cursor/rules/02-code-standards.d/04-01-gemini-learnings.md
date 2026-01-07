@@ -166,13 +166,13 @@ catch (error) {
 
 ```typescript
 // ❌ 悪い例: 理由が不明
-test.skip('費目を編集できる', async ({ page }) => {
+test.skip("費目を編集できる", async ({ page }) => {
   // ...
 });
 
 // ✅ 良い例: 理由とIssue番号をコメントとして残す
 // TODO: Issue #XXX - 編集機能の不具合が修正されたら、このテストを有効化する
-test.skip('費目を編集できる', async ({ page }) => {
+test.skip("費目を編集できる", async ({ page }) => {
   // ...
 });
 ```
@@ -227,12 +227,12 @@ test.skip('費目を編集できる', async ({ page }) => {
 
 ```typescript
 // ❌ 悪い例: インデックスに依存した脆弱なセレクタ
-const deleteButtons = screen.getAllByText('削除');
+const deleteButtons = screen.getAllByText("削除");
 fireEvent.click(deleteButtons[deleteButtons.length - 1]);
 
 // ✅ 良い例: roleとwithinでスコープを限定
-const modal = screen.getByRole('dialog');
-const deleteButton = within(modal).getByRole('button', { name: '削除' });
+const modal = screen.getByRole("dialog");
+const deleteButton = within(modal).getByRole("button", { name: "削除" });
 fireEvent.click(deleteButton);
 ```
 
@@ -268,7 +268,7 @@ export interface SyncAllTransactionsRequest {
 }
 
 // apps/frontend/src/lib/api/sync.ts
-import { SyncAllTransactionsRequest } from '@account-book/types';
+import { SyncAllTransactionsRequest } from "@account-book/types";
 ```
 
 **理由**:
@@ -393,7 +393,7 @@ await this.dataSource.transaction(async (entityManager) => {
 export class DeleteInstitutionUseCase {
   constructor(
     @InjectDataSource()
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
     // ...
   ) {}
 
@@ -407,7 +407,8 @@ export class DeleteInstitutionUseCase {
     // トランザクション内で削除操作を実行
     await this.dataSource.transaction(async (entityManager) => {
       if (dto.deleteTransactions === true) {
-        const transactionRepo = entityManager.getRepository(TransactionOrmEntity);
+        const transactionRepo =
+          entityManager.getRepository(TransactionOrmEntity);
         await transactionRepo.delete({ institutionId: id });
       }
 
@@ -493,17 +494,17 @@ async deleteByInstitutionId(institutionId: string): Promise<void> {
 // ❌ 悪い例: 冗長なロジック
 const params = new URLSearchParams();
 if (options?.deleteTransactions === true) {
-  params.append('deleteTransactions', 'true');
+  params.append("deleteTransactions", "true");
 }
-const endpoint = `/institutions/${id}${params.toString() ? `?${params.toString()}` : ''}`;
+const endpoint = `/institutions/${id}${params.toString() ? `?${params.toString()}` : ""}`;
 
 // ✅ 良い例: 簡潔で読みやすい
 const params = new URLSearchParams();
 if (options?.deleteTransactions) {
-  params.set('deleteTransactions', 'true');
+  params.set("deleteTransactions", "true");
 }
 const queryString = params.toString();
-const endpoint = `/institutions/${id}${queryString ? `?${queryString}` : ''}`;
+const endpoint = `/institutions/${id}${queryString ? `?${queryString}` : ""}`;
 ```
 
 **理由**:
@@ -596,15 +597,15 @@ export class DeleteInstitutionDto {
 // ✅ 良い例: @Transformで型変換
 export class DeleteInstitutionDto {
   @Transform(({ value }): boolean | string => {
-    if (value === 'true') {
+    if (value === "true") {
       return true;
     }
-    if (value === 'false') {
+    if (value === "false") {
       return false;
     }
     return value as string;
   })
-  @IsBoolean({ message: '取引履歴の削除フラグは真偽値で指定してください' })
+  @IsBoolean({ message: "取引履歴の削除フラグは真偽値で指定してください" })
   @IsOptional()
   deleteTransactions?: boolean;
 }
@@ -825,10 +826,10 @@ if (exception instanceof Error) {
 ```typescript
 // ✅ 良い例: カスタム例外クラスを使用
 export class EventNotFoundException extends Error {
-  public readonly code = 'EV001';
+  public readonly code = "EV001";
   constructor(public readonly eventId: string) {
     super(`Event not found: ${eventId}`);
-    this.name = 'EventNotFoundException';
+    this.name = "EventNotFoundException";
   }
 }
 
@@ -942,9 +943,9 @@ await page.waitForSelector('[data-testid="list"]');
 #### ❌ 避けるべきパターン: 実装されていない機能のテスト
 
 ```typescript
-describe('Pagination Performance', () => {
-  it('should fetch page 1', async () => {
-    await request(app).get('/api/institutions').query({ page: 1, limit: 20 });
+describe("Pagination Performance", () => {
+  it("should fetch page 1", async () => {
+    await request(app).get("/api/institutions").query({ page: 1, limit: 20 });
   });
 });
 ```
@@ -957,10 +958,10 @@ describe('Pagination Performance', () => {
 #### ✅ 正しいパターン: 未実装機能は.skip
 
 ```typescript
-describe.skip('Pagination Performance (Future Implementation)', () => {
+describe.skip("Pagination Performance (Future Implementation)", () => {
   // Note: InstitutionControllerにページネーション実装後に有効化
-  it('should fetch page 1', async () => {
-    await request(app).get('/api/institutions').query({ page: 1, limit: 20 });
+  it("should fetch page 1", async () => {
+    await request(app).get("/api/institutions").query({ page: 1, limit: 20 });
   });
 });
 ```
@@ -1224,7 +1225,7 @@ export default function TransactionsPage(): React.JSX.Element {
       const data = await getTransactions();
       setTransactions(data);
     } catch (err) {
-      setError('取引データの取得に失敗しました。再読み込みしてください。');
+      setError("取引データの取得に失敗しました。再読み込みしてください。");
     } finally {
       setLoading(false);
     }
@@ -1305,7 +1306,7 @@ export default function TransactionsPage(): React.JSX.Element {
 
 ```typescript
 // ❌ 誤った実装例
-import { IsDateString, IsNotEmpty, ValidateIf } from 'class-validator';
+import { IsDateString, IsNotEmpty, ValidateIf } from "class-validator";
 
 export class GetInstitutionSummaryDto {
   @IsDateString()
@@ -1339,9 +1340,9 @@ import {
   ValidatorConstraintInterface,
   ValidationArguments,
   Validate,
-} from 'class-validator';
+} from "class-validator";
 
-@ValidatorConstraint({ name: 'isEndDateAfterStartDate', async: false })
+@ValidatorConstraint({ name: "isEndDateAfterStartDate", async: false })
 export class IsEndDateAfterStartDateConstraint implements ValidatorConstraintInterface {
   validate(endDate: string, args: ValidationArguments): boolean {
     const object = args.object as GetInstitutionSummaryDto;
@@ -1353,7 +1354,7 @@ export class IsEndDateAfterStartDateConstraint implements ValidatorConstraintInt
   }
 
   defaultMessage(args: ValidationArguments): string {
-    return 'endDate must be after or equal to startDate';
+    return "endDate must be after or equal to startDate";
   }
 }
 
@@ -1549,7 +1550,7 @@ export class GetInstitutionSummaryDto {
 ```typescript
 // ✅ 正しい例: カスタムバリデーターの定義も含めて完全な型定義を記載
 // カスタムバリデーター（フィールド間の相関チェック用）
-@ValidatorConstraint({ name: 'isEndDateAfterStartDate', async: false })
+@ValidatorConstraint({ name: "isEndDateAfterStartDate", async: false })
 export class IsEndDateAfterStartDateConstraint implements ValidatorConstraintInterface {
   // ... 実装
 }
@@ -1829,7 +1830,9 @@ setStatusRecords(recordsMap);
 // ❌ 悪い例: Mapから配列に変換する際、順序が不定
 const recordsMap = await this.getPaymentStatusesUseCase.execute(cardSummaryIds);
 
-const records = Array.from(recordsMap.values()).map((record) => toPaymentStatusResponseDto(record));
+const records = Array.from(recordsMap.values()).map((record) =>
+  toPaymentStatusResponseDto(record),
+);
 
 return {
   success: true,
@@ -1886,7 +1889,10 @@ return {
 #### ❌ 脆弱な実装
 
 ```typescript
-if (error instanceof Error && error.message === 'Transaction fetch was cancelled') {
+if (
+  error instanceof Error &&
+  error.message === "Transaction fetch was cancelled"
+) {
   // キャンセル処理
 }
 ```
@@ -1900,9 +1906,9 @@ if (error instanceof Error && error.message === 'Transaction fetch was cancelled
 
 ```typescript
 export class CancellationError extends Error {
-  constructor(message: string = 'Operation was cancelled') {
+  constructor(message: string = "Operation was cancelled") {
     super(message);
-    this.name = 'CancellationError';
+    this.name = "CancellationError";
     Error.captureStackTrace?.(this, CancellationError);
   }
 }
@@ -1965,14 +1971,14 @@ constructor(
 
 ```typescript
 enum InstitutionType {
-  CREDIT_CARD = 'credit_card', // アンダースコア
+  CREDIT_CARD = "credit_card", // アンダースコア
 }
-type SyncTarget = 'credit-card'; // ハイフン
+type SyncTarget = "credit-card"; // ハイフン
 
 // 変換関数が必要
-function convertInstitutionType(type: InstitutionType): 'credit-card' {
+function convertInstitutionType(type: InstitutionType): "credit-card" {
   if (type === InstitutionType.CREDIT_CARD) {
-    return 'credit-card';
+    return "credit-card";
   }
   throw new Error(`Unsupported institution type: ${type}`);
 }
@@ -1988,7 +1994,7 @@ function convertInstitutionType(type: InstitutionType): 'credit-card' {
 
 ```typescript
 enum InstitutionType {
-  CREDIT_CARD = 'credit-card', // ハイフンで統一
+  CREDIT_CARD = "credit-card", // ハイフンで統一
 }
 type SyncTarget = InstitutionType; // 直接使用可能
 
@@ -2025,7 +2031,7 @@ try {
   if (error instanceof CancellationError) {
     // キャンセル処理（早期return）
     syncHistory = syncHistory.markAsCancelled();
-    return { status: 'CANCELLED' };
+    return { status: "CANCELLED" };
   }
   // その他のエラーはFAILED
   syncHistory = syncHistory.markAsFailed(error.message);
@@ -2073,9 +2079,11 @@ pnpm --filter @account-book/backend test sync-all-transactions.use-case.spec
 #### ❌ useCase.executeが2回呼び出される（非効率）
 
 ```typescript
-await expect(useCase.execute({ creditCardId })).rejects.toThrow(NotFoundException);
 await expect(useCase.execute({ creditCardId })).rejects.toThrow(
-  `Credit card not found with ID: ${creditCardId}`
+  NotFoundException,
+);
+await expect(useCase.execute({ creditCardId })).rejects.toThrow(
+  `Credit card not found with ID: ${creditCardId}`,
 );
 ```
 
@@ -2088,7 +2096,7 @@ await expect(useCase.execute({ creditCardId })).rejects.toThrow(
 
 ```typescript
 await expect(useCase.execute({ creditCardId })).rejects.toThrow(
-  new NotFoundException(`Credit card not found with ID: ${creditCardId}`)
+  new NotFoundException(`Credit card not found with ID: ${creditCardId}`),
 );
 ```
 
@@ -2101,8 +2109,8 @@ await expect(useCase.execute({ creditCardId })).rejects.toThrow(
 ```typescript
 export function createTestCreditCard(overrides?: Partial<CreditCardEntity>) {
   return new CreditCardEntity(
-    overrides?.id || 'cc_test_123',
-    overrides?.cardName || 'テストカード'
+    overrides?.id || "cc_test_123",
+    overrides?.cardName || "テストカード",
     // ...デフォルト値
   );
 }
@@ -2247,10 +2255,12 @@ export class ClassifySubcategoryUseCase {
     @Inject(SUB_CATEGORY_REPOSITORY)
     private readonly subcategoryRepository: ISubcategoryRepository,
     @Inject(MERCHANT_REPOSITORY)
-    private readonly merchantRepository: IMerchantRepository
+    private readonly merchantRepository: IMerchantRepository,
   ) {}
 
-  async execute(dto: ClassifySubcategoryDto): Promise<ClassifySubcategoryResult> {
+  async execute(
+    dto: ClassifySubcategoryDto,
+  ): Promise<ClassifySubcategoryResult> {
     // ...
 
     const merchantId = classification.getMerchantId();
@@ -2261,7 +2271,7 @@ export class ClassifySubcategoryUseCase {
       } else {
         // データ不整合を警告ログで記録
         this.logger.warn(
-          `Merchant with ID ${merchantId} not found, but was returned by classifier.`
+          `Merchant with ID ${merchantId} not found, but was returned by classifier.`,
         );
       }
     }
@@ -2317,7 +2327,13 @@ return {
 
 ```typescript
 // createdAt/updatedAtを除外し、id/nameをリネーム
-const { id, name, createdAt: _createdAt, updatedAt: _updatedAt, ...rest } = subcategory;
+const {
+  id,
+  name,
+  createdAt: _createdAt,
+  updatedAt: _updatedAt,
+  ...rest
+} = subcategory;
 
 return {
   subcategoryId: id,
@@ -2400,7 +2416,7 @@ const updatedInstitution = new InstitutionEntity(
   existingInstitution.id,
   name,
   type,
-  credentials
+  credentials,
   // ...
 );
 ```
@@ -2418,7 +2434,7 @@ const updatedInstitution = new InstitutionEntity(
   existingInstitution.id,
   dto.name ?? existingInstitution.name,
   dto.type ?? existingInstitution.type,
-  credentials
+  credentials,
   // ...
 );
 ```
@@ -2435,12 +2451,12 @@ const updatedInstitution = new InstitutionEntity(
 
 ```typescript
 // ❌ 悪い例: 冗長な状態更新
-const [currentStep, setCurrentStep] = useState<'select' | 'input'>('select');
+const [currentStep, setCurrentStep] = useState<"select" | "input">("select");
 
 useEffect(() => {
   // ...
   if (data.type === InstitutionType.BANK) {
-    setCurrentStep('select'); // 既に'select'で初期化されている
+    setCurrentStep("select"); // 既に'select'で初期化されている
   }
 }, [data]);
 ```
@@ -2449,7 +2465,7 @@ useEffect(() => {
 
 ```typescript
 // ✅ 良い例: 冗長な更新を削除
-const [currentStep, setCurrentStep] = useState<'select' | 'input'>('select');
+const [currentStep, setCurrentStep] = useState<"select" | "input">("select");
 
 useEffect(() => {
   // ...
@@ -2472,7 +2488,7 @@ useEffect(() => {
 const [institution, setInstitution] = useState<Institution | null>(null);
 const [loading, setLoading] = useState<boolean>(true);
 const [error, setError] = useState<string | null>(null);
-const [currentStep, setCurrentStep] = useState<'select' | 'input'>('select');
+const [currentStep, setCurrentStep] = useState<"select" | "input">("select");
 // ... さらに多くの状態
 ```
 
@@ -2484,18 +2500,18 @@ type State = {
   institution: Institution | null;
   loading: boolean;
   error: string | null;
-  currentStep: 'select' | 'input';
+  currentStep: "select" | "input";
 };
 
 type Action =
-  | { type: 'SET_INSTITUTION'; payload: Institution }
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_STEP'; payload: 'select' | 'input' };
+  | { type: "SET_INSTITUTION"; payload: Institution }
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "SET_ERROR"; payload: string | null }
+  | { type: "SET_STEP"; payload: "select" | "input" };
 
 const reducer = (state: State, action: Action): State => {
   switch (action.type) {
-    case 'SET_INSTITUTION':
+    case "SET_INSTITUTION":
       return { ...state, institution: action.payload };
     // ...
   }
@@ -2525,11 +2541,13 @@ const [state, dispatch] = useReducer(reducer, initialState);
 **問題**: Rate Limit対策の定数が定義されているが、実際には使用されていない。
 
 **解決策**:
+
 - Rate Limitエラー時に自動リトライするデコレータを実装
 - リセット時刻を確認し、適切な待機時間を計算
 - 指数バックオフを実装してAPI負荷を軽減
 
 **実装例**:
+
 ```python
 def _retry_on_rate_limit(func: Callable) -> Callable:
     """Rate Limitエラー時にリトライするデコレータ"""
@@ -2560,17 +2578,19 @@ def _retry_on_rate_limit(func: Callable) -> Callable:
 **問題**: `RateLimitError`が発生した際に、リセット時刻などの詳細情報が例外に設定されていない。
 
 **解決策**:
+
 - `gh api`コマンドに`--include`フラグを追加してHTTPヘッダーを取得
 - `x-ratelimit-remaining`, `x-ratelimit-reset`, `x-ratelimit-limit`をパース
 - これらの情報を`RateLimitError`に渡す
 
 **実装例**:
+
 ```python
 def _run_gh_command_with_headers(...) -> tuple[subprocess.CompletedProcess, dict[str, str]]:
     """HTTPヘッダーも取得するGitHub CLIコマンド実行関数"""
     command = ["gh"] + command + ["--include"]
     result = subprocess.run(...)
-    
+
     # HTTPヘッダーをパース
     headers = {}
     if result.stdout:
@@ -2581,12 +2601,12 @@ def _run_gh_command_with_headers(...) -> tuple[subprocess.CompletedProcess, dict
                 if ":" in line:
                     key, value = line.split(":", 1)
                     headers[key.strip().lower()] = value.strip()
-    
+
     # Rate Limit情報を抽出
     rate_limit_reset = int(headers.get("x-ratelimit-reset", 0)) if "x-ratelimit-reset" in headers else None
     rate_limit_remaining = int(headers.get("x-ratelimit-remaining", 0)) if "x-ratelimit-remaining" in headers else None
     rate_limit_limit = int(headers.get("x-ratelimit-limit", 0)) if "x-ratelimit-limit" in headers else None
-    
+
     if rate_limit_remaining == 0:
         raise RateLimitError(
             "GitHub API rate limit exceeded",
@@ -2605,17 +2625,19 @@ def _run_gh_command_with_headers(...) -> tuple[subprocess.CompletedProcess, dict
 **問題**: GraphQLクエリで`items(first: 200)`とハードコードされており、ページネーションが実装されていない。
 
 **解決策**:
+
 - `pageInfo` (`hasNextPage`, `endCursor`) を使用して、すべてのアイテムをループで取得
 - ページサイズを適切に設定（例: 100）
 - すべてのアイテムを取得するまでループを継続
 
 **実装例**:
+
 ```python
 def get_project_item_id(project_id: str, issue_node_id: str, token: Optional[str] = None) -> Optional[str]:
     """Project Item IDを取得する（ページネーション対応）"""
     cursor = None
     page_size = 100
-    
+
     while True:
         query = """
         query($projectId: ID!, $first: Int!, $after: String) {
@@ -2642,27 +2664,28 @@ def get_project_item_id(project_id: str, issue_node_id: str, token: Optional[str
         variables = {"projectId": project_id, "first": page_size}
         if cursor:
             variables["after"] = cursor
-        
+
         data = _run_graphql_query(query, variables, token)
         items_data = data.get("node", {}).get("items", {})
         items = items_data.get("nodes", [])
         page_info = items_data.get("pageInfo", {})
-        
+
         # 現在のページで検索
         for item in items:
             if item.get("content", {}).get("id") == issue_node_id:
                 return item.get("id")
-        
+
         # 次のページがあるか確認
         if not page_info.get("hasNextPage", False):
             break
-        
+
         cursor = page_info.get("endCursor")
-    
+
     return None
 ```
 
 **適用箇所**:
+
 - `get_project_item_id()` - Project Item ID取得
 - `get_project_items()` - プロジェクトアイテム取得
 - `create_issue()` - ラベル取得部分
@@ -2676,10 +2699,12 @@ def get_project_item_id(project_id: str, issue_node_id: str, token: Optional[str
 **問題**: `_run_gh_command`関数が`github.py`と`pr.py`で重複している。また、同様の`_run_git_command`関数も`commit.py`と`repository.py`で重複している。
 
 **解決策**:
+
 - 共通のヘルパー関数を`_common.py`のような共通モジュールに一元化
 - コードの重複をなくすことで、保守性を大幅に向上
 
 **実装例**:
+
 ```python
 # scripts/utils/git/_common.py
 def _run_gh_command(
@@ -2690,6 +2715,7 @@ def _run_gh_command(
 ```
 
 **使用例**:
+
 ```python
 # scripts/utils/git/pr.py
 from scripts.utils.git._common import _run_gh_command
@@ -2707,10 +2733,12 @@ from scripts.utils.git._common import _run_gh_command, _run_gh_command_with_head
 **問題**: `except Exception as e:`は非常に広範な例外キャッチであり、予期しないエラーを隠蔽してしまう可能性がある。
 
 **解決策**:
+
 - より具体的な例外をキャッチするように修正
 - `GitError`など、適切な例外クラスを指定
 
 **実装例**:
+
 ```python
 # ❌ 悪い例
 try:
@@ -2734,10 +2762,12 @@ except (GitError, RateLimitError) as e:
 **問題**: `get_issue`関数の`include_project`パラメータが関数内で使用されていない。
 
 **解決策**:
+
 - パラメータが不要であれば削除
 - もし特定の条件下でプロジェクト情報を取得する意図があるなら、そのロジックを実装
 
 **実装例**:
+
 ```python
 def get_issue(
     repo_owner: str,
@@ -2750,7 +2780,7 @@ def get_issue(
     json_fields = "number,title,body,state,url,assignees,labels"
     if include_project:
         json_fields += ",projectItems"  # パラメータを使用
-    
+
     command = [
         "issue",
         "view",
@@ -2772,11 +2802,13 @@ def get_issue(
 **問題**: `commit.py`で`GitError`がインポートされているが使用されていない。一方で、`push_changes`関数内で使用されている`AuthenticationError`がトップレベルでインポートされていない。
 
 **解決策**:
+
 - 未使用の`GitError`を削除
 - `AuthenticationError`をトップレベルのインポートに追加
 - ローカルインポートを削除
 
 **実装例**:
+
 ```python
 # ❌ 悪い例
 from scripts.utils.git.exceptions import (
@@ -2805,15 +2837,19 @@ from scripts.utils.git.exceptions import (
 **問題**: `github.py`モジュールのドキュメントが不足している。
 
 **解決策**:
+
 - `README.md`に`github.py`の説明を追加
 - 主要な関数と使用例を記載
 
 **実装例**:
+
 ```markdown
 ### github.py
+
 GitHub Issue操作とProject操作を提供します。
 
 **主要関数**:
+
 - **Issue操作**:
   - `create_issue()`: Issue作成
   - `get_issue()`: Issue情報取得
@@ -3029,15 +3065,15 @@ async findOne(@Param('id') id: string): Promise<CategoryResponseDto> {
 #### ✅ 正しいパターン: 専用ユースケースを定義
 
 ```typescript
-@Controller('categories')
+@Controller("categories")
 export class CategoryController {
   constructor(
     private readonly getCategoriesUseCase: GetCategoriesUseCase,
-    private readonly getCategoryByIdUseCase: GetCategoryByIdUseCase
+    private readonly getCategoryByIdUseCase: GetCategoryByIdUseCase,
   ) {}
 
-  @Get(':id')
-  async findOne(@Param('id') id: string): Promise<CategoryResponseDto> {
+  @Get(":id")
+  async findOne(@Param("id") id: string): Promise<CategoryResponseDto> {
     const result = await this.getCategoryByIdUseCase.execute(id);
     return CategoryResponseDto.fromEntity(result);
   }
@@ -3158,7 +3194,7 @@ interface CategoryUsageResponse {
 ```typescript
 // 各IDに対して追加APIコールが必要（N+1問題）
 const transactionDetails = await Promise.all(
-  transactionIds.map((id) => fetchTransactionDetail(id))
+  transactionIds.map((id) => fetchTransactionDetail(id)),
 );
 ```
 
@@ -3495,7 +3531,9 @@ private async checkDuplicate(
 
 ```typescript
 await expect(useCase.execute(request)).rejects.toThrow(ConflictException);
-await expect(useCase.execute(request)).rejects.toThrow('同名の費目が既に存在します');
+await expect(useCase.execute(request)).rejects.toThrow(
+  "同名の費目が既に存在します",
+);
 // 問題：2回実行される、モック状態が影響
 ```
 
@@ -3503,7 +3541,7 @@ await expect(useCase.execute(request)).rejects.toThrow('同名の費目が既に
 
 ```typescript
 await expect(useCase.execute(request)).rejects.toThrow(
-  new ConflictException('同名の費目が既に存在します')
+  new ConflictException("同名の費目が既に存在します"),
 );
 // 1回の実行で型とメッセージの両方を検証
 ```
@@ -3610,7 +3648,7 @@ await this.aggregationRepository.save(summary);
 // ✅ 既存データをチェックしてUpsert
 const existing = await this.aggregationRepository.findByCardAndMonth(
   summary.cardId,
-  summary.billingMonth
+  summary.billingMonth,
 );
 
 if (existing) {
@@ -3619,7 +3657,7 @@ if (existing) {
     existing.id, // 既存IDを使用
     // ... 他のフィールド
     existing.createdAt, // createdAtは保持
-    new Date() // updatedAtは更新
+    new Date(), // updatedAtは更新
   );
   await this.aggregationRepository.save(updatedSummary);
 } else {
@@ -3672,7 +3710,7 @@ private readonly aggregationRepository: AggregationRepository,
 export class AggregationController {
   constructor(
     @Inject(AGGREGATION_REPOSITORY)
-    private readonly aggregationRepository: AggregationRepository
+    private readonly aggregationRepository: AggregationRepository,
   ) {}
 
   async findAll() {
@@ -3685,7 +3723,7 @@ export class AggregationController {
 export class FindAllSummariesUseCase {
   constructor(
     @Inject(AGGREGATION_REPOSITORY)
-    private readonly aggregationRepository: AggregationRepository
+    private readonly aggregationRepository: AggregationRepository,
   ) {}
 
   async execute(): Promise<MonthlyCardSummary[]> {
@@ -3695,7 +3733,9 @@ export class FindAllSummariesUseCase {
 
 @Controller()
 export class AggregationController {
-  constructor(private readonly findAllSummariesUseCase: FindAllSummariesUseCase) {}
+  constructor(
+    private readonly findAllSummariesUseCase: FindAllSummariesUseCase,
+  ) {}
 
   async findAll() {
     return this.findAllSummariesUseCase.execute();
@@ -3771,7 +3811,9 @@ for (const summary of summaries) {
 }
 
 // ✅ 一括保存（並列実行）
-await Promise.all(summaries.map((summary) => this.aggregationRepository.save(summary)));
+await Promise.all(
+  summaries.map((summary) => this.aggregationRepository.save(summary)),
+);
 ```
 
 **教訓**:
@@ -3793,7 +3835,7 @@ await Promise.all(summaries.map((summary) => this.aggregationRepository.save(sum
 for (const summary of summaries) {
   const existing = await this.aggregationRepository.findByCardAndMonth(
     summary.cardId,
-    summary.billingMonth
+    summary.billingMonth,
   );
   // ...
 }
@@ -3814,9 +3856,11 @@ return summaries;
 const existingSummaries = await this.aggregationRepository.findByCard(
   creditCard.id,
   startMonth,
-  endMonth
+  endMonth,
 );
-const existingSummariesMap = new Map(existingSummaries.map((s) => [s.billingMonth, s]));
+const existingSummariesMap = new Map(
+  existingSummaries.map((s) => [s.billingMonth, s]),
+);
 
 const summariesToSave = summaries.map((summary) => {
   const existing = existingSummariesMap.get(summary.billingMonth);
@@ -3828,7 +3872,9 @@ const summariesToSave = summaries.map((summary) => {
 });
 
 // 一括保存
-await Promise.all(summariesToSave.map((s) => this.aggregationRepository.save(s)));
+await Promise.all(
+  summariesToSave.map((s) => this.aggregationRepository.save(s)),
+);
 
 // 更新後の配列を返す
 return summariesToSave;
@@ -3941,7 +3987,7 @@ useEffect(() => {
 export interface MonthlyCardSummary {
   // ...
 }
-import { apiClient } from './client';
+import { apiClient } from "./client";
 ```
 
 **問題点**:
@@ -3953,7 +3999,7 @@ import { apiClient } from './client';
 
 ```typescript
 // ✅ import文をファイル先頭に配置
-import { apiClient } from './client';
+import { apiClient } from "./client";
 
 export interface MonthlyCardSummary {
   // ...
@@ -4047,7 +4093,7 @@ const PAYMENT_STATUSES: PaymentStatus[] = [
 ```typescript
 // ❌ 冗長なString()比較
 reconciliation.status === ReconciliationStatus.MATCHED ||
-  String(reconciliation.status) === 'matched';
+  String(reconciliation.status) === "matched";
 ```
 
 **問題点**:
@@ -4105,24 +4151,24 @@ const status = await paymentStatusApi.getStatus(summaryId).catch((err) => {
 // ❌ 複数のコンポーネントで同じ関数を重複定義
 // MonthlySummaryCard.tsx
 const formatDate = (date: Date | string): string => {
-  const d = typeof date === 'string' ? new Date(date) : date;
+  const d = typeof date === "string" ? new Date(date) : date;
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 };
 
 // ReconciliationResultCard.tsx
 const formatDate = (date: Date | string | undefined): string => {
-  if (!date) return '';
-  const d = typeof date === 'string' ? new Date(date) : date;
-  if (isNaN(d.getTime())) return '';
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 };
 
 // PaymentStatusCard.tsx
 const formatDate = (date: Date | string | undefined): string => {
-  if (!date) return '';
-  const d = typeof date === 'string' ? new Date(date) : date;
-  if (isNaN(d.getTime())) return '';
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
 };
 ```
 
@@ -4138,21 +4184,21 @@ const formatDate = (date: Date | string | undefined): string => {
 // ✅ 共通ユーティリティファイルに抽出
 // utils/date.utils.ts
 export function formatDate(date: Date | string | undefined): string {
-  if (!date) return '';
-  const d = typeof date === 'string' ? new Date(date) : date;
-  if (isNaN(d.getTime())) return '';
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
 export function formatDateTime(date: Date | string | undefined): string {
-  if (!date) return '';
-  const d = typeof date === 'string' ? new Date(date) : date;
-  if (isNaN(d.getTime())) return '';
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日 ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 // 各コンポーネントからimportして使用
-import { formatDate } from '@/utils/date.utils';
+import { formatDate } from "@/utils/date.utils";
 ```
 
 **教訓**:
@@ -4246,7 +4292,8 @@ private formatYearMonth(year: number, month: number): string {
 
 ```typescript
 // 実装で追加
-const existingSummaries = await this.aggregationRepository.findByCard(/* ... */);
+const existingSummaries =
+  await this.aggregationRepository.findByCard(/* ... */);
 
 // ❌ テストでモック未定義
 // aggregationRepository.findByCard.mockResolvedValue([]);  // 追加忘れ
@@ -4298,7 +4345,7 @@ pnpm build
 ```typescript
 // ❌ 0件をエラー扱い
 if (transactions.length === 0) {
-  throw new NotFoundException('No transactions found for the specified period');
+  throw new NotFoundException("No transactions found for the specified period");
 }
 
 // ✅ 0件は正常、空配列を返す
@@ -4334,7 +4381,7 @@ return new MonthlyCardSummary(
   summary.netPaymentAmount,
   summary.status,
   existing.createdAt,
-  new Date()
+  new Date(),
 );
 
 // ✅ toPlain/fromPlainで簡潔かつ堅牢
@@ -4361,7 +4408,7 @@ return MonthlyCardSummary.fromPlain({
 ```typescript
 // ❌ 手動生成（一貫性欠如）
 const categoryBreakdown = ormEntity.categoryBreakdown.map(
-  (item) => new CategoryAmount(item.category, item.amount, item.count)
+  (item) => new CategoryAmount(item.category, item.amount, item.count),
 );
 
 // 手動変換
@@ -4373,10 +4420,14 @@ const categoryBreakdown = domain.categoryBreakdown.map((item) => ({
 
 // ✅ 統一：VOのメソッド活用
 // ORM→Domain
-const categoryBreakdown = ormEntity.categoryBreakdown.map((item) => CategoryAmount.fromPlain(item));
+const categoryBreakdown = ormEntity.categoryBreakdown.map((item) =>
+  CategoryAmount.fromPlain(item),
+);
 
 // Domain→Plain
-const categoryBreakdown = domain.categoryBreakdown.map((item) => item.toPlain());
+const categoryBreakdown = domain.categoryBreakdown.map((item) =>
+  item.toPlain(),
+);
 ```
 
 **教訓**:
@@ -4399,7 +4450,11 @@ const nextYear = nextMonth > 11 ? year + 1 : year;
 const actualMonth = nextMonth > 11 ? 0 : nextMonth;
 
 // ✅ Date APIの自動処理活用
-const firstDayOfNextMonth = new Date(closingDate.getFullYear(), closingDate.getMonth() + 1, 1);
+const firstDayOfNextMonth = new Date(
+  closingDate.getFullYear(),
+  closingDate.getMonth() + 1,
+  1,
+);
 const year = firstDayOfNextMonth.getFullYear();
 const month = firstDayOfNextMonth.getMonth();
 ```
@@ -4608,7 +4663,10 @@ private async getValidRecordForTransition(
 ```typescript
 // ✅ 正しい実装
 export class PaymentStatusRecord {
-  private static readonly ALLOWED_TRANSITIONS: Record<PaymentStatus, PaymentStatus[]> = {
+  private static readonly ALLOWED_TRANSITIONS: Record<
+    PaymentStatus,
+    PaymentStatus[]
+  > = {
     [PaymentStatus.PENDING]: [
       PaymentStatus.PROCESSING,
       PaymentStatus.PARTIAL,
@@ -4682,10 +4740,12 @@ async findAllByStatus(status: PaymentStatus): Promise<PaymentStatusRecord[]> {
 
 ```typescript
 // ✅ 正しい実装
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException } from "@nestjs/common";
 
 if (!currentRecord.canTransitionTo(newStatus)) {
-  throw new BadRequestException(`Cannot transition from ${currentRecord.status} to ${newStatus}`);
+  throw new BadRequestException(
+    `Cannot transition from ${currentRecord.status} to ${newStatus}`,
+  );
 }
 ```
 
@@ -5452,7 +5512,8 @@ catch (error) {
 #### ✅ 正しいパターン: 定数として定義して再利用
 
 ```typescript
-const DEFAULT_SAVE_ERROR_MESSAGE = '銀行の登録に失敗しました。もう一度お試しください。';
+const DEFAULT_SAVE_ERROR_MESSAGE =
+  "銀行の登録に失敗しました。もう一度お試しください。";
 
 try {
   // ...
@@ -5510,13 +5571,16 @@ validate(
 #### ✅ 正しいパターン: 静的プロパティとして定義
 
 ```typescript
-@ValidatorConstraint({ name: 'isValidBankCredentials', async: false })
+@ValidatorConstraint({ name: "isValidBankCredentials", async: false })
 export class IsValidBankCredentialsConstraint implements ValidatorConstraintInterface {
   private static readonly bankCodePattern = /^\d{4}$/;
   private static readonly branchCodePattern = /^\d{3}$/;
   private static readonly accountNumberPattern = /^\d{7}$/;
 
-  validate(credentials: Record<string, unknown> | undefined, args: ValidationArguments): boolean {
+  validate(
+    credentials: Record<string, unknown> | undefined,
+    args: ValidationArguments,
+  ): boolean {
     // 静的プロパティとして定義された正規表現を再利用
     return (
       IsValidBankCredentialsConstraint.bankCodePattern.test(bankCode) &&
@@ -5802,7 +5866,8 @@ interface ITransactionRepository {
 }
 
 // 使用例
-const relatedTransactions = await this.transactionRepository.findByIds(transactionIds);
+const relatedTransactions =
+  await this.transactionRepository.findByIds(transactionIds);
 ```
 
 **教訓**:
@@ -5900,19 +5965,22 @@ return {
 // ✅ 正しいパターン
 export class GetEventsByDateRangeQueryDto {
   @ApiProperty({
-    description: '開始日（ISO 8601形式: YYYY-MM-DD）',
-    example: '2025-01-01',
+    description: "開始日（ISO 8601形式: YYYY-MM-DD）",
+    example: "2025-01-01",
   })
-  @IsNotEmpty({ message: 'startDateは必須です' })
-  @IsDateString({}, { message: 'startDateは有効な日付形式である必要があります' })
+  @IsNotEmpty({ message: "startDateは必須です" })
+  @IsDateString(
+    {},
+    { message: "startDateは有効な日付形式である必要があります" },
+  )
   startDate!: string;
 
   @ApiProperty({
-    description: '終了日（ISO 8601形式: YYYY-MM-DD）',
-    example: '2025-12-31',
+    description: "終了日（ISO 8601形式: YYYY-MM-DD）",
+    example: "2025-12-31",
   })
-  @IsNotEmpty({ message: 'endDateは必須です' })
-  @IsDateString({}, { message: 'endDateは有効な日付形式である必要があります' })
+  @IsNotEmpty({ message: "endDateは必須です" })
+  @IsDateString({}, { message: "endDateは有効な日付形式である必要があります" })
   endDate!: string;
 }
 ```
@@ -5939,11 +6007,11 @@ export class GetEventsByDateRangeQueryDto {
 // ✅ 正しいパターン
 export class LinkTransactionRequestDto {
   @ApiProperty({
-    description: '取引ID',
-    example: 'txn_123',
+    description: "取引ID",
+    example: "txn_123",
   })
   @IsString()
-  @IsNotEmpty({ message: 'transactionIdは必須です' })
+  @IsNotEmpty({ message: "transactionIdは必須です" })
   transactionId!: string;
 }
 ```
@@ -6020,9 +6088,11 @@ export class EventEntity {
 
 ```typescript
 // ❌ 悪い例: 曖昧なアサーション
-expect(getEventResponse.body.data.relatedTransactions.length).toBeGreaterThanOrEqual(1);
+expect(
+  getEventResponse.body.data.relatedTransactions.length,
+).toBeGreaterThanOrEqual(1);
 expect(getEventResponse.body.data.relatedTransactions).not.toContain(
-  expect.objectContaining({ id: createdTransactionId })
+  expect.objectContaining({ id: createdTransactionId }),
 );
 
 // ✅ 良い例: 明確なアサーション
@@ -6066,24 +6136,26 @@ app.useGlobalPipes(
       const messages = errors.map((error) => {
         const field = error.property;
         const constraints = error.constraints
-          ? Object.values(error.constraints).join(', ')
-          : 'Validation failed';
+          ? Object.values(error.constraints).join(", ")
+          : "Validation failed";
 
         // ネストされたプロパティのエラーも処理
         if (error.children && error.children.length > 0) {
           const nestedMessages = error.children
             .map((child) => {
               const childConstraints = child.constraints
-                ? Object.values(child.constraints).join(', ')
-                : '';
-              return childConstraints ? `${child.property}: ${childConstraints}` : '';
+                ? Object.values(child.constraints).join(", ")
+                : "";
+              return childConstraints
+                ? `${child.property}: ${childConstraints}`
+                : "";
             })
             .filter((msg) => msg.length > 0);
 
           if (nestedMessages.length > 0) {
             return {
               field,
-              message: `${constraints} (${nestedMessages.join('; ')})`,
+              message: `${constraints} (${nestedMessages.join("; ")})`,
             };
           }
         }
@@ -6096,7 +6168,7 @@ app.useGlobalPipes(
 
       return new BadRequestException({ message: messages });
     },
-  })
+  }),
 );
 ```
 
@@ -6129,7 +6201,7 @@ app.useGlobalPipes(
 ```typescript
 // ❌ 悪い例: 文字列マッチングによるエラー分類
 if (exception instanceof Error) {
-  if (exception.message.includes('not found')) {
+  if (exception.message.includes("not found")) {
     return new NotFoundException({ message: exception.message });
   }
 }
@@ -6290,8 +6362,8 @@ const dailyData = useMemo(() => {
 
   // 取引を処理するヘルパー関数
   const processTransactions = (
-    transactions: MonthlyBalanceResponse['income']['transactions'],
-    type: 'income' | 'expense'
+    transactions: MonthlyBalanceResponse["income"]["transactions"],
+    type: "income" | "expense",
   ): void => {
     for (const transaction of transactions) {
       const date = new Date(transaction.date);
@@ -6308,8 +6380,8 @@ const dailyData = useMemo(() => {
   };
 
   // 収入と支出の取引を処理
-  processTransactions(data.income.transactions, 'income');
-  processTransactions(data.expense.transactions, 'expense');
+  processTransactions(data.income.transactions, "income");
+  processTransactions(data.expense.transactions, "expense");
   // ...
 }, [data]);
 ```
@@ -6358,7 +6430,10 @@ interface CustomTooltipProps {
   payload?: Array<{ name: string; value: number; color: string }>;
 }
 
-const CustomTooltip = ({ active, payload }: CustomTooltipProps): React.JSX.Element | null => {
+const CustomTooltip = ({
+  active,
+  payload,
+}: CustomTooltipProps): React.JSX.Element | null => {
   // ...
 };
 ```
@@ -6747,14 +6822,14 @@ const YEAR_SELECTION_OFFSET = 5; // 現在年から前後何年まで表示す�
 **❌ 悪い例**:
 
 ```typescript
-const monthNum = parseInt(month.month.split('-')[1] || '1', 10);
+const monthNum = parseInt(month.month.split("-")[1] || "1", 10);
 ```
 
 **✅ 良い例**:
 
 ```typescript
 // month.monthはYYYY-MM形式であることが保証されている
-const monthPart = month.month.split('-')[1];
+const monthPart = month.month.split("-")[1];
 if (!monthPart) {
   throw new Error(`Invalid month format: ${month.month}`);
 }
@@ -6830,14 +6905,14 @@ const monthNum = parseInt(monthPart, 10);
 **❌ 悪い例**:
 
 ```typescript
-test('データが空の場合に適切なメッセージが表示される', async ({ page }) => {
+test("データが空の場合に適切なメッセージが表示される", async ({ page }) => {
   // ...
   const hasNoDataMessage = await page
-    .getByText('データがありません')
+    .getByText("データがありません")
     .isVisible()
     .catch(() => false);
   const hasGraph = await page
-    .locator('svg')
+    .locator("svg")
     .first()
     .isVisible()
     .catch(() => false);
@@ -6850,20 +6925,20 @@ test('データが空の場合に適切なメッセージが表示される', as
 **✅ 良い例**:
 
 ```typescript
-test('データが空の年に「データがありません」と表示される', async ({ page }) => {
+test("データが空の年に「データがありません」と表示される", async ({ page }) => {
   // ...
   const hasNoDataMessage = await page
-    .getByText('データがありません')
+    .getByText("データがありません")
     .isVisible()
     .catch(() => false);
 
   if (hasNoDataMessage) {
     // メッセージが表示されていればテスト成功
-    await expect(page.getByText('データがありません')).toBeVisible();
+    await expect(page.getByText("データがありません")).toBeVisible();
   } else {
     // グラフが表示された場合は、テスト対象のデータがないためスキップ
     test.skip(
-      `最も古い年 (${oldestYear}) にデータが存在するため、空データの場合のテストをスキップします。`
+      `最も古い年 (${oldestYear}) にデータが存在するため、空データの場合のテストをスキップします。`,
     );
   }
 });
@@ -6881,14 +6956,14 @@ test('データが空の年に「データがありません」と表示され�
 **❌ 悪い例**:
 
 ```typescript
-test('APIエラー時にエラーメッセージが表示される', async ({ page }) => {
+test("APIエラー時にエラーメッセージが表示される", async ({ page }) => {
   // エラーが発生していない場合は、エラーメッセージは表示されない
-  const errorMessage = page.getByText('年間データの取得に失敗しました');
+  const errorMessage = page.getByText("年間データの取得に失敗しました");
   const errorVisible = await errorMessage.isVisible().catch(() => false);
 
   // エラーが表示されている場合のみ確認（確実にテストできない）
   if (errorVisible) {
-    await expect(page.getByRole('button', { name: '再試行' })).toBeVisible();
+    await expect(page.getByRole("button", { name: "再試行" })).toBeVisible();
   }
 });
 ```
@@ -6896,24 +6971,26 @@ test('APIエラー時にエラーメッセージが表示される', async ({ pa
 **✅ 良い例**:
 
 ```typescript
-test('APIエラー時にエラーメッセージと再試行ボタンが表示される', async ({ page }) => {
+test("APIエラー時にエラーメッセージと再試行ボタンが表示される", async ({
+  page,
+}) => {
   // APIリクエストをインターセプトしてエラーをシミュレート
-  await page.route('**/api/aggregation/yearly-balance*', (route) => {
+  await page.route("**/api/aggregation/yearly-balance*", (route) => {
     void route.abort();
   });
 
   // 年を変更してAPIエラーを発生させる
-  const yearSelect = page.getByLabel('年:');
+  const yearSelect = page.getByLabel("年:");
   const currentYear = new Date().getFullYear();
   const previousYear = currentYear - 1;
   await yearSelect.selectOption(String(previousYear));
 
   // エラーメッセージが表示されるのを待機
-  const errorMessage = page.getByText('年間データの取得に失敗しました');
+  const errorMessage = page.getByText("年間データの取得に失敗しました");
   await expect(errorMessage).toBeVisible();
 
   // 再試行ボタンが表示されることを確認
-  await expect(page.getByRole('button', { name: '再試行' })).toBeVisible();
+  await expect(page.getByRole("button", { name: "再試行" })).toBeVisible();
 });
 ```
 
@@ -6930,11 +7007,11 @@ test('APIエラー時にエラーメッセージと再試行ボタンが表示�
 **❌ 悪い例**:
 
 ```typescript
-test('エラー時に適切なメッセージが表示される', async ({ page }) => {
+test("エラー時に適切なメッセージが表示される", async ({ page }) => {
   // エラーメッセージの表示要素が存在することを確認
 });
 
-test('APIエラー時にエラーメッセージが表示される', async ({ page }) => {
+test("APIエラー時にエラーメッセージが表示される", async ({ page }) => {
   // 同じ内容をテストしている
 });
 ```
@@ -6943,7 +7020,9 @@ test('APIエラー時にエラーメッセージが表示される', async ({ pa
 
 ```typescript
 // 重複しているテストを1つに統合
-test('APIエラー時にエラーメッセージと再試行ボタンが表示される', async ({ page }) => {
+test("APIエラー時にエラーメッセージと再試行ボタンが表示される", async ({
+  page,
+}) => {
   // APIエラーをモックして確実にテスト
 });
 ```
@@ -6960,9 +7039,9 @@ test('APIエラー時にエラーメッセージと再試行ボタンが表示�
 **❌ 悪い例**:
 
 ```typescript
-test('テスト1', async ({ page }) => {
+test("テスト1", async ({ page }) => {
   const hasNoData = await page
-    .getByText('データがありません')
+    .getByText("データがありません")
     .isVisible()
     .catch(() => false);
   if (hasNoData) {
@@ -6970,9 +7049,9 @@ test('テスト1', async ({ page }) => {
   }
 });
 
-test('テスト2', async ({ page }) => {
+test("テスト2", async ({ page }) => {
   const hasNoData = await page
-    .getByText('データがありません')
+    .getByText("データがありません")
     .isVisible()
     .catch(() => false);
   if (hasNoData) {
@@ -6987,19 +7066,19 @@ test('テスト2', async ({ page }) => {
 // ヘルパー関数を定義
 async function skipIfNoData(page: Page): Promise<void> {
   const noData = await page
-    .getByText('データがありません')
+    .getByText("データがありません")
     .isVisible()
     .catch(() => false);
   if (noData) {
-    test.skip('データがないためテストをスキップします。');
+    test.skip("データがないためテストをスキップします。");
   }
 }
 
-test('テスト1', async ({ page }) => {
+test("テスト1", async ({ page }) => {
   await skipIfNoData(page);
 });
 
-test('テスト2', async ({ page }) => {
+test("テスト2", async ({ page }) => {
   await skipIfNoData(page);
 });
 ```
@@ -7017,10 +7096,10 @@ test('テスト2', async ({ page }) => {
 
 ```typescript
 // 凡例のいずれか1つが存在すればテストが成功してしまう
-const legendText = await page.locator('text').allTextContents();
-const hasIncome = legendText.some((text) => text.includes('収入'));
-const hasExpense = legendText.some((text) => text.includes('支出'));
-const hasBalance = legendText.some((text) => text.includes('収支'));
+const legendText = await page.locator("text").allTextContents();
+const hasIncome = legendText.some((text) => text.includes("収入"));
+const hasExpense = legendText.some((text) => text.includes("支出"));
+const hasBalance = legendText.some((text) => text.includes("収支"));
 
 expect(hasIncome || hasExpense || hasBalance).toBe(true);
 ```
@@ -7029,9 +7108,9 @@ expect(hasIncome || hasExpense || hasBalance).toBe(true);
 
 ```typescript
 // 3つの凡例すべてが表示されることを個別にアサート
-await expect(page.getByText('収入', { exact: true })).toBeVisible();
-await expect(page.getByText('支出', { exact: true })).toBeVisible();
-await expect(page.getByText('収支', { exact: true })).toBeVisible();
+await expect(page.getByText("収入", { exact: true })).toBeVisible();
+await expect(page.getByText("支出", { exact: true })).toBeVisible();
+await expect(page.getByText("収支", { exact: true })).toBeVisible();
 ```
 
 **理由**:
@@ -7047,9 +7126,9 @@ await expect(page.getByText('収支', { exact: true })).toBeVisible();
 
 ```typescript
 // ページ全体のテキストコンテンツを取得（範囲が広すぎる）
-const pageText = await page.textContent('body');
-const hasBalancePositive = pageText?.includes('収支（プラス）') ?? false;
-const hasBalanceNegative = pageText?.includes('収支（マイナス）') ?? false;
+const pageText = await page.textContent("body");
+const hasBalancePositive = pageText?.includes("収支（プラス）") ?? false;
+const hasBalanceNegative = pageText?.includes("収支（マイナス）") ?? false;
 ```
 
 **✅ 良い例**:
@@ -7057,11 +7136,11 @@ const hasBalanceNegative = pageText?.includes('収支（マイナス）') ?? fal
 ```typescript
 // より範囲を限定したセレクタを使用
 const hasBalancePositive = await page
-  .getByText('収支（プラス）')
+  .getByText("収支（プラス）")
   .isVisible()
   .catch(() => false);
 const hasBalanceNegative = await page
-  .getByText('収支（マイナス）')
+  .getByText("収支（マイナス）")
   .isVisible()
   .catch(() => false);
 ```
@@ -7080,11 +7159,13 @@ const hasBalanceNegative = await page
 **❌ 悪い例**:
 
 ```typescript
-test('テスト', async ({ page }) => {
-  await page.waitForSelector('text=読み込み中...', { state: 'hidden' });
-  const noData = await page.getByText('データがありません').isVisible();
-  const error = await page.getByText('年間データの取得に失敗しました').isVisible();
-  await expect(page.getByRole('button', { name: '再試行' })).toBeVisible();
+test("テスト", async ({ page }) => {
+  await page.waitForSelector("text=読み込み中...", { state: "hidden" });
+  const noData = await page.getByText("データがありません").isVisible();
+  const error = await page
+    .getByText("年間データの取得に失敗しました")
+    .isVisible();
+  await expect(page.getByRole("button", { name: "再試行" })).toBeVisible();
 });
 ```
 
@@ -7092,16 +7173,18 @@ test('テスト', async ({ page }) => {
 
 ```typescript
 // 定数定義
-const LOADING_TEXT = '読み込み中...';
-const NO_DATA_TEXT = 'データがありません';
-const API_ERROR_TEXT = '年間データの取得に失敗しました';
-const RETRY_BUTTON_NAME = '再試行';
+const LOADING_TEXT = "読み込み中...";
+const NO_DATA_TEXT = "データがありません";
+const API_ERROR_TEXT = "年間データの取得に失敗しました";
+const RETRY_BUTTON_NAME = "再試行";
 
-test('テスト', async ({ page }) => {
-  await page.waitForSelector(`text=${LOADING_TEXT}`, { state: 'hidden' });
+test("テスト", async ({ page }) => {
+  await page.waitForSelector(`text=${LOADING_TEXT}`, { state: "hidden" });
   const noData = await page.getByText(NO_DATA_TEXT).isVisible();
   const error = await page.getByText(API_ERROR_TEXT).isVisible();
-  await expect(page.getByRole('button', { name: RETRY_BUTTON_NAME })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: RETRY_BUTTON_NAME }),
+  ).toBeVisible();
 });
 ```
 
@@ -7118,27 +7201,27 @@ test('テスト', async ({ page }) => {
 **❌ 悪い例**:
 
 ```typescript
-test('テスト1', async ({ page }) => {
+test("テスト1", async ({ page }) => {
   const hasNoDataMessage = await page
-    .getByText('データがありません')
+    .getByText("データがありません")
     .isVisible()
     .catch(() => false);
   const hasGraph = await page
-    .locator('svg')
+    .locator("svg")
     .first()
     .isVisible()
     .catch(() => false);
   expect(hasNoDataMessage || hasGraph).toBe(true);
 });
 
-test('テスト2', async ({ page }) => {
+test("テスト2", async ({ page }) => {
   // 同じロジックが重複
   const hasNoDataMessage = await page
-    .getByText('データがありません')
+    .getByText("データがありません")
     .isVisible()
     .catch(() => false);
   const hasGraph = await page
-    .locator('svg')
+    .locator("svg")
     .first()
     .isVisible()
     .catch(() => false);
@@ -7156,18 +7239,18 @@ async function expectDataOrGraphDisplayed(page: Page): Promise<void> {
     .isVisible()
     .catch(() => false);
   const hasGraph = await page
-    .locator('svg')
+    .locator("svg")
     .first()
     .isVisible()
     .catch(() => false);
   expect(hasNoDataMessage || hasGraph).toBe(true);
 }
 
-test('テスト1', async ({ page }) => {
+test("テスト1", async ({ page }) => {
   await expectDataOrGraphDisplayed(page);
 });
 
-test('テスト2', async ({ page }) => {
+test("テスト2", async ({ page }) => {
   await expectDataOrGraphDisplayed(page);
 });
 ```
@@ -7186,7 +7269,7 @@ test('テスト2', async ({ page }) => {
 
 ```typescript
 // 正規表現でテキストコンテンツをパース（脆弱）
-const options = await yearSelect.locator('option').allTextContents();
+const options = await yearSelect.locator("option").allTextContents();
 const years = options
   .map((opt) => {
     const match = opt.match(/(\d+)年/);
@@ -7201,7 +7284,7 @@ const years = options
 ```typescript
 // value属性を直接取得（堅牢）
 const optionValues = await yearSelect
-  .locator('option')
+  .locator("option")
   .evaluateAll((options) => options.map((o) => (o as HTMLOptionElement).value));
 const years = optionValues
   .map((v) => parseInt(v, 10))
@@ -7298,8 +7381,8 @@ if (absAmount >= 50000) return 25;
 
 // ✅ 良い例: データ構造として定義
 const thresholds = [
-  { limit: 100000, score: 30, reason: '高額取引（10万円以上）' },
-  { limit: 50000, score: 25, reason: '高額取引（5万円以上）' },
+  { limit: 100000, score: 30, reason: "高額取引（10万円以上）" },
+  { limit: 50000, score: 25, reason: "高額取引（5万円以上）" },
   // ...
 ];
 ```
@@ -7422,7 +7505,11 @@ private calculateSummary(transactions: TransactionEntity[]): {
 ```typescript
 // ❌ 悪い例: PR説明で「カテゴリマッチ20点」と記載されているのに、実装では15点
 // 関連カテゴリ名に含まれる場合は15点
-if (relatedCategoryNames.some((relatedName) => categoryName.includes(relatedName.toLowerCase()))) {
+if (
+  relatedCategoryNames.some((relatedName) =>
+    categoryName.includes(relatedName.toLowerCase()),
+  )
+) {
   return {
     score: 15, // PR説明では20点と記載されている
     reason: `カテゴリが関連（${transaction.category.name}）`,
@@ -7431,7 +7518,11 @@ if (relatedCategoryNames.some((relatedName) => categoryName.includes(relatedName
 
 // ✅ 良い例: 仕様と実装を一致させる
 // 関連カテゴリ名に含まれる場合は20点
-if (relatedCategoryNames.some((relatedName) => categoryName.includes(relatedName.toLowerCase()))) {
+if (
+  relatedCategoryNames.some((relatedName) =>
+    categoryName.includes(relatedName.toLowerCase()),
+  )
+) {
   return {
     score: 20, // PR説明と一致
     reason: `カテゴリが関連（${transaction.category.name}）`,
@@ -7455,34 +7546,34 @@ if (relatedCategoryNames.some((relatedName) => categoryName.includes(relatedName
 // ❌ 悪い例: 冗長なキーワードが含まれている
 const mapping: Record<EventCategory, string[]> = {
   [EventCategory.TRAVEL]: [
-    '交通費', // '交通'でマッチするため冗長
-    '宿泊費', // '宿泊'でマッチするため冗長
-    '飲食費', // '飲食'でマッチするため冗長
-    '娯楽費', // '娯楽'でマッチするため冗長
-    '交通',
-    '宿泊',
-    '飲食',
-    '娯楽',
+    "交通費", // '交通'でマッチするため冗長
+    "宿泊費", // '宿泊'でマッチするため冗長
+    "飲食費", // '飲食'でマッチするため冗長
+    "娯楽費", // '娯楽'でマッチするため冗長
+    "交通",
+    "宿泊",
+    "飲食",
+    "娯楽",
   ],
   [EventCategory.EDUCATION]: [
-    '教育費', // '教育'でマッチするため冗長
-    '書籍費', // '書籍'でマッチするため冗長
-    '文具費', // '文具'でマッチするため冗長
-    '教育',
-    '書籍',
-    '文具',
+    "教育費", // '教育'でマッチするため冗長
+    "書籍費", // '書籍'でマッチするため冗長
+    "文具費", // '文具'でマッチするため冗長
+    "教育",
+    "書籍",
+    "文具",
   ],
   // ...
 };
 
 // ✅ 良い例: 短いキーワードのみを残す
 const mapping: Record<EventCategory, string[]> = {
-  [EventCategory.TRAVEL]: ['交通', '宿泊', '飲食', '娯楽'],
-  [EventCategory.EDUCATION]: ['教育', '書籍', '文具'],
-  [EventCategory.PURCHASE]: ['家具', '家電', '自動車', '住宅', '購入'],
-  [EventCategory.MEDICAL]: ['医療', '薬', '健康診断'],
-  [EventCategory.LIFE_EVENT]: ['結婚', '出産', '引越'],
-  [EventCategory.INVESTMENT]: ['投資', '証券'],
+  [EventCategory.TRAVEL]: ["交通", "宿泊", "飲食", "娯楽"],
+  [EventCategory.EDUCATION]: ["教育", "書籍", "文具"],
+  [EventCategory.PURCHASE]: ["家具", "家電", "自動車", "住宅", "購入"],
+  [EventCategory.MEDICAL]: ["医療", "薬", "健康診断"],
+  [EventCategory.LIFE_EVENT]: ["結婚", "出産", "引越"],
+  [EventCategory.INVESTMENT]: ["投資", "証券"],
   [EventCategory.OTHER]: [],
 };
 ```
@@ -7951,12 +8042,12 @@ interface AccountAssetDto {
 
 // ✅ 良い例: enum型
 export enum AccountType {
-  SAVINGS = 'SAVINGS',
-  TIME_DEPOSIT = 'TIME_DEPOSIT',
-  CREDIT_CARD = 'CREDIT_CARD',
-  STOCK = 'STOCK',
-  MUTUAL_FUND = 'MUTUAL_FUND',
-  OTHER = 'OTHER',
+  SAVINGS = "SAVINGS",
+  TIME_DEPOSIT = "TIME_DEPOSIT",
+  CREDIT_CARD = "CREDIT_CARD",
+  STOCK = "STOCK",
+  MUTUAL_FUND = "MUTUAL_FUND",
+  OTHER = "OTHER",
 }
 
 interface AccountAssetDto {
@@ -8036,16 +8127,16 @@ classDiagram
 ```typescript
 // ❌ 悪い例: 既存コードと異なる値
 export enum InstitutionType {
-  BANK = 'BANK', // 既存コードでは 'bank'
-  CREDIT_CARD = 'CREDIT_CARD', // 既存コードでは 'credit-card'
-  SECURITIES = 'SECURITIES', // 既存コードでは 'securities'
+  BANK = "BANK", // 既存コードでは 'bank'
+  CREDIT_CARD = "CREDIT_CARD", // 既存コードでは 'credit-card'
+  SECURITIES = "SECURITIES", // 既存コードでは 'securities'
 }
 
 // ✅ 良い例: 既存コードに合わせる
 export enum InstitutionType {
-  BANK = 'bank',
-  CREDIT_CARD = 'credit-card',
-  SECURITIES = 'securities',
+  BANK = "bank",
+  CREDIT_CARD = "credit-card",
+  SECURITIES = "securities",
 }
 ```
 
@@ -8245,7 +8336,7 @@ export interface InstitutionAssetDto {
 }
 
 // ✅ 良い例: enum型を使用
-import { InstitutionType } from '@account-book/types';
+import { InstitutionType } from "@account-book/types";
 
 export interface InstitutionAssetDto {
   institutionType: InstitutionType;
@@ -8274,7 +8365,7 @@ export interface InstitutionAssetDto {
 
 ```typescript
 // ❌ 悪い例: new Date()を直接使用
-it('should use current date when asOfDate is not provided', async () => {
+it("should use current date when asOfDate is not provided", async () => {
   const beforeExecute = new Date();
   const result = await useCase.execute();
   const afterExecute = new Date();
@@ -8285,8 +8376,8 @@ it('should use current date when asOfDate is not provided', async () => {
 });
 
 // ✅ 良い例: jest.useFakeTimers()で時刻を固定
-it('should use current date when asOfDate is not provided', async () => {
-  const mockDate = new Date('2025-01-20T10:00:00.000Z');
+it("should use current date when asOfDate is not provided", async () => {
+  const mockDate = new Date("2025-01-20T10:00:00.000Z");
   jest.useFakeTimers();
   jest.setSystemTime(mockDate);
 
@@ -8332,7 +8423,7 @@ export interface AssetBalanceResponseDto {
 }
 
 // calculate-asset-balance.use-case.ts
-import type { AssetBalanceResponseDto } from '../../presentation/dto/asset-balance-response.dto';
+import type { AssetBalanceResponseDto } from "../../presentation/dto/asset-balance-response.dto";
 ```
 
 **理由**:
@@ -8357,21 +8448,21 @@ import type { AssetBalanceResponseDto } from '../../presentation/dto/asset-balan
 
 ```typescript
 // ❌ 悪い例: 順序を考慮しない
-if (name.includes('カード')) {
-  return 'CREDIT_CARD';
+if (name.includes("カード")) {
+  return "CREDIT_CARD";
 }
-if (name.includes('株式')) {
-  return 'STOCK';
+if (name.includes("株式")) {
+  return "STOCK";
 }
 
 // ✅ 良い例: より具体的なキーワードを先に判定
 // 株式は「クレジットカード」より先に判定
-if (name.includes('株式') || name.includes('stock')) {
-  return 'STOCK';
+if (name.includes("株式") || name.includes("stock")) {
+  return "STOCK";
 }
 // カードは最後に判定
-if (name.includes('カード') || name.includes('card')) {
-  return 'CREDIT_CARD';
+if (name.includes("カード") || name.includes("card")) {
+  return "CREDIT_CARD";
 }
 ```
 
@@ -8516,7 +8607,7 @@ export interface AccountAssetDto {
 }
 
 // ✅ 良い例: enum型
-import { AccountType } from '@account-book/types';
+import { AccountType } from "@account-book/types";
 
 export interface AccountAssetDto {
   accountType: AccountType;
@@ -8546,21 +8637,21 @@ export interface AccountAssetDto {
 
 ```typescript
 // get-asset-balance.dto.spec.ts
-import { IsNotFutureDateConstraint } from './get-asset-balance.dto';
+import { IsNotFutureDateConstraint } from "./get-asset-balance.dto";
 
-describe('IsNotFutureDateConstraint', () => {
+describe("IsNotFutureDateConstraint", () => {
   let constraint: IsNotFutureDateConstraint;
 
   beforeEach(() => {
     constraint = new IsNotFutureDateConstraint();
   });
 
-  it('should return false when asOfDate is in the future', () => {
-    const mockDate = new Date('2025-01-20T12:00:00.000Z');
+  it("should return false when asOfDate is in the future", () => {
+    const mockDate = new Date("2025-01-20T12:00:00.000Z");
     jest.useFakeTimers();
     jest.setSystemTime(mockDate);
 
-    const result = constraint.validate('2025-01-21');
+    const result = constraint.validate("2025-01-21");
 
     expect(result).toBe(false);
 
@@ -9243,11 +9334,13 @@ catch (error) {
 ```typescript
 // ❌ 悪い例: idとinstitutionIdの両方で検索
 const existingIndex = allSettings.findIndex(
-  (s) => s.id === settings.id || s.institutionId === settings.institutionId
+  (s) => s.id === settings.id || s.institutionId === settings.institutionId,
 );
 
 // ✅ 良い例: institutionIdのみで検索
-const existingIndex = allSettings.findIndex((s) => s.institutionId === settings.institutionId);
+const existingIndex = allSettings.findIndex(
+  (s) => s.institutionId === settings.institutionId,
+);
 ```
 
 **理由**:
@@ -9355,11 +9448,14 @@ setSettings(updated);
 
 ```typescript
 // ✅ 良い例: APIレスポンスを直接利用
-const updatedSetting = await updateInstitutionSyncSettings(setting.institutionId, request);
+const updatedSetting = await updateInstitutionSyncSettings(
+  setting.institutionId,
+  request,
+);
 
 // 一覧を再取得する代わりに、ローカルstateを更新
 setSettings((currentSettings) =>
-  currentSettings.map((s) => (s.id === updatedSetting.id ? updatedSetting : s))
+  currentSettings.map((s) => (s.id === updatedSetting.id ? updatedSetting : s)),
 );
 ```
 
@@ -9425,23 +9521,28 @@ const getInstitutionName = (institutionId: string): string => {
 
 ```typescript
 // ❌ 悪い例: download.suggestedFilename()のみを使用
-test('CSV形式でエクスポートできる', async () => {
-  const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'CSVエクスポート' }).click();
+test("CSV形式でエクスポートできる", async () => {
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "CSVエクスポート" }).click();
   const download = await downloadPromise;
   const filename = download.suggestedFilename();
   expect(filename).toMatch(/^transactions_.*\.csv$/); // 失敗: "download.csv"が返される
 });
 
 // ✅ 良い例: HTTPレスポンスヘッダーから直接取得
-test('CSV形式でエクスポートできる', async () => {
+test("CSV形式でエクスポートできる", async () => {
   const responsePromise = page.waitForResponse(
-    (response) => response.url().includes('/api/transactions/export') && response.status() === 200
+    (response) =>
+      response.url().includes("/api/transactions/export") &&
+      response.status() === 200,
   );
-  const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'CSVエクスポート' }).click();
-  const [response, download] = await Promise.all([responsePromise, downloadPromise]);
-  const contentDisposition = response.headers()['content-disposition'] || '';
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "CSVエクスポート" }).click();
+  const [response, download] = await Promise.all([
+    responsePromise,
+    downloadPromise,
+  ]);
+  const contentDisposition = response.headers()["content-disposition"] || "";
   if (contentDisposition) {
     const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
     if (filenameMatch && filenameMatch[1]) {
@@ -9500,21 +9601,29 @@ if (quotedMatch && quotedMatch[1]) {
 
 ```typescript
 // ❌ 悪い例: 値オブジェクトを渡す
-const createTransaction = (id: string, date: Date, amount: number): TransactionEntity => {
+const createTransaction = (
+  id: string,
+  date: Date,
+  amount: number,
+): TransactionEntity => {
   return new TransactionEntity(
     id,
     new TransactionDate(date), // 値オブジェクト
-    new Money(amount) // 値オブジェクト
+    new Money(amount), // 値オブジェクト
     // ...
   );
 };
 
 // ✅ 良い例: プリミティブ型を直接渡す
-const createTransaction = (id: string, date: Date, amount: number): TransactionEntity => {
+const createTransaction = (
+  id: string,
+  date: Date,
+  amount: number,
+): TransactionEntity => {
   return new TransactionEntity(
     id,
     date, // Date型を直接
-    amount // number型を直接
+    amount, // number型を直接
     // ...
   );
 };
@@ -9590,7 +9699,8 @@ const transactions = await this.getTransactionsUseCase.execute({
 
 // ✅ 良い例: 分割代入でformatを除外
 const { format: _format, ...getTransactionsQuery } = query;
-const transactions = await this.getTransactionsUseCase.execute(getTransactionsQuery);
+const transactions =
+  await this.getTransactionsUseCase.execute(getTransactionsQuery);
 ```
 
 **理由**:
@@ -9668,15 +9778,15 @@ catch (err) {
 ```typescript
 // ❌ 悪い例: 不要なContent-Typeヘッダー
 const response = await fetch(url, {
-  method: 'GET',
+  method: "GET",
   headers: {
-    'Content-Type': 'application/json', // 不要
+    "Content-Type": "application/json", // 不要
   },
 });
 
 // ✅ 良い例: ヘッダーを削除
 const response = await fetch(url, {
-  method: 'GET',
+  method: "GET",
 });
 ```
 
@@ -9697,20 +9807,20 @@ const response = await fetch(url, {
 ```typescript
 // ❌ 悪い例: if文の繰り返し
 if (params.institutionId) {
-  searchParams.append('institutionId', params.institutionId);
+  searchParams.append("institutionId", params.institutionId);
 }
 if (params.accountId) {
-  searchParams.append('accountId', params.accountId);
+  searchParams.append("accountId", params.accountId);
 }
 // ... 繰り返し
 
 // ✅ 良い例: Object.entries()でループ処理
 for (const [key, value] of Object.entries(params)) {
-  if (key !== 'format' && value !== null && value !== undefined) {
+  if (key !== "format" && value !== null && value !== undefined) {
     searchParams.append(key, String(value));
   }
 }
-searchParams.append('format', params.format);
+searchParams.append("format", params.format);
 ```
 
 **理由**:
@@ -9729,20 +9839,20 @@ searchParams.append('format', params.format);
 
 ```typescript
 // ❌ 悪い例: エラーメッセージの表示を検証していない
-test('エクスポートエラー時にエラーメッセージが表示される', async () => {
+test("エクスポートエラー時にエラーメッセージが表示される", async () => {
   await page.context().setOffline(true);
-  await page.getByRole('button', { name: 'CSVエクスポート' }).click();
+  await page.getByRole("button", { name: "CSVエクスポート" }).click();
   // エラーメッセージが表示される（実装に応じて）← コメントのみ
   await page.context().setOffline(false);
 });
 
 // ✅ 良い例: エラーメッセージの表示を明示的に検証
-test('エクスポートエラー時にエラーメッセージが表示される', async () => {
+test("エクスポートエラー時にエラーメッセージが表示される", async () => {
   await page.context().setOffline(true);
-  await page.getByRole('button', { name: 'CSVエクスポート' }).click();
+  await page.getByRole("button", { name: "CSVエクスポート" }).click();
   // エラーメッセージが表示されることを確認
   await expect(
-    page.getByText('エクスポートに失敗しました。もう一度お試しください。')
+    page.getByText("エクスポートに失敗しました。もう一度お試しください。"),
   ).toBeVisible();
   await page.context().setOffline(false);
 });
@@ -9769,8 +9879,10 @@ return [
   this.formatDate(transaction.date),
   transaction.amount.toString(), // 直接toString()
   // ...
-  transaction.isReconciled ? 'true' : 'false', // 三項演算子
-  transaction.relatedTransactionId ? this.escapeCSVField(transaction.relatedTransactionId) : '', // 三項演算子
+  transaction.isReconciled ? "true" : "false", // 三項演算子
+  transaction.relatedTransactionId
+    ? this.escapeCSVField(transaction.relatedTransactionId)
+    : "", // 三項演算子
 ];
 
 // ✅ 良い例: escapeCSVFieldで統一
@@ -9843,7 +9955,7 @@ if (filenameMatch && filenameMatch[1]) {
 }
 
 // ✅ 良い例: クォート付き・クォートなしの両方に対応
-let filename = '';
+let filename = "";
 if (contentDisposition) {
   const quotedMatch = contentDisposition.match(/filename="([^"]+)"/);
   if (quotedMatch && quotedMatch[1]) {
@@ -9877,7 +9989,7 @@ expect(filename).toMatch(/^transactions_.*\.csv$/);
 const handleExport = useCallback(
   async (format: ExportFormat): Promise<void> => {
     const params: GetTransactionsParams = {};
-    if (institutionFilter !== 'all') {
+    if (institutionFilter !== "all") {
       params.institutionId = institutionFilter;
     }
     if (startDate) {
@@ -9889,7 +10001,7 @@ const handleExport = useCallback(
     // categoryTypeFilterやreconciledFilterは反映されない
     await exportTransactions({ ...params, format });
   },
-  [institutionFilter, startDate, endDate]
+  [institutionFilter, startDate, endDate],
 );
 
 // ✅ 良い例: クライアント側でフィルタリング済みのデータを使用
@@ -9899,7 +10011,7 @@ const handleExport = useCallback(
     const dataToExport = filteredAndSortedTransactions;
 
     if (dataToExport.length === 0) {
-      setError('エクスポートするデータがありません。');
+      setError("エクスポートするデータがありません。");
       setExporting(false);
       return;
     }
@@ -9908,18 +10020,18 @@ const handleExport = useCallback(
     let content: string;
     let mimeType: string;
 
-    if (format === 'csv') {
+    if (format === "csv") {
       content = convertTransactionsToCSV(dataToExport);
-      mimeType = 'text/csv; charset=utf-8';
+      mimeType = "text/csv; charset=utf-8";
     } else {
       content = convertTransactionsToJSON(dataToExport);
-      mimeType = 'application/json; charset=utf-8';
+      mimeType = "application/json; charset=utf-8";
     }
 
     // ダウンロード
     await downloadFile(content, filename, mimeType);
   },
-  [filteredAndSortedTransactions]
+  [filteredAndSortedTransactions],
 );
 ```
 
@@ -9945,7 +10057,7 @@ useEffect(() => {
       const institutionsData = await getInstitutions();
       setInstitutions(institutionsData);
     } catch (err) {
-      console.error('データの取得に失敗しました:', err);
+      console.error("データの取得に失敗しました:", err);
       // ユーザーには何も通知されない
     }
   };
@@ -9959,8 +10071,10 @@ useEffect(() => {
       const institutionsData = await getInstitutions();
       setInstitutions(institutionsData);
     } catch (err) {
-      console.error('金融機関一覧の取得に失敗しました:', err);
-      setError('金融機関一覧の取得に失敗しました。ページを再読み込みしてください。');
+      console.error("金融機関一覧の取得に失敗しました:", err);
+      setError(
+        "金融機関一覧の取得に失敗しました。ページを再読み込みしてください。",
+      );
     }
   };
   void fetchData();
@@ -9983,34 +10097,34 @@ useEffect(() => {
 
 ```typescript
 // ❌ 悪い例: リストの存在のみを確認
-it('ソート機能が動作する', async () => {
-  await userEvent.selectOptions(sortFieldSelect, 'amount');
-  await userEvent.selectOptions(sortOrderSelect, 'asc');
+it("ソート機能が動作する", async () => {
+  await userEvent.selectOptions(sortFieldSelect, "amount");
+  await userEvent.selectOptions(sortOrderSelect, "asc");
 
   await waitFor(() => {
-    const transactionList = screen.getByTestId('transaction-list');
+    const transactionList = screen.getByTestId("transaction-list");
     expect(transactionList).toBeInTheDocument();
     // ソート順の検証がない
   });
 });
 
 // ✅ 良い例: 実際のソート順を検証
-import { within } from '@testing-library/react';
+import { within } from "@testing-library/react";
 
-it('ソート機能が動作する', async () => {
-  await userEvent.selectOptions(sortFieldSelect, 'amount');
-  await userEvent.selectOptions(sortOrderSelect, 'asc');
+it("ソート機能が動作する", async () => {
+  await userEvent.selectOptions(sortFieldSelect, "amount");
+  await userEvent.selectOptions(sortOrderSelect, "asc");
 
   await waitFor(() => {
-    const transactionList = screen.getByTestId('transaction-list');
+    const transactionList = screen.getByTestId("transaction-list");
     const items = within(transactionList).getAllByTestId(/transaction-/);
 
     // 金額の昇順でソートした場合、絶対値が小さい順になるはず
     // mockTransactions: tx-1 (amount: -1000), tx-3 (amount: -2000), tx-2 (amount: 50000)
     // Math.abs(amount): tx-1 (1000), tx-3 (2000), tx-2 (50000)
-    expect(items[0]).toHaveAttribute('data-testid', 'transaction-tx-1');
-    expect(items[1]).toHaveAttribute('data-testid', 'transaction-tx-3');
-    expect(items[2]).toHaveAttribute('data-testid', 'transaction-tx-2');
+    expect(items[0]).toHaveAttribute("data-testid", "transaction-tx-1");
+    expect(items[1]).toHaveAttribute("data-testid", "transaction-tx-3");
+    expect(items[2]).toHaveAttribute("data-testid", "transaction-tx-2");
   });
 });
 ```
@@ -10043,7 +10157,7 @@ E2Eテストで、複数のテストケースで同じ準備コード（取引�
  */
 async function navigateToFirstTransactionDetail(page: Page): Promise<void> {
   // 取引一覧にデータがあるか確認
-  const table = page.locator('table');
+  const table = page.locator("table");
   const hasData = await table.isVisible({ timeout: 5000 }).catch(() => false);
 
   if (!hasData) {
@@ -10052,14 +10166,18 @@ async function navigateToFirstTransactionDetail(page: Page): Promise<void> {
   }
 
   // 最初の取引の説明をクリック（リンクになっている）
-  const firstTransactionLink = page.locator('table tbody tr').first().locator('a').first();
+  const firstTransactionLink = page
+    .locator("table tbody tr")
+    .first()
+    .locator("a")
+    .first();
   await expect(firstTransactionLink).toBeVisible({ timeout: 10000 });
 
   // リンクのhrefを取得して遷移
-  const href = await firstTransactionLink.getAttribute('href');
+  const href = await firstTransactionLink.getAttribute("href");
   if (href) {
     await page.goto(href, {
-      waitUntil: 'domcontentloaded',
+      waitUntil: "domcontentloaded",
       timeout: 60000,
     });
   } else {
@@ -10069,7 +10187,7 @@ async function navigateToFirstTransactionDetail(page: Page): Promise<void> {
 }
 
 // テストケース内での呼び出し
-test('取引詳細情報が正しく表示される', async () => {
+test("取引詳細情報が正しく表示される", async () => {
   await navigateToFirstTransactionDetail(page);
   // ...以降のアサーション
 });
@@ -10129,19 +10247,19 @@ let getByIdUseCase: jest.Mocked<GetTransactionByIdUseCase>;
 
 ```typescript
 // ❌ 悪い例: モックが2回定義されている
-jest.mock('next/navigation', () => ({
+jest.mock("next/navigation", () => ({
   useParams: jest.fn(),
   useRouter: jest.fn(),
 }));
 // ... 他のモック定義 ...
-jest.mock('next/navigation', () => ({
+jest.mock("next/navigation", () => ({
   useParams: () => mockUseParams(),
   useRouter: jest.fn(),
 }));
 
 // ✅ 良い例: モック定義を1箇所に集約
 const mockUseParams = jest.fn();
-jest.mock('next/navigation', () => ({
+jest.mock("next/navigation", () => ({
   useParams: () => mockUseParams(),
   useRouter: jest.fn(),
 }));
@@ -10250,8 +10368,14 @@ function toTransactionWithDates(data: Transaction): Transaction {
   return {
     ...data,
     date: data.date instanceof Date ? data.date : new Date(data.date),
-    createdAt: data.createdAt instanceof Date ? data.createdAt : new Date(data.createdAt),
-    updatedAt: data.updatedAt instanceof Date ? data.updatedAt : new Date(data.updatedAt),
+    createdAt:
+      data.createdAt instanceof Date
+        ? data.createdAt
+        : new Date(data.createdAt),
+    updatedAt:
+      data.updatedAt instanceof Date
+        ? data.updatedAt
+        : new Date(data.updatedAt),
     confirmedAt: data.confirmedAt
       ? data.confirmedAt instanceof Date
         ? data.confirmedAt
@@ -10267,11 +10391,14 @@ export async function getTransactionById(id: string): Promise<Transaction> {
 
 export async function updateTransactionCategory(
   transactionId: string,
-  category: { id: string; name: string; type: CategoryType }
+  category: { id: string; name: string; type: CategoryType },
 ): Promise<Transaction> {
-  const data = await apiClient.patch<Transaction>(`/api/transactions/${transactionId}/category`, {
-    category,
-  });
+  const data = await apiClient.patch<Transaction>(
+    `/api/transactions/${transactionId}/category`,
+    {
+      category,
+    },
+  );
   return toTransactionWithDates(data);
 }
 ```
@@ -10527,6 +10654,7 @@ find repository/ -maxdepth 1 -type d ! -name "repository" -exec rm -rf {} \;
 ```
 
 **問題点**:
+
 - `find repository/ -maxdepth 1 -type d`は`repository/`直下のディレクトリ（各管理対象リポジトリのディレクトリ）をリストアップ
 - `! -name "repository"`の条件は、これらのディレクトリ名が"repository"でない限り真となり、結果としてすべての管理対象リポジトリが削除対象となる
 - 意図せず管理対象のすべてのリポジトリを削除してしまう可能性がある
@@ -10554,6 +10682,7 @@ done
 ```
 
 **理由**:
+
 - プロジェクト設定ファイルにリストされているリポジトリ以外を削除するロジックにより、管理対象リポジトリを誤って削除するリスクを回避
 - 削除前に確認用のコマンドを実行する手順を提供することで、運用ミスを防止
 - 実際の削除コマンドはコメントアウトしており、確認後に実行することを明確化
@@ -10572,6 +10701,7 @@ poetry run python scripts/script_management/manage_config.py create-template \
 ```
 
 **問題点**:
+
 - このままコピー＆ペーストすると意図しない設定でファイルが作成されてしまう可能性がある
 - ユーザーが自身の値に置き換える必要があることが明確でない
 
@@ -10587,6 +10717,7 @@ poetry run python scripts/script_management/manage_config.py create-template \
 ```
 
 **理由**:
+
 - ユーザーが自身の値に置き換える必要があることを明確に示せる
 - コピー＆ペースト時の誤用を防止
 
@@ -10601,6 +10732,7 @@ done
 ```
 
 **問題点**:
+
 - ファイル名にスペースなどが含まれている場合に意図しない動作を引き起こす可能性がある
 - 一般的に推奨されない方法
 
@@ -10613,6 +10745,7 @@ done
 ```
 
 **理由**:
+
 - ファイル名にスペースが含まれていても正しく処理される
 - より安全で堅牢な方法
 - シェルの標準的な方法
@@ -10626,6 +10759,7 @@ done
 ```
 
 **問題点**:
+
 - スクリプト自体がドキュメント内で提供されていない
 - ユーザーが実行できない
 
@@ -10643,6 +10777,7 @@ cp -r backups/YYYYMMDD_HHMMSS/config/ ./
 ```
 
 **理由**:
+
 - 実際に実行可能な手順を提供
 - スクリプトが提供されていない場合でも対応可能
 - 手動でのリストア手順への参照を追加することで、より親切なドキュメントになる
@@ -10656,6 +10791,7 @@ find scripts_repository/ -name ".script_manifest.yaml" -exec cp --parents {} "$B
 ```
 
 **問題点**:
+
 - ドキュメントの他の箇所では、このファイルはプロジェクトのルートディレクトリに存在するかのようにリストされている
 - パスが間違っている可能性が高い
 
@@ -10668,6 +10804,7 @@ fi
 ```
 
 **理由**:
+
 - ドキュメント全体で一貫した記述になる
 - ファイルが存在する場合のみコピーするため、エラーを回避
 
@@ -10705,6 +10842,7 @@ cp -r backups/YYYYMMDD_HHMMSS/config/ ./
 ```
 
 **問題点**:
+
 - コピー元のパスの末尾に`/`が付いていると、ディレクトリの中身だけがカレントディレクトリにコピーされてしまう
 - ディレクトリ自体を置き換えるという意図したリストア動作にならない
 
@@ -10718,6 +10856,7 @@ cp -r backups/YYYYMMDD_HHMMSS/config ./
 ```
 
 **理由**:
+
 - ディレクトリ自体を置き換えるという意図した動作になる
 - バックアップと整合性を取ることができる
 
@@ -10730,6 +10869,7 @@ tail -100 *.log | grep -i error
 ```
 
 **問題点**:
+
 - カレントディレクトリに`.log`ファイルが存在しない場合に`tail: cannot open '*.log' for reading: No such file or directory`というエラーで失敗する
 
 **✅ 良い例**: `find`コマンドを使用
@@ -10739,6 +10879,7 @@ find . -name "*.log" -type f -print0 | xargs -0 tail -n 100 | grep -i error
 ```
 
 **理由**:
+
 - ファイルが存在しない場合でもエラーにならない
 - より堅牢な方法
 - プロジェクトの他のドキュメントでも`find`が使われている箇所があり、一貫性も保てる
@@ -10763,6 +10904,7 @@ def api_call_with_retry(func, max_retries=3):
 ```
 
 **問題点**:
+
 - このプロジェクトのGitHub API呼び出しは主に`gh`コマンドを`subprocess`でラップして実行されている
 - `scripts/utils/git/github.py`には`_retry_on_rate_limit`というデコレータによる実際のリトライ実装がある
 - ドキュメントの例がプロジェクトの実際の実装と異なると、利用者が混乱する可能性がある
@@ -10787,6 +10929,7 @@ fi
 ```
 
 **理由**:
+
 - `gh`コマンドに特化しており、より文脈に合っている
 - プロジェクトの実際の実装（`scripts/utils/git/github.py`の`_retry_on_rate_limit`デコレータ）に言及することで、利用者が実際の実装を参照できる
 
@@ -10821,6 +10964,7 @@ extend-ignore = ["E203", "E266", "E501", "W503"]
 ```
 
 **問題点**:
+
 - `max-line-length = 100`と設定しているにもかかわらず、`extend-ignore`で`E501`（line too long）を指定しているため、行長チェックが機能しなくなってしまう
 - `black`が行のフォーマットを行いますが、長い文字列など`black`が自動で改行できないケースを検知できない
 
@@ -10833,6 +10977,7 @@ extend-ignore = ["E203", "E266", "W503"]
 ```
 
 **理由**:
+
 - `black`が自動で改行できないケース（長い文字列など）を検知できる
 - `max-line-length`の設定が正しく機能する
 - コード品質の向上につながる
@@ -10851,6 +10996,7 @@ extend-ignore = ["E203", "E266", "E501", "W503"]
 ```
 
 **問題点**:
+
 - 設定ファイルとコマンドライン引数が一致していないと、期待する動作と異なる結果になる可能性がある
 
 **✅ 良い例**: 設定ファイルとコマンドライン引数を一致させる
@@ -10865,6 +11011,7 @@ extend-ignore = ["E203", "E266", "W503"]
 ```
 
 **理由**:
+
 - 設定の一貫性が保たれる
 - 期待する動作が確実に実行される
 - メンテナンスが容易になる
@@ -10900,6 +11047,7 @@ extend-ignore = ["E203", "E266", "E501", "W503"]
 ```
 
 **問題点**:
+
 - TOMLファイルとして正しくない
 - セクションヘッダー`[tool.flake8]`が抜けている
 - ドキュメントの正確性が損なわれる
@@ -10913,6 +11061,7 @@ extend-ignore = ["E203", "E266", "E501", "W503"]
 ```
 
 **理由**:
+
 - TOMLファイルとして正しい形式
 - ドキュメントの正確性が保たれる
 - コピー＆ペーストして使用できる
@@ -10929,6 +11078,7 @@ max-line-length = 100
 ```
 
 **問題点**:
+
 - `black`と`flake8`の行長設定が一致していない
 - ツール間で設定の不整合が発生する可能性がある
 - 不要なリントエラーが発生する可能性がある
@@ -10955,6 +11105,7 @@ line-length = 100
 ```
 
 **理由**:
+
 - `black`と`flake8`の振る舞いが一貫する
 - 不要なリントエラーを防ぐことができる
 - 安定したCIが期待できる
@@ -10970,6 +11121,7 @@ extend-ignore = ["E203", "E266", "W503"]
 ```
 
 **問題点**:
+
 - `pyproject.toml`はTOMLファイルなのに、コードブロックの言語指定が`yaml`になっている
 - シンタックスハイライトが正しく機能しない
 
@@ -10982,6 +11134,7 @@ extend-ignore = ["E203", "E266", "W503"]
 ```
 
 **理由**:
+
 - シンタックスハイライトが正しく機能する
 - ドキュメントの可読性が向上する
 - ファイル形式が明確になる
@@ -11019,6 +11172,7 @@ fi
 ```
 
 **問題点**:
+
 - `.gitignore`に追加した設定ファイルが実際に使用されない
 - 開発者が設定ファイルを作成しても機能しない
 - 設定ファイルの存在意義が不明確になる
@@ -11046,6 +11200,7 @@ fi
 ```
 
 **理由**:
+
 - `.gitignore`に追加した設定ファイルが実際に機能する
 - 開発者が設定ファイルを作成すれば、すぐに使用できる
 - 設定ファイルの目的が明確になる
@@ -11060,6 +11215,7 @@ scripts/jira/config.local.sh
 ```
 
 **問題点**:
+
 - なぜこのファイルを除外するのか不明確
 - どのような情報が含まれるのか不明
 - 新規開発者が理解しにくい
@@ -11075,6 +11231,7 @@ scripts/jira/config.local.sh
 ```
 
 **理由**:
+
 - 除外理由が明確になる
 - 含まれる機密情報の種類が分かる
 - 新規開発者も理解しやすい
@@ -11101,11 +11258,13 @@ scripts/jira/config.local.sh
 **❌ 悪い例**: デフォルト値が本番環境でも使用される
 
 ```typescript
-const secret: string = process.env.JWT_SECRET || 'default-secret-key-change-in-production';
+const secret: string =
+  process.env.JWT_SECRET || "default-secret-key-change-in-production";
 return new JwtService(secret, expiresIn);
 ```
 
 **問題点**:
+
 - 本番環境で予測可能なシークレットキーが使用される
 - 攻撃者がJWTを偽造する可能性がある
 - 重大なセキュリティ脆弱性
@@ -11114,13 +11273,19 @@ return new JwtService(secret, expiresIn);
 
 ```typescript
 const secret: string | undefined = process.env.JWT_SECRET;
-if (process.env.NODE_ENV === 'production' && !secret) {
-  throw new Error('FATAL: JWT_SECRET environment variable must be set in production.');
+if (process.env.NODE_ENV === "production" && !secret) {
+  throw new Error(
+    "FATAL: JWT_SECRET environment variable must be set in production.",
+  );
 }
-return new JwtService(secret || 'default-secret-key-change-in-production', expiresIn);
+return new JwtService(
+  secret || "default-secret-key-change-in-production",
+  expiresIn,
+);
 ```
 
 **理由**:
+
 - 本番環境での誤設定を防止
 - セキュリティリスクを排除
 - 起動時に問題を検出
@@ -11140,6 +11305,7 @@ rm -f /tmp/create-user.mjs
 ```
 
 **問題点**:
+
 - `/tmp`ディレクトリは他のユーザーも書き込み可能
 - 悪意のあるユーザーがシンボリックリンクを事前に作成する可能性
 - 意図しないファイルを上書きされるリスク
@@ -11162,6 +11328,7 @@ node "${TMP_SCRIPT_FILE}" "${EMAIL}" "${PASSWORD}"
 ```
 
 **理由**:
+
 - ランダムなファイル名で競合を防止
 - シンボリックリンク攻撃を防止
 - スクリプト中断時も確実に削除
@@ -11185,6 +11352,7 @@ return {
 ```
 
 **問題点**:
+
 - 設定を変更しても一部の値が古いまま
 - 一貫性が保てない
 - メンテナンスが困難
@@ -11206,6 +11374,7 @@ return {
 ```
 
 **理由**:
+
 - 設定値の一貫性が保証される
 - 変更時の影響範囲が明確
 - メンテナンスが容易
@@ -11221,6 +11390,7 @@ const userDataList: UserData[] = JSON.parse(data) as UserData[];
 ```
 
 **問題点**:
+
 - ファイルが破損している場合に検出できない
 - 予期しない構造でもエラーにならない
 - ランタイムエラーの原因
@@ -11232,27 +11402,28 @@ const rawDataList: unknown = JSON.parse(data);
 
 // データが配列であることを確認
 if (!Array.isArray(rawDataList)) {
-  throw new Error('User data is not an array');
+  throw new Error("User data is not an array");
 }
 
 // 各要素がUserDataの構造を持っているか簡易チェック
 const userDataList: UserData[] = rawDataList.map((item: unknown) => {
   if (
-    typeof item !== 'object' ||
+    typeof item !== "object" ||
     item === null ||
-    !('id' in item) ||
-    !('email' in item) ||
-    !('hashedPassword' in item) ||
-    !('createdAt' in item) ||
-    !('updatedAt' in item)
+    !("id" in item) ||
+    !("email" in item) ||
+    !("hashedPassword" in item) ||
+    !("createdAt" in item) ||
+    !("updatedAt" in item)
   ) {
-    throw new Error('Invalid user data structure');
+    throw new Error("Invalid user data structure");
   }
   return item as UserData;
 });
 ```
 
 **理由**:
+
 - データの整合性が保証される
 - 早期にエラーを検出
 - より堅牢な実装
@@ -11273,6 +11444,7 @@ public async save(user: User): Promise<User> {
 ```
 
 **問題点**:
+
 - 複数のリクエストが同時に実行されるとデータが失われる
 - 一方の更新がもう一方の更新によって上書きされる
 
@@ -11281,7 +11453,7 @@ public async save(user: User): Promise<User> {
 ```typescript
 /**
  * ユーザーを保存する
- * 
+ *
  * 注意: 現在の実装はJSONファイルベースのため、複数のリクエストが同時に実行された場合に
  * 競合状態（レースコンディション）が発生する可能性があります。
  * 本番環境で使用する場合は、ファイルロック（proper-lockfile等）の実装または
@@ -11293,6 +11465,7 @@ public async save(user: User): Promise<User> {
 ```
 
 **理由**:
+
 - 問題点を明確に文書化
 - 将来の改善方針を示す
 - 本番環境での使用時の注意を喚起
@@ -11326,6 +11499,7 @@ export class PasswordService {
 ```
 
 **問題点**:
+
 - セキュリティ強度を柔軟に調整できない
 - 将来的なセキュリティ要件の変更に対応しにくい
 - 環境ごとに異なる設定ができない
@@ -11354,6 +11528,7 @@ export class PasswordService {
 ```
 
 **理由**:
+
 - セキュリティ強度を柔軟に調整可能
 - 環境ごとに異なる設定が可能
 - 将来的な要件変更に対応しやすい
@@ -11371,6 +11546,7 @@ fi
 ```
 
 **問題点**:
+
 - POSTのみ許可されているエンドポイントにGETを送ると404エラー
 - サーバーが起動していても検知できない
 - タイムアウトしてしまう
@@ -11394,6 +11570,7 @@ fi
 ```
 
 **理由**:
+
 - より確実にサーバーの起動を検知
 - HTTPメソッドに依存しない
 - エンドポイントの実装に依存しない
@@ -11409,6 +11586,7 @@ console.log(`Application is running on: http://localhost:${port}`);
 ```
 
 **問題点**:
+
 - ログレベルの制御ができない
 - フォーマットが統一されない
 - 構造化されたログ出力ができない
@@ -11416,12 +11594,15 @@ console.log(`Application is running on: http://localhost:${port}`);
 **✅ 良い例**: NestJS標準のLoggerを使用
 
 ```typescript
-import { Logger } from '@nestjs/common';
+import { Logger } from "@nestjs/common";
 
-new Logger('Bootstrap').log(`Application is running on: http://localhost:${port}`);
+new Logger("Bootstrap").log(
+  `Application is running on: http://localhost:${port}`,
+);
 ```
 
 **理由**:
+
 - ログレベルの制御が可能
 - フォーマットが統一される
 - 構造化されたログ出力が可能
@@ -11435,6 +11616,7 @@ new Logger('Bootstrap').log(`Application is running on: http://localhost:${port}
 
 ```markdown
 ### 2. Application Layer
+
 - **LoginUseCase**: ログイン処理のユースケース
 - **AuthenticationService**: 認証関連のビジネスロジック
 ```
@@ -11445,10 +11627,12 @@ new Logger('Bootstrap').log(`Application is running on: http://localhost:${port}
 
 ```markdown
 ### 2. Application Layer
+
 - **LoginUseCase**: ログイン処理のユースケース（認証ロジックを含む）
 ```
 
 **理由**:
+
 - ドキュメントと実装の整合性が保たれる
 - 開発者が混乱しない
 - メンテナンスが容易
@@ -11472,6 +11656,7 @@ curl -X POST http://localhost:3001/api/v1/auth/login \
 ```
 
 **理由**:
+
 - ドキュメントの正確性が保たれる
 - 開発者がコピー&ペーストで即座に使用できる
 - 混乱を防ぐ
@@ -11527,6 +11712,7 @@ CMD ["pnpm", "run", "start:prod"]
 ```
 
 **理由**:
+
 - セキュリティリスクを軽減（コンテナ侵害時の影響範囲を限定）
 - ベストプラクティスに準拠
 - 本番環境での運用安全性が向上
@@ -11561,6 +11747,7 @@ services:
 ```
 
 **理由**:
+
 - 設定の重複を排除
 - メンテナンス性の向上
 - Dockerfileを単一の真実の源（Single Source of Truth）として扱える
@@ -11572,6 +11759,7 @@ services:
 **✅ 良い例**: 一貫したパターン
 
 すべてのスクリプトで以下を統一：
+
 - `set -e`でエラー時に即座に停止
 - ヘルプ表示機能（`-h`または`--help`）
 - 引数解析の統一的なパターン
@@ -11579,6 +11767,7 @@ services:
 - 進捗表示の統一的な形式
 
 **理由**:
+
 - 開発者がスクリプトを理解しやすい
 - メンテナンスが容易
 - 新しいスクリプト作成時のテンプレートとして使用可能

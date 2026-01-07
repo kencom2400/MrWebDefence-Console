@@ -72,10 +72,13 @@ if (query.latestOnly) {
 // ❌ 悪い例: process.envを直接参照
 @Injectable()
 export class ConnectionCheckerService {
-  private readonly TIMEOUT_MS = parseInt(process.env.HEALTH_CHECK_TIMEOUT_MS || '10000', 10);
+  private readonly TIMEOUT_MS = parseInt(
+    process.env.HEALTH_CHECK_TIMEOUT_MS || "10000",
+    10,
+  );
   private readonly MAX_RESPONSE_TIME_MS = parseInt(
-    process.env.HEALTH_CHECK_MAX_RESPONSE_TIME_MS || '5000',
-    10
+    process.env.HEALTH_CHECK_MAX_RESPONSE_TIME_MS || "5000",
+    10,
   );
 }
 ```
@@ -91,7 +94,7 @@ export class ConnectionCheckerService {
 
 ```typescript
 // ✅ 良い例: ConfigServiceを使用
-import { ConfigService } from '@nestjs/config';
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class ConnectionCheckerService {
@@ -100,12 +103,12 @@ export class ConnectionCheckerService {
 
   constructor(private readonly configService: ConfigService) {
     this.TIMEOUT_MS = this.configService.get<number>(
-      'HEALTH_CHECK_TIMEOUT_MS',
-      10000 // デフォルト値
+      "HEALTH_CHECK_TIMEOUT_MS",
+      10000, // デフォルト値
     );
     this.MAX_RESPONSE_TIME_MS = this.configService.get<number>(
-      'HEALTH_CHECK_MAX_RESPONSE_TIME_MS',
-      5000 // デフォルト値
+      "HEALTH_CHECK_MAX_RESPONSE_TIME_MS",
+      5000, // デフォルト値
     );
   }
 }
@@ -133,7 +136,7 @@ export class ConnectionCheckerService {
 
 ```typescript
 // app.module.ts
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule } from "@nestjs/config";
 
 @Module({
   imports: [
@@ -155,8 +158,8 @@ export class AppModule {}
 `class-validator`を使用することで、より厳密な型チェックとバリデーションが可能です：
 
 ```typescript
-import { IsNumber, Min, Max } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsNumber, Min, Max } from "class-validator";
+import { Type } from "class-transformer";
 
 export class EnvironmentVariables {
   @Type(() => Number)
