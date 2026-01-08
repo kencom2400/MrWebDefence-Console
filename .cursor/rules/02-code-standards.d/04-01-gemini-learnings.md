@@ -504,7 +504,7 @@ export class MfaRepository implements IMfaRepository {
 - 混乱の防止
 - 保守の負担軽減
 
-### 13-13. Guardの適用タイミングとログイン時のIP検証（PR #39）
+### 13-14. Guardの適用タイミングとログイン時のIP検証（PR #39）
 
 **学習元**: PR #39 - IP AllowList機能の詳細設計（Geminiレビュー指摘）
 
@@ -624,7 +624,7 @@ export class IpAddressService {
 - クライアント側での扱いの容易さ
 - レスポンス形式の簡素化
 
-### 13-14. データベースインデックスの冗長性排除とRESTful API設計（PR #39）
+### 13-15. データベースインデックスの冗長性排除とRESTful API設計（PR #39）
 
 **学習元**: PR #39 - IP AllowList機能の詳細設計（Geminiレビュー指摘）
 
