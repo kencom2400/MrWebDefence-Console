@@ -17,22 +17,12 @@
 ```json
 {
   "qrCodeUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...",
-  "backupCodes": [
-    "ABCD-1234",
-    "EFGH-5678",
-    "IJKL-9012",
-    "MNOP-3456",
-    "QRST-7890",
-    "UVWX-1357",
-    "YZAB-2468",
-    "CDEF-3690",
-    "GHIJ-4701",
-    "KLMN-5812"
-  ],
   "tempToken": "mfa-setup-temp-token-xyz123",
   "expiresIn": 300
 }
 ```
+
+**注意**: バックアップコードはこの時点では生成されません。検証成功後に返却されます。
 
 **エラー** (401 Unauthorized):
 ```json
@@ -67,9 +57,24 @@
 **レスポンス** (200 OK):
 ```json
 {
-  "message": "MFA has been enabled successfully"
+  "message": "MFA has been enabled successfully",
+  "backupCodes": [
+    "ABCD-1234",
+    "EFGH-5678",
+    "IJKL-9012",
+    "MNOP-3456",
+    "QRST-7890",
+    "UVWX-1357",
+    "YZAB-2468",
+    "CDEF-3690",
+    "GHIJ-4701",
+    "KLMN-5812"
+  ],
+  "warning": "These backup codes can only be viewed once. Please save them securely."
 }
 ```
+
+**注意**: バックアップコードは検証成功時に生成され、このレスポンスで一度だけ返却されます。
 
 **エラー** (400 Bad Request):
 ```json
@@ -180,7 +185,7 @@
 }
 ```
 
-### 5. バックアップコード取得
+### 5. バックアップコード一覧取得
 
 **エンドポイント**: `GET /api/v1/auth/mfa/backup-codes`
 
@@ -190,18 +195,72 @@
 ```json
 {
   "backupCodes": [
-    "ABCD-1234",
-    "EFGH-5678",
-    "IJKL-9012",
-    "MNOP-3456",
-    "QRST-7890",
-    "UVWX-1357",
-    "YZAB-2468",
-    "CDEF-3690",
-    "GHIJ-4701",
-    "KLMN-5812"
+    {
+      "id": "uuid-1",
+      "used": false,
+      "createdAt": "2026-01-08T10:00:00Z"
+    },
+    {
+      "id": "uuid-2",
+      "used": true,
+      "usedAt": "2026-01-08T11:00:00Z",
+      "createdAt": "2026-01-08T10:00:00Z"
+    }
   ],
-  "warning": "These codes can only be viewed once. Please save them securely."
+  "totalCount": 10,
+  "unusedCount": 9,
+  "usedCount": 1
+}
+```
+
+**注意**: 実際のコード値は返却されません（セキュリティ上の理由）。使用済み/未使用の状態のみを返却します。
+
+### 6. バックアップコード再生成
+
+**エンドポイント**: `POST /api/v1/auth/mfa/backup-codes/regenerate`
+
+**認証**: 必須（JWT）
+
+**リクエスト**:
+```json
+{
+  "password": "user-password"
+}
+```
+
+**レスポンス** (200 OK):
+```json
+{
+  "message": "Backup codes have been regenerated successfully",
+  "backupCodes": [
+    "WXYZ-9876",
+    "STUV-5432",
+    "QRST-1098",
+    "MNOP-7654",
+    "KLMN-3210",
+    "IJKL-9876",
+    "GHIJ-5432",
+    "EFGH-1098",
+    "CDEF-7654",
+    "ABYZ-3210"
+  ],
+  "warning": "Previous backup codes have been invalidated. These new codes can only be viewed once. Please save them securely."
+}
+```
+
+**エラー** (400 Bad Request):
+```json
+{
+  "statusCode": 400,
+  "message": ["password should not be empty"]
+}
+```
+
+**エラー** (401 Unauthorized):
+```json
+{
+  "statusCode": 401,
+  "message": "Invalid password"
 }
 ```
 
@@ -213,7 +272,15 @@
 }
 ```
 
-### 6. ログインAPI（修正版）
+**エラー** (404 Not Found):
+```json
+{
+  "statusCode": 404,
+  "message": "MFA is not enabled"
+}
+```
+
+### 7. ログインAPI（修正版）
 
 **エンドポイント**: `POST /api/v1/auth/login`
 

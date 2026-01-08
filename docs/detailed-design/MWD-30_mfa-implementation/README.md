@@ -79,7 +79,11 @@
 - **SetupMfaUseCase**: MFAセットアップ処理
   - シークレット生成
   - QRコード生成
+  - 一時保存（検証前）
+- **GenerateBackupCodesUseCase**: バックアップコード生成処理（検証成功後）
   - バックアップコード生成
+  - ハッシュ化
+  - 永続化
 - **VerifyMfaUseCase**: MFA検証処理
   - TOTPコード検証
   - バックアップコード検証
@@ -96,11 +100,12 @@
 ### 4. Presentation Layer
 
 - **MfaController**: MFA関連のHTTPエンドポイント
-  - `POST /api/v1/auth/mfa/setup` - MFAセットアップ開始
-  - `POST /api/v1/auth/mfa/verify-setup` - セットアップ時の検証
+  - `POST /api/v1/auth/mfa/setup` - MFAセットアップ開始（QRコードのみ返却）
+  - `POST /api/v1/auth/mfa/verify-setup` - セットアップ時の検証（成功時にバックアップコード返却）
   - `POST /api/v1/auth/mfa/verify` - ログイン時のMFA検証
   - `POST /api/v1/auth/mfa/disable` - MFA無効化
-  - `GET /api/v1/auth/mfa/backup-codes` - バックアップコード取得
+  - `GET /api/v1/auth/mfa/backup-codes` - バックアップコード一覧取得（使用済み/未使用の状態を含む）
+  - `POST /api/v1/auth/mfa/backup-codes/regenerate` - バックアップコード再生成（既存コードは無効化）
 - **AuthController (Modified)**: ログインAPIを修正し、MFA有効な場合は中間状態を返す
 
 ## データフロー
@@ -110,13 +115,14 @@
 1. ユーザーがMFAセットアップをリクエスト
 2. `SetupMfaUseCase` がシークレットを生成
 3. `QrCodeService` がQRコードを生成（OTPAUTH URI形式）
-4. `BackupCodeService` がバックアップコードを生成（ハッシュ化して保存）
-5. シークレットとQRコードを一時的に保存（Redisまたはセッション）
-6. クライアントにQRコードとバックアップコードを返却
-7. ユーザーが認証アプリでQRコードをスキャン
-8. ユーザーがTOTPコードを入力して検証
-9. 検証成功後、`MfaRepository` にシークレットを永続化
+4. シークレットを一時的に保存（Redisまたはセッション）
+5. クライアントにQRコードのみを返却（バックアップコードはまだ生成しない）
+6. ユーザーが認証アプリでQRコードをスキャン
+7. ユーザーがTOTPコードを入力して検証
+8. 検証成功後、`BackupCodeService` がバックアップコードを生成
+9. `MfaRepository` にシークレットとバックアップコード（ハッシュ化済み）を永続化
 10. ユーザーエンティティの `mfaEnabled` を `true` に設定
+11. クライアントにバックアップコードを返却（一度だけ表示可能）
 
 ### 2. ログイン時のMFA認証フロー
 
@@ -144,6 +150,8 @@
 - **レート制限**: MFA検証の試行回数に制限を設ける（ブルートフォース攻撃対策）
 - **QRコードの一時性**: セットアップ時のQRコードは一度だけ表示し、検証後は無効化
 - **バックアップコードの再生成**: ユーザーがバックアップコードを再生成できる機能を提供（既存コードは無効化）
+- **バックアップコードの提供タイミング**: セットアップ検証成功後にのみバックアップコードを生成・返却（セキュリティ向上）
+- **責務分離**: Domain層（Value Objects）とInfrastructure層（Services）の責務を明確に分離
 
 ## 実装詳細
 

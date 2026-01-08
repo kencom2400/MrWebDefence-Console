@@ -41,7 +41,6 @@ classDiagram
         -IUserRepository userRepository
         -TotpService totpService
         -QrCodeService qrCodeService
-        -BackupCodeService backupCodeService
         +execute(userId): SetupMfaResult
     }
 
@@ -49,7 +48,14 @@ classDiagram
         -IUserRepository userRepository
         -TotpService totpService
         -IMfaRepository mfaRepository
+        -BackupCodeService backupCodeService
         +execute(userId, code, type): boolean
+    }
+
+    class GenerateBackupCodesUseCase {
+        -IMfaRepository mfaRepository
+        -BackupCodeService backupCodeService
+        +execute(userId): BackupCode[]
     }
 
     class DisableMfaUseCase {
@@ -80,6 +86,7 @@ classDiagram
         +verify()
         +disable()
         +getBackupCodes()
+        +regenerateBackupCodes()
     }
 
     class AuthController {
@@ -91,9 +98,11 @@ classDiagram
     User --> BackupCode : has many
     SetupMfaUseCase --> TotpService
     SetupMfaUseCase --> QrCodeService
-    SetupMfaUseCase --> BackupCodeService
     VerifyMfaUseCase --> TotpService
     VerifyMfaUseCase --> IMfaRepository
+    VerifyMfaUseCase --> BackupCodeService
+    GenerateBackupCodesUseCase --> IMfaRepository
+    GenerateBackupCodesUseCase --> BackupCodeService
     DisableMfaUseCase --> IMfaRepository
     MfaController --> SetupMfaUseCase
     MfaController --> VerifyMfaUseCase

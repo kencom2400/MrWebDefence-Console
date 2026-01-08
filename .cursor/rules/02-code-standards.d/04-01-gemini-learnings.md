@@ -75,3 +75,69 @@ const expiresIn = this.jwtService.getExpiresIn();
 **理由**:
 - コードの可読性と保守性の向上
 - チーム開発における共通認識の維持
+
+### 13-12. バックアップコードのライフサイクル管理と責務分離（PR #37）
+
+**学習元**: PR #37 - MFA機能実装設計（Geminiレビュー指摘）
+
+#### バックアップコードの提供タイミング
+
+**問題**: MFAセットアップ時にバックアップコードを生成して返却すると、検証前にコードが漏洩するリスクがある。また、検証が完了しない場合に不要なコードが生成される。
+
+**解決策**: バックアップコードは検証成功後にのみ生成・永続化し、その時点で一度だけ返却する。
+
+```typescript
+// Bad: セットアップ時にバックアップコードを生成
+SetupMfaUseCase -> BackupCodeService.generateCodes()
+SetupMfaUseCase -> return { qrCodeUrl, backupCodes, tempToken }
+
+// Good: 検証成功後にバックアップコードを生成
+VerifyMfaUseCase -> TotpService.verifyToken()
+VerifyMfaUseCase -> BackupCodeService.generateCodes() // 検証成功後
+VerifyMfaUseCase -> MfaRepository.saveBackupCodes()
+VerifyMfaUseCase -> return { message, backupCodes }
+```
+
+**理由**:
+- セキュリティ向上（検証前のコード漏洩防止）
+- リソース効率（検証が完了しない場合の無駄な生成を防止）
+
+#### バックアップコード管理APIの明確化
+
+**問題**: バックアップコードの再生成機能が設計に含まれているが、API仕様が不明確。
+
+**解決策**:
+1. **バックアップコード一覧取得API**: 実際のコード値は返さず、使用済み/未使用の状態のみを返却する。
+2. **バックアップコード再生成API**: パスワード確認を必須とし、既存コードを無効化してから新規コードを生成する。
+
+**理由**:
+- セキュリティ向上（コード値の再表示を防止）
+- ユーザビリティ向上（状態確認と再生成の明確な分離）
+
+#### ドメインモデルとインフラストラクチャ層の責務分離
+
+**問題**: `BackupCodeService` がDomain層とInfrastructure層のどちらに属するか不明確。
+
+**解決策**:
+- **Domain層**: `BackupCode` Value Object（ビジネスロジック、バリデーション）
+- **Infrastructure層**: `BackupCodeService`（技術的な詳細：生成アルゴリズム、ハッシュ化）
+
+```typescript
+// Domain Layer
+class BackupCode {
+  private constructor(private readonly code: string) {}
+  static create(code: string): BackupCode { /* validation */ }
+  getValue(): string { return this.code; }
+}
+
+// Infrastructure Layer
+class BackupCodeService {
+  generateCodes(count: number): BackupCode[] { /* technical implementation */ }
+  hashCode(code: string): string { /* bcrypt hashing */ }
+  verifyCode(code: string, hash: string): boolean { /* hash comparison */ }
+}
+```
+
+**理由**:
+- Onion Architectureの原則に従った明確な責務分離
+- テスト容易性の向上（Domain層の独立性）

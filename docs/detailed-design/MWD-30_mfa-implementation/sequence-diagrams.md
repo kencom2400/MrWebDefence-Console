@@ -22,14 +22,10 @@ sequenceDiagram
     SetupMfaUseCase->>QrCodeService: generateQrCode(secret, email, issuer)
     QrCodeService-->>SetupMfaUseCase: qrCodeUrl
     
-    SetupMfaUseCase->>BackupCodeService: generateCodes(10)
-    BackupCodeService-->>SetupMfaUseCase: backupCodes[]
-    
     SetupMfaUseCase->>MfaRepository: saveSecret(userId, secret) [temporary]
-    SetupMfaUseCase->>MfaRepository: saveBackupCodes(userId, codes) [temporary]
     
-    SetupMfaUseCase-->>MfaController: { qrCodeUrl, backupCodes, tempToken }
-    MfaController-->>Client: 200 OK { qrCodeUrl, backupCodes, tempToken }
+    SetupMfaUseCase-->>MfaController: { qrCodeUrl, tempToken }
+    MfaController-->>Client: 200 OK { qrCodeUrl, tempToken }
     
     Note over Client: User scans QR code with authenticator app
     
@@ -42,11 +38,18 @@ sequenceDiagram
     VerifyMfaUseCase->>TotpService: verifyToken(secret, code)
     TotpService-->>VerifyMfaUseCase: true
     
+    VerifyMfaUseCase->>BackupCodeService: generateCodes(10)
+    BackupCodeService-->>VerifyMfaUseCase: backupCodes[]
+    
+    VerifyMfaUseCase->>BackupCodeService: hashCode(backupCodes)
+    BackupCodeService-->>VerifyMfaUseCase: hashedCodes[]
+    
     VerifyMfaUseCase->>UserRepository: enableMfa(userId, secret)
     VerifyMfaUseCase->>MfaRepository: saveSecret(userId, secret) [permanent]
+    VerifyMfaUseCase->>MfaRepository: saveBackupCodes(userId, hashedCodes) [permanent]
     
-    VerifyMfaUseCase-->>MfaController: success
-    MfaController-->>Client: 200 OK { message: "MFA enabled" }
+    VerifyMfaUseCase-->>MfaController: { success: true, backupCodes }
+    MfaController-->>Client: 200 OK { message: "MFA enabled", backupCodes }
 ```
 
 ## ログイン時のMFA認証フロー
