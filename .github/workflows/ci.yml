@@ -39,7 +39,6 @@ jobs:
           pnpm --version
 
       - name: Install dependencies
-        working-directory: apps/backend
         run: pnpm install
 
       - name: Run lint
@@ -70,7 +69,6 @@ jobs:
           pnpm --version
 
       - name: Install dependencies
-        working-directory: apps/backend
         run: pnpm install
 
       - name: Build
@@ -101,7 +99,6 @@ jobs:
           pnpm --version
 
       - name: Install dependencies
-        working-directory: apps/backend
         run: pnpm install
 
       - name: Rebuild native modules
@@ -155,7 +152,6 @@ jobs:
           pnpm --version
 
       - name: Install dependencies
-        working-directory: apps/backend
         run: pnpm install
 
       - name: Rebuild native modules

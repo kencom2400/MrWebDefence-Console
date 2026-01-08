@@ -3,8 +3,8 @@ version: '3.8'
 services:
   backend:
     build:
-      context: ./apps/backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/backend/Dockerfile
       target: development
     container_name: mrwebdefence-console-backend
     ports:
@@ -19,15 +19,11 @@ services:
       - REDIS_HOST=redis-dev
       - REDIS_PORT=6379
     volumes:
-      # Mount source code for hot reload
-      - ./apps/backend/src:/app/src
-      - ./apps/backend/test:/app/test
-      - ./apps/backend/tsconfig.json:/app/tsconfig.json
-      - ./apps/backend/nest-cli.json:/app/nest-cli.json
-      # Exclude node_modules from volume mount (use container's node_modules)
+      # Mount backend source code
+      - ./apps/backend:/app/apps/backend
+      # Persist node_modules to avoid overwriting them with local (potentially empty or incompatible) modules
       - /app/node_modules
-      # Mount data directory for JSON file storage
-      - ./apps/backend/data:/app/data
+      - /app/apps/backend/node_modules
     restart: unless-stopped
     depends_on:
       - redis-dev
