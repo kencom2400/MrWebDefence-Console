@@ -76,6 +76,8 @@ export class MfaController {
     private readonly userRepository: IUserRepository,
     @Inject('JwtService')
     private readonly jwtService: JwtService,
+    @Inject('PasswordService')
+    private readonly passwordService: PasswordService,
   ) {}
 
   /**
@@ -269,8 +271,7 @@ export class MfaController {
         throw new NotFoundException('User not found');
       }
 
-      const passwordService = new (await import('../../infrastructure/services/password.service')).PasswordService(10);
-      const isPasswordValid = await passwordService.compare(dto.password, user.hashedPassword);
+      const isPasswordValid = await this.passwordService.compare(dto.password, user.hashedPassword);
       if (!isPasswordValid) {
         throw new UnauthorizedException('Invalid password');
       }
