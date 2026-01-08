@@ -46,15 +46,31 @@ export class AuthController {
   @Public() // ログインは認証不要
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  public async login(@Body() loginRequest: LoginRequestDto): Promise<LoginResponseDto> {
+  public async login(
+    @Body() loginRequest: LoginRequestDto,
+  ): Promise<LoginResponseDto | { requiresMfa: true; userId: string }> {
     try {
       const result = await this.loginUseCase.execute(loginRequest.email, loginRequest.password);
 
-      return {
-        accessToken: result.accessToken,
-        tokenType: result.tokenType,
-        expiresIn: result.expiresIn,
-      };
+      // MFA有効なユーザーの場合は中間状態を返す
+      if ('requiresMfa' in result && result.requiresMfa) {
+        return {
+          requiresMfa: true,
+          userId: result.userId,
+        };
+      }
+
+      // 通常のログイン成功（型ガードにより、resultはLoginResponseDto型）
+      if ('accessToken' in result) {
+        return {
+          accessToken: result.accessToken,
+          tokenType: result.tokenType,
+          expiresIn: result.expiresIn,
+        };
+      }
+
+      // この分岐には到達しないはずだが、TypeScriptの型チェックのために追加
+      throw new Error('Unexpected login result');
     } catch (error: unknown) {
       if (error instanceof AuthenticationError) {
         throw new UnauthorizedException('Invalid credentials');
