@@ -5,15 +5,25 @@
  */
 
 import { GenerateBackupCodesUseCase } from './generate-backup-codes.use-case';
+import { IUserRepository } from '../../domain/repositories/user.repository.interface';
 import { IMfaRepository } from '../../domain/repositories/mfa.repository.interface';
 import { BackupCodeService } from '../../infrastructure/services/backup-code.service';
+import { User } from '../../domain/entities/user.entity';
+import { UserRole } from '../../domain/entities/user-role.enum';
 
 describe('GenerateBackupCodesUseCase', () => {
   let generateBackupCodesUseCase: GenerateBackupCodesUseCase;
+  let mockUserRepository: jest.Mocked<IUserRepository>;
   let mockMfaRepository: jest.Mocked<IMfaRepository>;
   let mockBackupCodeService: jest.Mocked<BackupCodeService>;
 
   beforeEach(() => {
+    mockUserRepository = {
+      findByEmail: jest.fn(),
+      findById: jest.fn(),
+      save: jest.fn(),
+    } as any;
+
     mockMfaRepository = {
       saveSecret: jest.fn(),
       getSecret: jest.fn(),
@@ -22,6 +32,7 @@ describe('GenerateBackupCodesUseCase', () => {
       getBackupCodes: jest.fn(),
       markBackupCodeAsUsed: jest.fn(),
       deleteBackupCodes: jest.fn(),
+      getAllBackupCodeRecords: jest.fn(),
     } as any;
 
     mockBackupCodeService = {
@@ -33,6 +44,7 @@ describe('GenerateBackupCodesUseCase', () => {
     } as any;
 
     generateBackupCodesUseCase = new GenerateBackupCodesUseCase(
+      mockUserRepository,
       mockMfaRepository,
       mockBackupCodeService,
     );
@@ -43,6 +55,17 @@ describe('GenerateBackupCodesUseCase', () => {
 
     it('正常系: バックアップコードを生成する', async () => {
       // Arrange
+      const mockUser = User.reconstruct(
+        userId,
+        'user@example.com',
+        '$2b$10$hashedPassword',
+        UserRole.SERVICE_MEMBER,
+        false,
+        null,
+        new Date(),
+        new Date(),
+      );
+
       const codes = [
         'ABCD-1234',
         'EFGH-5678',
@@ -68,6 +91,7 @@ describe('GenerateBackupCodesUseCase', () => {
         '$2b$10$hash10',
       ];
 
+      mockUserRepository.findById.mockResolvedValue(mockUser);
       mockBackupCodeService.generateCodes.mockReturnValue(codes);
       mockBackupCodeService.hashCodes.mockResolvedValue(codeHashes);
       mockMfaRepository.saveBackupCodes.mockResolvedValue();
@@ -77,6 +101,7 @@ describe('GenerateBackupCodesUseCase', () => {
 
       // Assert
       expect(result.codes).toEqual(codes);
+      expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
       expect(mockBackupCodeService.generateCodes).toHaveBeenCalled();
       expect(mockBackupCodeService.hashCodes).toHaveBeenCalledWith(codes);
       expect(mockMfaRepository.saveBackupCodes).toHaveBeenCalledWith(userId, codeHashes);
