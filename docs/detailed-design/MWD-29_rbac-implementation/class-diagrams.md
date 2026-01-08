@@ -11,9 +11,9 @@ classDiagram
     }
 
     class User {
-        +String id
-        +String email
-        +String hashedPassword
+        +string id
+        +string email
+        +string hashedPassword
         +UserRole role
         +Date createdAt
         +Date updatedAt

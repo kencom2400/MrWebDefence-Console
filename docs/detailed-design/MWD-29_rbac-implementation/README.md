@@ -68,9 +68,13 @@
 
 - **Roles Decorator**: エンドポイントに必要なロールを指定するメタデータデコレータ
 - **Public Decorator**: 認証/認可をバイパスするエンドポイントを指定するデコレータ
-- **RolesGuard**: 
-  - グローバルガードとして適用
-  - `@Roles` が指定されている場合：ユーザーのロールと照合
+- **JwtAuthGuard (Global)**:
+  - 認証を担当
+  - `@Public` が指定されている場合：トークン検証をスキップ（またはエラーをスローせず通過させる）
+- **RolesGuard (Global)**: 
+  - 認可を担当
+  - `JwtAuthGuard` の後に実行される
+  - `@Roles` が指定されている場合：`request.user.role` と照合
   - `@Public` が指定されている場合：許可
   - **どちらも指定されていない場合：拒否（Fail Safe）**
 
@@ -80,18 +84,21 @@
    - `LoginUseCase` がユーザー認証に成功
    - `JwtService` がJWTを生成する際、ペイロードに `role` を含める
 
-2. **リクエスト受信（認可フロー）**
-   - `JwtAuthGuard` がユーザーを認証し、`request.user` にセット（JWTペイロードから `role` も復元される）
-   - `RolesGuard` が実行される
-   - ハンドラーのメタデータをチェック
-     - `@Public` がある → 許可
-     - `@Roles` がある → `request.user.role` と比較して判定
-     - メタデータなし → **拒否** (`ForbiddenException`)
+2. **リクエスト受信（認証・認可パイプライン）**
+   - **Step 1: JwtAuthGuard (Authentication)**
+     - `@Public` をチェック。Trueならパス。
+     - FalseならJWTを検証し、`request.user` にユーザー情報をセット。
+   - **Step 2: RolesGuard (Authorization)**
+     - `@Public` をチェック。Trueならパス。
+     - `@Roles` をチェック。
+       - ロール指定あり → `request.user.role` と比較して判定。権限があればパス。
+       - ロール指定なし → **拒否** (`ForbiddenException`) - Fail Safe
 
 ## セキュリティ考慮事項
 
 - **Default Deny (デフォルト拒否)**: ガードの付け忘れによる事故を防ぐため、明示的に許可されたエンドポイント以外はアクセス不可とする。
 - **Fail Safe**: `@Roles` 指定がないエンドポイントは、意図せず公開されるのを防ぐため、デフォルトでアクセスを拒否する。
+- **Guard Pipeline**: 認証(`JwtAuthGuard`)と認可(`RolesGuard`)を適切な順序でグローバルに適用し、依存関係を明確にする。
 - **JWT Integrity**: ロール情報の改ざん防止（JWT署名による検証）。
 
 ## 参照資料
