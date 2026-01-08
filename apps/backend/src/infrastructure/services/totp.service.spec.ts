@@ -77,7 +77,7 @@ describe('TotpService', () => {
       const uri = totpService.generateKeyUri(secret, email, issuer);
       expect(uri).toBeDefined();
       expect(uri).toContain('otpauth://totp/');
-      expect(uri).toContain(email);
+      expect(uri).toContain('user%40example.com'); // URLエンコードされたemail
       expect(uri).toContain(issuer);
       expect(uri).toContain(`secret=${secret}`);
     });
