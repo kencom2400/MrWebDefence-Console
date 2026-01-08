@@ -82,7 +82,7 @@ export class AuthController {
    */
   @Get('profile')
   @UseGuards(JwtAuthGuard)
-  public getProfile(@Request() req: RequestWithUser) {
+  public getProfile(@Request() req: RequestWithUser): JwtPayload {
     return req.user;
   }
 }

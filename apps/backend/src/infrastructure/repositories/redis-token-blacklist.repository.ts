@@ -12,7 +12,7 @@ export class RedisTokenBlacklistRepository
   constructor() {
     const host = process.env.REDIS_HOST || 'localhost';
     const port = parseInt(process.env.REDIS_PORT || '6379', 10);
-
+    
     this.redisClient = new Redis({
       host,
       port,
@@ -20,7 +20,7 @@ export class RedisTokenBlacklistRepository
     });
   }
 
-  async onModuleInit() {
+  async onModuleInit(): Promise<void> {
     try {
       await this.redisClient.connect();
     } catch (error) {
@@ -30,7 +30,7 @@ export class RedisTokenBlacklistRepository
     }
   }
 
-  async onModuleDestroy() {
+  async onModuleDestroy(): Promise<void> {
     await this.redisClient.quit();
   }
 

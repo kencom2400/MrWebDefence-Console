@@ -10,8 +10,6 @@ import { AuthController } from './auth.controller';
 import { LoginUseCase, AuthenticationError } from '../../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../../application/use-cases/logout.use-case';
 import { LoginRequestDto } from '../dto/login-request.dto';
-import { JwtService } from '../../infrastructure/services/jwt.service';
-import { ITokenBlacklistRepository } from '../../domain/repositories/token-blacklist.repository.interface';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
 describe('AuthController', () => {

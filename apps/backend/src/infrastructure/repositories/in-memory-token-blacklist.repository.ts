@@ -20,7 +20,7 @@ export class InMemoryTokenBlacklistRepository implements ITokenBlacklistReposito
     clearInterval(this.cleanupInterval);
   }
 
-  public async add(token: string, expiresAt: number): Promise<void> {
+  public async add(token: string, _expiresAt: number): Promise<void> {
     this.blacklist.add(token);
     // 期限付きで削除するロジックを入れるのが望ましい
     // setTimeout(() => this.blacklist.delete(token), (expiresAt * 1000) - Date.now());
