@@ -272,3 +272,234 @@ CREATE TABLE backup_codes (
 **理由**:
 - 実装時の混乱防止
 - 設計の信頼性向上
+
+### 13-14. セキュリティ強化とエラーハンドリングの改善（PR #38）
+
+**学習元**: PR #38 - MFA E2Eテストの修正とバックアップコード検証ロジックの改善（Geminiレビュー指摘）
+
+#### 暗号学的に安全な乱数生成
+
+**問題**: バックアップコードのようなセキュリティ上重要な値の生成に `Math.random()` を使用すると、予測可能な値が生成されるリスクがある。
+
+**解決策**: Node.jsの `crypto` モジュールの `randomInt()` を使用して、暗号学的に安全な乱数を生成する。
+
+```typescript
+// Bad: 予測可能な乱数生成
+code += characters.charAt(Math.floor(Math.random() * characters.length));
+
+// Good: 暗号学的に安全な乱数生成
+import { randomInt } from 'crypto';
+code += characters.charAt(randomInt(characters.length));
+```
+
+**理由**:
+- セキュリティ強化（予測不可能な値の生成）
+- 暗号学的に安全な乱数生成のベストプラクティスに準拠
+
+#### タイミング攻撃対策
+
+**問題**: バックアップコード検証時に、有効なコードが見つかるとすぐにループを終了すると、コードの位置によって応答時間が変わり、タイミング攻撃に対して脆弱になる。
+
+**解決策**: `Promise.all` を使用して全ての未使用コードを並行して検証し、応答時間がコードの位置に依存しないようにする。
+
+```typescript
+// Bad: 順次検証でタイミング攻撃に脆弱
+for (const record of allRecords) {
+  if (record.usedAt !== null) continue;
+  const isCodeValid = await this.backupCodeService.verify(code, record.codeHash);
+  if (isCodeValid) {
+    await this.mfaRepository.markBackupCodeAsUsed(userId, record.codeHash);
+    break; // 早期終了でタイミング情報が漏洩
+  }
+}
+
+// Good: 並行検証でタイミング攻撃を緩和
+const verificationPromises = allRecords
+  .filter((record) => record.usedAt === null)
+  .map(async (record) => ({
+    isMatch: await this.backupCodeService.verify(code, record.codeHash),
+    hash: record.codeHash,
+  }));
+
+const verificationResults = await Promise.all(verificationPromises);
+const validResult = verificationResults.find((result) => result.isMatch);
+if (validResult) {
+  await this.mfaRepository.markBackupCodeAsUsed(userId, validResult.hash);
+}
+```
+
+**理由**:
+- セキュリティ強化（タイミング攻撃の緩和）
+- 応答時間の一貫性確保
+
+#### NestJSの組み込み例外の使用
+
+**問題**: 汎用的な `Error` クラスを使用すると、コントローラー層でエラーメッセージ文字列に依存した分岐が必要になり、コードの堅牢性と保守性が低下する。
+
+**解決策**: NestJSの組み込み例外（`NotFoundException`, `ConflictException`, `UnauthorizedException`, `BadRequestException` など）を使用する。
+
+```typescript
+// Bad: 汎用的なErrorクラス
+if (!user) {
+  throw new Error('User not found');
+}
+if (user.mfaEnabled) {
+  throw new Error('MFA is already enabled');
+}
+
+// Good: NestJSの組み込み例外
+import { NotFoundException, ConflictException } from '@nestjs/common';
+if (!user) {
+  throw new NotFoundException('User not found');
+}
+if (user.mfaEnabled) {
+  throw new ConflictException('MFA is already enabled');
+}
+```
+
+**理由**:
+- エラーハンドリングの一貫性向上
+- HTTPステータスコードの自動設定
+- コントローラー層でのエラーメッセージ文字列解析が不要
+
+#### ユースケースの自己完結性
+
+**問題**: ユースケースが `userId` を引数に取るが、そのユーザーが存在するかどうかの検証が行われていない場合、後続の処理で予期しないエラーが発生する可能性がある。
+
+**解決策**: ユースケースは自己完結しているべきであり、入力の妥当性を検証する。`IUserRepository` を注入し、`execute` メソッドの冒頭でユーザーの存在確認を行う。
+
+```typescript
+// Bad: ユーザー存在確認なし
+@Injectable()
+export class GenerateBackupCodesUseCase {
+  constructor(
+    @Inject('IMfaRepository')
+    private readonly mfaRepository: IMfaRepository,
+  ) {}
+  
+  public async execute(userId: string): Promise<GenerateBackupCodesResult> {
+    const codes = this.backupCodeService.generateCodes();
+    // ユーザーが存在しない場合のエラーハンドリングがない
+  }
+}
+
+// Good: ユーザー存在確認を追加
+@Injectable()
+export class GenerateBackupCodesUseCase {
+  constructor(
+    @Inject('IUserRepository')
+    private readonly userRepository: IUserRepository,
+    @Inject('IMfaRepository')
+    private readonly mfaRepository: IMfaRepository,
+  ) {}
+  
+  public async execute(userId: string): Promise<GenerateBackupCodesResult> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const codes = this.backupCodeService.generateCodes();
+  }
+}
+```
+
+**理由**:
+- 早期エラー検出
+- ユースケースの自己完結性向上
+- デバッグの容易性向上
+
+#### 依存性注入の一貫性
+
+**問題**: モジュール内のプロバイダーで、依存性の注入方法に一貫性がない。一部のプロバイダーはクラス名で直接注入されているが、他の多くは文字列トークンを使用している。
+
+**解決策**: クラスベースのDIに統一する。クラス名で直接提供されているプロバイダー（`TotpService`, `QrCodeService`, `BackupCodeService`, `GenerateBackupCodesUseCase` など）は、`@Inject()` デコレータを削除してクラス名で直接注入する。インターフェース（`IUserRepository`, `IMfaRepository` など）やファクトリで提供されるプロバイダー（`PasswordService`, `JwtService` など）は文字列トークンを使用する。
+
+```typescript
+// Bad: 文字列トークンとクラス名が混在
+@Injectable()
+export class SetupMfaUseCase {
+  constructor(
+    @Inject('IUserRepository')
+    private readonly userRepository: IUserRepository,
+    @Inject('TotpService')  // クラス名で提供されているのに文字列トークンを使用
+    private readonly totpService: TotpService,
+    @Inject('QrCodeService')  // クラス名で提供されているのに文字列トークンを使用
+    private readonly qrCodeService: QrCodeService,
+  ) {}
+}
+
+// Good: クラスベースのDIに統一
+@Injectable()
+export class SetupMfaUseCase {
+  constructor(
+    @Inject('IUserRepository')  // インターフェースは文字列トークン
+    private readonly userRepository: IUserRepository,
+    private readonly totpService: TotpService,  // クラス名で直接注入
+    private readonly qrCodeService: QrCodeService,  // クラス名で直接注入
+  ) {}
+}
+```
+
+**理由**:
+- 型安全性の向上
+- コードの簡潔性向上
+- 文字列トークンの重複定義の解消
+- 保守性の向上
+
+#### 未使用コードの削除
+
+**問題**: 未使用のメソッドやインポートが残っていると、混乱を招き、保守の負担となる。
+
+**解決策**: 未使用のコードは削除する。特に、インターフェースで定義されていないメソッドや、どこからも使用されていないメソッドは削除する。
+
+```typescript
+// Bad: 未使用のメソッドが残っている
+export class MfaRepository implements IMfaRepository {
+  public async findBackupCodeByHash(
+    userId: string,
+    codeHash: string,
+  ): Promise<BackupCodeRecord | null> {
+    // このメソッドはインターフェースで定義されておらず、使用されていない
+  }
+}
+
+// Good: 未使用のメソッドを削除
+export class MfaRepository implements IMfaRepository {
+  // findBackupCodeByHashメソッドを削除
+}
+```
+
+**理由**:
+- コードの可読性向上
+- 保守の負担軽減
+- 混乱の防止
+
+#### 冗長なコメントの削除
+
+**問題**: 実装が完了しているにもかかわらず、TODOコメントや冗長なコメントが残っていると、混乱を招く。
+
+**解決策**: 実装が完了している場合は、TODOコメントや冗長なコメントを削除する。
+
+```typescript
+// Bad: 実装済みなのにTODOコメントが残っている
+} else {
+  // ログイン検証成功時は、バックアップコードを使用済みとしてマーク（バックアップコードの場合）
+  if (type === MfaVerificationType.BACKUP_CODE) {
+    // TODO: 使用したバックアップコードを特定してマーク
+    // 現在の実装では、どのハッシュが使用されたかを特定できない
+  }
+  return { success: true };
+}
+
+// Good: 実装済みの場合はコメントを削除
+} else {
+  // ログイン検証成功時
+  // バックアップコードの場合は、上記の検証処理で既に使用済みとしてマークされている
+  return { success: true };
+}
+```
+
+**理由**:
+- コードの可読性向上
+- 混乱の防止
+- 保守の負担軽減

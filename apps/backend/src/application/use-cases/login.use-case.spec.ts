@@ -53,6 +53,8 @@ describe('LoginUseCase', () => {
         email,
         hashedPassword,
         role,
+        false, // mfaEnabled
+        null, // mfaSecret
         new Date(),
         new Date(),
       );
@@ -66,9 +68,14 @@ describe('LoginUseCase', () => {
       const result = await loginUseCase.execute(email, password);
 
       // Assert
-      expect(result.accessToken).toBe(accessToken);
-      expect(result.tokenType).toBe('Bearer');
-      expect(result.expiresIn).toBe(1800);
+      // MFA無効なユーザーなので、通常のログイン成功レスポンスを返す
+      if ('accessToken' in result) {
+        expect(result.accessToken).toBe(accessToken);
+        expect(result.tokenType).toBe('Bearer');
+        expect(result.expiresIn).toBe(1800);
+      } else {
+        fail('Expected accessToken in result');
+      }
       expect(mockUserRepository.findByEmail).toHaveBeenCalledWith(email);
       expect(mockPasswordService.compare).toHaveBeenCalledWith(password, hashedPassword);
       expect(mockJwtService.generateToken).toHaveBeenCalledWith(userId, email, role);
@@ -92,6 +99,8 @@ describe('LoginUseCase', () => {
         email,
         hashedPassword,
         role,
+        false, // mfaEnabled
+        null, // mfaSecret
         new Date(),
         new Date(),
       );

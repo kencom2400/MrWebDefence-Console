@@ -32,33 +32,50 @@ export class JwtAuthGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<Request>();
     const token = this.extractTokenFromHeader(request);
+    const handlerName = context.getHandler().name;
 
-    // this.logger.debug(`Handler: ${context.getHandler().name}, Public: ${isPublic}, Token: ${!!token}`);
+    // デバッグログは必要に応じて有効化
+    // this.logger.debug(
+    //   `[${handlerName}] Public: ${isPublic}, Token: ${!!token}, TokenPreview: ${token ? token.substring(0, 20) + '...' : 'none'}`,
+    // );
 
     // 公開エンドポイントでトークンがない場合はスルー（RolesGuardに任せる）
     if (isPublic && !token) {
+      // this.logger.debug(`[${handlerName}] Public endpoint without token, allowing`);
       return true;
     }
 
     if (!token) {
       // 公開エンドポイントでないのにトークンがない場合はエラー
+      this.logger.warn(`[${handlerName}] No token provided for protected endpoint`);
       throw new UnauthorizedException();
     }
 
     // ブラックリストチェック
-    const isBlacklisted = await this.tokenBlacklistRepository.isBlacklisted(token);
-    if (isBlacklisted) {
-      throw new UnauthorizedException('Token is invalidated');
+    try {
+      const isBlacklisted = await this.tokenBlacklistRepository.isBlacklisted(token);
+      // this.logger.debug(`[${handlerName}] Token blacklisted: ${isBlacklisted}`);
+      if (isBlacklisted) {
+        this.logger.warn(`[${handlerName}] Token is blacklisted`);
+        throw new UnauthorizedException('Token is invalidated');
+      }
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+      this.logger.error(`[${handlerName}] Error checking blacklist:`, error);
+      throw error;
     }
 
     // トークン検証
     const payload: JwtPayload | null = this.jwtService.verifyToken(token);
     if (!payload) {
       // トークンが無効な場合
-      // 公開エンドポイントであればスルー（RolesGuardに任せる）ことも考えられるが、
-      // 無効なトークンが送られてきた場合は明示的にエラーにする方が安全かつデバッグしやすい
+      this.logger.warn(`[${handlerName}] Token verification failed`);
       throw new UnauthorizedException();
     }
+
+    // this.logger.debug(`[${handlerName}] Token verified successfully, userId: ${payload.sub}`);
 
     // リクエストにユーザー情報を付与
     // 型アサーションを使用して型安全性を維持
