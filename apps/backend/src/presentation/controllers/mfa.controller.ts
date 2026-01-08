@@ -22,6 +22,8 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { Public } from '../decorators/public.decorator';
+import { Roles } from '../decorators/roles.decorator';
+import { UserRole } from '../../domain/entities/user-role.enum';
 import { SetupMfaUseCase } from '../../application/use-cases/setup-mfa.use-case';
 import {
   VerifyMfaUseCase,
@@ -83,6 +85,7 @@ export class MfaController {
    * MFAセットアップ開始
    * POST /api/v1/auth/mfa/setup
    */
+  @Roles(UserRole.SERVICE_MEMBER, UserRole.SERVICE_ADMIN)
   @Post('setup')
   @HttpCode(HttpStatus.OK)
   public async setup(@Request() req: RequestWithUser): Promise<SetupMfaResponseDto> {
@@ -107,6 +110,7 @@ export class MfaController {
    * MFAセットアップ検証
    * POST /api/v1/auth/mfa/verify-setup
    */
+  @Roles(UserRole.SERVICE_MEMBER, UserRole.SERVICE_ADMIN)
   @Post('verify-setup')
   @HttpCode(HttpStatus.OK)
   public async verifySetup(
@@ -198,6 +202,7 @@ export class MfaController {
    * MFA無効化
    * POST /api/v1/auth/mfa/disable
    */
+  @Roles(UserRole.SERVICE_MEMBER, UserRole.SERVICE_ADMIN)
   @Post('disable')
   @HttpCode(HttpStatus.OK)
   public async disable(
@@ -228,6 +233,7 @@ export class MfaController {
    * バックアップコード一覧取得
    * GET /api/v1/auth/mfa/backup-codes
    */
+  @Roles(UserRole.SERVICE_MEMBER, UserRole.SERVICE_ADMIN)
   @Get('backup-codes')
   @HttpCode(HttpStatus.OK)
   public async getBackupCodes(@Request() req: RequestWithUser): Promise<GetBackupCodesResponseDto> {
@@ -255,6 +261,7 @@ export class MfaController {
    * バックアップコード再生成
    * POST /api/v1/auth/mfa/backup-codes/regenerate
    */
+  @Roles(UserRole.SERVICE_MEMBER, UserRole.SERVICE_ADMIN)
   @Post('backup-codes/regenerate')
   @HttpCode(HttpStatus.OK)
   public async regenerateBackupCodes(

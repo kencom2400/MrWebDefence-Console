@@ -116,4 +116,18 @@ export class MfaRepository implements IMfaRepository {
   public async deleteBackupCodes(userId: string): Promise<void> {
     this.backupCodes.delete(userId);
   }
+
+  /**
+   * ユーザーの全てのバックアップコードレコードを取得する（検証用）
+   */
+  public async getAllBackupCodeRecords(
+    userId: string,
+  ): Promise<Array<{ id: string; codeHash: string; usedAt: Date | null }>> {
+    const records = this.backupCodes.get(userId) || [];
+    return records.map((record) => ({
+      id: record.id,
+      codeHash: record.codeHash,
+      usedAt: record.usedAt,
+    }));
+  }
 }

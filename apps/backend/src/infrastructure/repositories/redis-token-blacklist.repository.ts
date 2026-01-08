@@ -57,7 +57,14 @@ export class RedisTokenBlacklistRepository
    * @returns ブラックリストに含まれている場合はtrue
    */
   public async isBlacklisted(token: string): Promise<boolean> {
-    const result = await this.redisClient.exists(`${this.KEY_PREFIX}${token}`);
-    return result === 1;
+    try {
+      const result = await this.redisClient.exists(`${this.KEY_PREFIX}${token}`);
+      return result === 1;
+    } catch (error) {
+      // Redis接続エラーの場合は、ログを出力してfalseを返す（トークンを有効とみなす）
+      // これにより、Redis接続エラーが発生しても、アプリケーションは動作し続ける
+      this.logger.warn('Failed to check token blacklist (assuming not blacklisted):', error);
+      return false;
+    }
   }
 }

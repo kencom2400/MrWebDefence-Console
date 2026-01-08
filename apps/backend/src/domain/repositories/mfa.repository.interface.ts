@@ -54,4 +54,11 @@ export interface IMfaRepository {
    * @param userId ユーザーID
    */
   deleteBackupCodes(userId: string): Promise<void>;
+
+  /**
+   * ユーザーの全てのバックアップコードレコードを取得する（検証用）
+   * @param userId ユーザーID
+   * @returns バックアップコードレコードの配列（ハッシュを含む）
+   */
+  getAllBackupCodeRecords(userId: string): Promise<Array<{ id: string; codeHash: string; usedAt: Date | null }>>;
 }

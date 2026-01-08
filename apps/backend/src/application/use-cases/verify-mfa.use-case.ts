@@ -90,38 +90,27 @@ export class VerifyMfaUseCase {
     } else if (type === MfaVerificationType.BACKUP_CODE) {
       // バックアップコードの検証
       const backupCode = BackupCode.create(code);
-      const backupCodes = await this.mfaRepository.getBackupCodes(userId);
+      const allRecords = await this.mfaRepository.getAllBackupCodeRecords(userId);
 
       // 全てのバックアップコードのハッシュと比較
-      for (const metadata of backupCodes) {
-        if (metadata.isUsed()) {
+      for (const record of allRecords) {
+        if (record.usedAt !== null) {
           continue; // 使用済みのコードはスキップ
         }
 
-        // バックアップコードのハッシュを取得
-        // MfaRepositoryから直接ハッシュを取得する必要があるが、
-        // 現在の実装ではgetBackupCodes()はメタデータのみ返却する
-        // そのため、全てのレコードを取得してハッシュと比較する必要がある
-        // 暫定的に、MfaRepositoryにfindBackupCodeByHashメソッドを追加する必要がある
+        // バックアップコードのハッシュと比較
+        const isCodeValid = await this.backupCodeService.verify(
+          backupCode.getValue(),
+          record.codeHash,
+        );
+
+        if (isCodeValid) {
+          isValid = true;
+          // 使用済みとしてマーク
+          await this.mfaRepository.markBackupCodeAsUsed(userId, record.codeHash);
+          break;
+        }
       }
-
-      // バックアップコードをハッシュ化
-      const codeHash = await this.backupCodeService.hash(backupCode.getValue());
-
-      // MfaRepositoryからハッシュに対応するレコードを検索
-      const backupCodeRecord = await (this.mfaRepository as any).findBackupCodeByHash(
-        userId,
-        codeHash,
-      );
-
-      if (!backupCodeRecord || backupCodeRecord.usedAt !== null) {
-        return { success: false };
-      }
-
-      isValid = true;
-
-      // 使用済みとしてマーク
-      await this.mfaRepository.markBackupCodeAsUsed(userId, codeHash);
     }
 
     if (!isValid) {
