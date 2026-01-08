@@ -3,8 +3,6 @@ import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RolesGuard } from './roles.guard';
 import { UserRole } from '../../domain/entities/user-role.enum';
-import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
-import { ROLES_KEY } from '../decorators/roles.decorator';
 
 describe('RolesGuard', () => {
   let guard: RolesGuard;
@@ -31,7 +29,7 @@ describe('RolesGuard', () => {
     expect(guard).toBeDefined();
   });
 
-  const createMockContext = (user?: any) => {
+  const createMockContext = (user?: any): ExecutionContext => {
     return {
       getHandler: jest.fn(),
       getClass: jest.fn(),
@@ -49,7 +47,8 @@ describe('RolesGuard', () => {
     });
 
     it('should throw ForbiddenException if no roles defined and not public (Fail Safe)', () => {
-      jest.spyOn(reflector, 'getAllAndOverride')
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValueOnce(undefined) // IS_PUBLIC_KEY
         .mockReturnValueOnce(undefined); // ROLES_KEY
       const context = createMockContext();
@@ -57,7 +56,8 @@ describe('RolesGuard', () => {
     });
 
     it('should throw ForbiddenException if user is not present', () => {
-      jest.spyOn(reflector, 'getAllAndOverride')
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValueOnce(undefined) // IS_PUBLIC_KEY
         .mockReturnValueOnce([UserRole.SERVICE_MEMBER]); // ROLES_KEY
       const context = createMockContext(undefined);
@@ -65,7 +65,8 @@ describe('RolesGuard', () => {
     });
 
     it('should throw ForbiddenException if user role is missing', () => {
-      jest.spyOn(reflector, 'getAllAndOverride')
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValueOnce(undefined) // IS_PUBLIC_KEY
         .mockReturnValueOnce([UserRole.SERVICE_MEMBER]); // ROLES_KEY
       const context = createMockContext({});
@@ -73,7 +74,8 @@ describe('RolesGuard', () => {
     });
 
     it('should throw ForbiddenException if user does not have required role', () => {
-      jest.spyOn(reflector, 'getAllAndOverride')
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValueOnce(undefined) // IS_PUBLIC_KEY
         .mockReturnValueOnce([UserRole.SERVICE_ADMIN]); // ROLES_KEY
       const context = createMockContext({ role: UserRole.SERVICE_MEMBER });
@@ -81,7 +83,8 @@ describe('RolesGuard', () => {
     });
 
     it('should return true if user has required role', () => {
-      jest.spyOn(reflector, 'getAllAndOverride')
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValueOnce(undefined) // IS_PUBLIC_KEY
         .mockReturnValueOnce([UserRole.SERVICE_MEMBER]); // ROLES_KEY
       const context = createMockContext({ role: UserRole.SERVICE_MEMBER });
@@ -89,7 +92,8 @@ describe('RolesGuard', () => {
     });
 
     it('should return true if user has one of required roles', () => {
-      jest.spyOn(reflector, 'getAllAndOverride')
+      jest
+        .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValueOnce(undefined) // IS_PUBLIC_KEY
         .mockReturnValueOnce([UserRole.SERVICE_ADMIN, UserRole.SERVICE_MEMBER]); // ROLES_KEY
       const context = createMockContext({ role: UserRole.SERVICE_MEMBER });
@@ -97,4 +101,3 @@ describe('RolesGuard', () => {
     });
   });
 });
-
