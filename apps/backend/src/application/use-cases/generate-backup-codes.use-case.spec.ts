@@ -43,7 +43,18 @@ describe('GenerateBackupCodesUseCase', () => {
 
     it('正常系: バックアップコードを生成する', async () => {
       // Arrange
-      const codes = ['ABCD-1234', 'EFGH-5678', 'IJKL-9012', 'MNOP-3456', 'QRST-7890', 'UVWX-1357', 'YZAB-2468', 'CDEF-3690', 'GHIJ-4701', 'KLMN-5812'];
+      const codes = [
+        'ABCD-1234',
+        'EFGH-5678',
+        'IJKL-9012',
+        'MNOP-3456',
+        'QRST-7890',
+        'UVWX-1357',
+        'YZAB-2468',
+        'CDEF-3690',
+        'GHIJ-4701',
+        'KLMN-5812',
+      ];
       const codeHashes = [
         '$2b$10$hash1',
         '$2b$10$hash2',
@@ -72,4 +83,3 @@ describe('GenerateBackupCodesUseCase', () => {
     });
   });
 });
-

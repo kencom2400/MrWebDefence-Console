@@ -22,4 +22,3 @@ export class VerifyMfaResponseDto {
   tokenType: string;
   expiresIn: number;
 }
-

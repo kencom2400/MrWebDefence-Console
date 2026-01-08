@@ -66,4 +66,3 @@ export class TotpService {
     return authenticator.keyuri(email, issuer, secret);
   }
 }
-

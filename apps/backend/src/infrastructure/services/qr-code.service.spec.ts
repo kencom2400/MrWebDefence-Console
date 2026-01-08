@@ -15,14 +15,16 @@ describe('QrCodeService', () => {
 
   describe('generateDataUrl', () => {
     it('正常系: OTPAUTH URIからQRコードのData URLを生成する', async () => {
-      const otpauthUri = 'otpauth://totp/MrWebDefence:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=MrWebDefence';
+      const otpauthUri =
+        'otpauth://totp/MrWebDefence:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=MrWebDefence';
       const dataUrl = await qrCodeService.generateDataUrl(otpauthUri);
       expect(dataUrl).toBeDefined();
       expect(dataUrl).toMatch(/^data:image\/png;base64,/);
     });
 
     it('正常系: 生成されたData URLが有効なBase64文字列である', async () => {
-      const otpauthUri = 'otpauth://totp/MrWebDefence:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=MrWebDefence';
+      const otpauthUri =
+        'otpauth://totp/MrWebDefence:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=MrWebDefence';
       const dataUrl = await qrCodeService.generateDataUrl(otpauthUri);
       const base64Data = dataUrl.replace('data:image/png;base64,', '');
       // Base64文字列のバリデーション
@@ -35,4 +37,3 @@ describe('QrCodeService', () => {
     });
   });
 });
-

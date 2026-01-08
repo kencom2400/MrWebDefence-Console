@@ -57,4 +57,3 @@ export class DisableMfaUseCase {
     await this.mfaRepository.deleteBackupCodes(userId);
   }
 }
-

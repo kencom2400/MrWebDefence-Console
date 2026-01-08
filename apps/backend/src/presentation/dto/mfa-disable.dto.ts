@@ -13,4 +13,3 @@ export class DisableMfaRequestDto {
 export class DisableMfaResponseDto {
   message: string;
 }
-

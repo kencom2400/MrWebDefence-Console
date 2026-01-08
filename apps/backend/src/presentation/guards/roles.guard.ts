@@ -32,7 +32,7 @@ export class RolesGuard implements CanActivate {
 
     // リクエストからユーザー情報を取得 (JwtAuthGuardによってセットされている前提)
     const { user } = context.switchToHttp().getRequest<{ user: JwtPayload }>();
-    
+
     // ユーザー情報がない、またはロールがない場合は拒否
     if (!user || !user.role) {
       throw new ForbiddenException('Access denied (User role not found)');
@@ -47,4 +47,3 @@ export class RolesGuard implements CanActivate {
     return true;
   }
 }
-

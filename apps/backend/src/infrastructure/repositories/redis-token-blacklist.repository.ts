@@ -14,7 +14,7 @@ export class RedisTokenBlacklistRepository
   constructor(private readonly configService: ConfigService) {
     const host = this.configService.get<string>('REDIS_HOST', 'localhost');
     const port = this.configService.get<number>('REDIS_PORT', 6379);
-    
+
     this.redisClient = new Redis({
       host,
       port,

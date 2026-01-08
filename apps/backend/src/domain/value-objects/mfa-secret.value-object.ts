@@ -58,4 +58,3 @@ export class MfaSecret {
     return this.value === other.value;
   }
 }
-

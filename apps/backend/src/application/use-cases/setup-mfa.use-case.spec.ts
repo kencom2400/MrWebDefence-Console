@@ -35,11 +35,7 @@ describe('SetupMfaUseCase', () => {
       generateDataUrl: jest.fn(),
     } as any;
 
-    setupMfaUseCase = new SetupMfaUseCase(
-      mockUserRepository,
-      mockTotpService,
-      mockQrCodeService,
-    );
+    setupMfaUseCase = new SetupMfaUseCase(mockUserRepository, mockTotpService, mockQrCodeService);
   });
 
   describe('execute', () => {
@@ -61,7 +57,8 @@ describe('SetupMfaUseCase', () => {
         new Date(),
       );
       const secret = 'JBSWY3DPEHPK3PXP';
-      const otpauthUri = 'otpauth://totp/MrWebDefence:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=MrWebDefence';
+      const otpauthUri =
+        'otpauth://totp/MrWebDefence:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=MrWebDefence';
       const qrCodeDataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...';
 
       mockUserRepository.findById.mockResolvedValue(user);
@@ -113,4 +110,3 @@ describe('SetupMfaUseCase', () => {
     });
   });
 });
-

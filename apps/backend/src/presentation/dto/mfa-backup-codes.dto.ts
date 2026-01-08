@@ -28,4 +28,3 @@ export class RegenerateBackupCodesResponseDto {
   backupCodes: string[];
   warning: string;
 }
-

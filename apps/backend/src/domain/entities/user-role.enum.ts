@@ -16,4 +16,3 @@ export enum UserRole {
    */
   SERVICE_MEMBER = 'SERVICE_MEMBER',
 }
-

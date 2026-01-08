@@ -59,4 +59,3 @@ export class BackupCode {
     return this.code === other.code;
   }
 }
-

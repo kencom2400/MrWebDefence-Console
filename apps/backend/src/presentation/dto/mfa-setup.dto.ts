@@ -30,4 +30,3 @@ export class VerifySetupMfaResponseDto {
   backupCodes: string[];
   warning: string;
 }
-

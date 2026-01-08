@@ -23,7 +23,11 @@ import {
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { Public } from '../decorators/public.decorator';
 import { SetupMfaUseCase } from '../../application/use-cases/setup-mfa.use-case';
-import { VerifyMfaUseCase, MfaVerificationType, MfaVerificationContext } from '../../application/use-cases/verify-mfa.use-case';
+import {
+  VerifyMfaUseCase,
+  MfaVerificationType,
+  MfaVerificationContext,
+} from '../../application/use-cases/verify-mfa.use-case';
 import { DisableMfaUseCase } from '../../application/use-cases/disable-mfa.use-case';
 import { GenerateBackupCodesUseCase } from '../../application/use-cases/generate-backup-codes.use-case';
 import { IMfaRepository } from '../../domain/repositories/mfa.repository.interface';
@@ -33,20 +37,15 @@ import {
   VerifySetupMfaRequestDto,
   VerifySetupMfaResponseDto,
 } from '../dto/mfa-setup.dto';
-import {
-  VerifyMfaRequestDto,
-  VerifyMfaResponseDto,
-} from '../dto/mfa-verify.dto';
-import {
-  DisableMfaRequestDto,
-  DisableMfaResponseDto,
-} from '../dto/mfa-disable.dto';
+import { VerifyMfaRequestDto, VerifyMfaResponseDto } from '../dto/mfa-verify.dto';
+import { DisableMfaRequestDto, DisableMfaResponseDto } from '../dto/mfa-disable.dto';
 import {
   GetBackupCodesResponseDto,
   RegenerateBackupCodesRequestDto,
   RegenerateBackupCodesResponseDto,
 } from '../dto/mfa-backup-codes.dto';
 import { JwtService } from '../../infrastructure/services/jwt.service';
+import { PasswordService } from '../../infrastructure/services/password.service';
 import { BackupCodeMetadata } from '../../domain/value-objects/backup-code-metadata.value-object';
 import { IUserRepository } from '../../domain/repositories/user.repository.interface';
 
@@ -155,9 +154,7 @@ export class MfaController {
   @Public() // ログイン時のMFA検証は認証不要
   @Post('verify')
   @HttpCode(HttpStatus.OK)
-  public async verify(
-    @Body() dto: VerifyMfaRequestDto,
-  ): Promise<VerifyMfaResponseDto> {
+  public async verify(@Body() dto: VerifyMfaRequestDto): Promise<VerifyMfaResponseDto> {
     try {
       // コードの形式でTOTPかバックアップコードかを判定
       const isTotpCode = /^\d{6}$/.test(dto.code);
@@ -221,7 +218,9 @@ export class MfaController {
       if (error instanceof Error && error.message === 'MFA is already disabled') {
         throw new NotFoundException('MFA is not enabled');
       }
-      throw new BadRequestException(error instanceof Error ? error.message : 'Failed to disable MFA');
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Failed to disable MFA',
+      );
     }
   }
 
@@ -264,7 +263,7 @@ export class MfaController {
   ): Promise<RegenerateBackupCodesResponseDto> {
     try {
       const userId = req.user.sub;
-      
+
       // パスワード確認
       const user = await this.userRepository.findById(userId);
       if (!user) {
@@ -275,7 +274,7 @@ export class MfaController {
       if (!isPasswordValid) {
         throw new UnauthorizedException('Invalid password');
       }
-      
+
       // 既存のバックアップコードを削除
       await this.mfaRepository.deleteBackupCodes(userId);
 
@@ -291,8 +290,9 @@ export class MfaController {
       if (error instanceof UnauthorizedException || error instanceof NotFoundException) {
         throw error;
       }
-      throw new BadRequestException(error instanceof Error ? error.message : 'Failed to regenerate backup codes');
+      throw new BadRequestException(
+        error instanceof Error ? error.message : 'Failed to regenerate backup codes',
+      );
     }
   }
 }
-

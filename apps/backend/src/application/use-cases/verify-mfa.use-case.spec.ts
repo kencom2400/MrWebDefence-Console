@@ -4,7 +4,11 @@
  * MFA検証ユースケースのテスト
  */
 
-import { VerifyMfaUseCase, MfaVerificationType, MfaVerificationContext } from './verify-mfa.use-case';
+import {
+  VerifyMfaUseCase,
+  MfaVerificationType,
+  MfaVerificationContext,
+} from './verify-mfa.use-case';
 import { IUserRepository } from '../../domain/repositories/user.repository.interface';
 import { IMfaRepository } from '../../domain/repositories/mfa.repository.interface';
 import { TotpService } from '../../infrastructure/services/totp.service';
@@ -213,4 +217,3 @@ describe('VerifyMfaUseCase', () => {
     });
   });
 });
-

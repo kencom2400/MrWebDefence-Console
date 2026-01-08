@@ -62,4 +62,3 @@ export class BackupCodeMetadata {
     return new BackupCodeMetadata(this.id, usedAt, this.createdAt);
   }
 }
-

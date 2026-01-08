@@ -107,10 +107,13 @@ export class VerifyMfaUseCase {
 
       // バックアップコードをハッシュ化
       const codeHash = await this.backupCodeService.hash(backupCode.getValue());
-      
+
       // MfaRepositoryからハッシュに対応するレコードを検索
-      const backupCodeRecord = await (this.mfaRepository as any).findBackupCodeByHash(userId, codeHash);
-      
+      const backupCodeRecord = await (this.mfaRepository as any).findBackupCodeByHash(
+        userId,
+        codeHash,
+      );
+
       if (!backupCodeRecord || backupCodeRecord.usedAt !== null) {
         return { success: false };
       }
@@ -157,4 +160,3 @@ export class VerifyMfaUseCase {
     }
   }
 }
-

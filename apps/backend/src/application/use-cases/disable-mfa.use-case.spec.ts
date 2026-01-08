@@ -109,7 +109,9 @@ describe('DisableMfaUseCase', () => {
       mockUserRepository.findById.mockResolvedValue(user);
 
       // Act & Assert
-      await expect(disableMfaUseCase.execute(userId, password)).rejects.toThrow('MFA is already disabled');
+      await expect(disableMfaUseCase.execute(userId, password)).rejects.toThrow(
+        'MFA is already disabled',
+      );
       expect(mockUserRepository.findById).toHaveBeenCalledWith(userId);
       expect(mockPasswordService.compare).not.toHaveBeenCalled();
     });
@@ -138,4 +140,3 @@ describe('DisableMfaUseCase', () => {
     });
   });
 });
-

@@ -55,4 +55,3 @@ export interface IMfaRepository {
    */
   deleteBackupCodes(userId: string): Promise<void>;
 }
-

@@ -6,9 +6,9 @@
  */
 
 import { Injectable } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { IMfaRepository } from '../../domain/repositories/mfa.repository.interface';
 import { BackupCodeMetadata } from '../../domain/value-objects/backup-code-metadata.value-object';
-import { v4 as uuidv4 } from 'uuid';
 
 interface BackupCodeRecord {
   id: string;
@@ -54,7 +54,7 @@ export class MfaRepository implements IMfaRepository {
    */
   public async saveBackupCodes(userId: string, codeHashes: string[]): Promise<void> {
     const records: BackupCodeRecord[] = codeHashes.map((codeHash) => ({
-      id: uuidv4(),
+      id: randomUUID(),
       userId,
       codeHash,
       usedAt: null,
@@ -97,7 +97,10 @@ export class MfaRepository implements IMfaRepository {
    * @param codeHash バックアップコードのハッシュ
    * @returns バックアップコードレコード、またはnull
    */
-  public async findBackupCodeByHash(userId: string, codeHash: string): Promise<BackupCodeRecord | null> {
+  public async findBackupCodeByHash(
+    userId: string,
+    codeHash: string,
+  ): Promise<BackupCodeRecord | null> {
     const records = this.backupCodes.get(userId);
     if (!records) {
       return null;
@@ -114,4 +117,3 @@ export class MfaRepository implements IMfaRepository {
     this.backupCodes.delete(userId);
   }
 }
-

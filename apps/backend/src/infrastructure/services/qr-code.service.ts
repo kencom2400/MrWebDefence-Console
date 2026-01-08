@@ -24,8 +24,9 @@ export class QrCodeService {
         margin: 2,
       });
     } catch (error) {
-      throw new Error(`Failed to generate QR code: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to generate QR code: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 }
-
