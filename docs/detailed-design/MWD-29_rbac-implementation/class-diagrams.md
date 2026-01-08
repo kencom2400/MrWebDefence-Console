@@ -17,8 +17,8 @@ classDiagram
         +UserRole role
         +Date createdAt
         +Date updatedAt
-        +create(id, email, password, role)
-        +reconstruct(...)
+        +create(id, email, hashedPassword, role)
+        +reconstruct(id, email, hashedPassword, role, createdAt, updatedAt)
     }
 
     class RolesGuard {
@@ -30,6 +30,10 @@ classDiagram
         <<Decorator>>
         +roles: UserRole[]
     }
+    
+    class Public {
+        <<Decorator>>
+    }
 
     class JwtAuthGuard {
         +canActivate(context): boolean
@@ -37,6 +41,7 @@ classDiagram
 
     User --> UserRole
     RolesGuard ..> Roles : Reads Metadata
+    RolesGuard ..> Public : Reads Metadata
     RolesGuard ..> User : Checks Role
     RolesGuard --|> CanActivate
     JwtAuthGuard --|> CanActivate
@@ -54,11 +59,14 @@ classDiagram
 
     class RolesGuard {
     }
+    
+    class AppModule {
+        +providers
+    }
 
     class LoginUseCase {
     }
 
-    AuthController --> RolesGuard : UseGuards
+    AppModule --> RolesGuard : APP_GUARD (Global)
     AuthController --> LoginUseCase
 ```
-

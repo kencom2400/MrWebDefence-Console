@@ -1,66 +1,38 @@
 
-### 13-8. 設定管理とテスト効率化（PR #34）
+### 13-9. RBAC設計とセキュリティ（PR #35）
 
-**学習元**: PR #34 - Task 3.2: セッション管理機能実装 (Redis導入)（Geminiレビュー指摘）
+**学習元**: PR #35 - Task 3.3: RBAC実装（Geminiレビュー指摘）
 
-#### ConfigModuleの使用
+#### デフォルト拒否 (Deny by Default) とフェイルセーフ
 
-**問題**: 環境変数を`process.env`から直接読み込むと、テスト時のモック化が難しく、設定の一元管理ができない。
+**問題**: ガードを個別のエンドポイントに適用する方式では、適用漏れが発生した場合に、意図せずエンドポイントが公開されてしまうリスクがある。
 
-**解決策**: NestJSの`ConfigModule`と`ConfigService`を使用する。
+**解決策**:
+1. **グローバルガードの適用**: `APP_GUARD` を使用して、認可ガード（`RolesGuard`）をアプリケーション全体に適用する。
+2. **パブリックデコレータ**: 公開エンドポイントには明示的に `@Public()` デコレータを付与してバイパスする。
+3. **フェイルセーフ**: `@Roles` も `@Public` も指定されていないエンドポイントは、デフォルトでアクセスを**拒否**する。
 
 ```typescript
-// ✅ 良い例
-constructor(private readonly configService: ConfigService) {
-  const host = this.configService.get<string>('REDIS_HOST', 'localhost');
-  // ...
-}
+// RolesGuardのロジックイメージ
+const isPublic = this.reflector.get<boolean>('isPublic', context.getHandler());
+if (isPublic) return true;
+
+const requiredRoles = this.reflector.get<UserRole[]>('roles', context.getHandler());
+if (!requiredRoles) return false; // Fail Safe: ロール指定がなければ拒否
+
+// ... ロールチェック ...
 ```
 
 **理由**:
-- テスト容易性の向上（ConfigServiceをモックできる）
-- 設定の一元管理と型安全性
-- デフォルト値の管理が容易
+- セキュリティホールの防止（適用漏れ対策）
+- 安全なデフォルト設定の徹底
 
-#### マジックストリングの排除
+#### ドメインエンティティの一貫性
 
-**問題**: Redisのキープレフィックスなどがハードコードされており、変更時の保守性が低い。
+**問題**: エンティティのファクトリメソッド（`create`）などで、ドメインの文脈に合わない引数名（例: ハッシュ化済みパスワードなのに単に `password`）を使用すると混乱を招く。
 
-**解決策**: クラス定数として定義する。
-
-```typescript
-// ✅ 良い例
-private readonly KEY_PREFIX = 'blacklist:';
-
-// 使用時
-await this.redisClient.set(`${this.KEY_PREFIX}${token}`, ...);
-```
+**解決策**: 引数名やメソッドシグネチャは、その値の実態（`hashedPassword`）を正確に表すようにする。
 
 **理由**:
 - コードの可読性と保守性の向上
-- 一貫性の維持
-
-#### 型アサーションの活用（@ts-ignoreの回避）
-
-**問題**: 型定義が不足している場合に`@ts-ignore`を使用すると、意図しない型エラーまで隠蔽してしまう。
-
-**解決策**: 適切な型定義を行うか、交差型を使用した型アサーションを行う。
-
-```typescript
-// ✅ 良い例
-(request as Request & { user: JwtPayload }).user = payload;
-```
-
-**理由**:
-- 型安全性の維持
-- コードの意図が明確になる
-
-#### テスト実行の効率化
-
-**問題**: `pnpm run test`（ユニットテスト）と`pnpm run test:cov`（カバレッジ付きユニットテスト）を両方実行しており、処理が重複していた。
-
-**解決策**: CIや全テスト実行時は、カバレッジ付きテストのみを実行する。
-
-**理由**:
-- CI時間の短縮
-- リソースの有効活用
+- ドメインロジックの意図の明確化
