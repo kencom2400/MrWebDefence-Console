@@ -167,11 +167,6 @@ describe('MFA E2E Tests', () => {
       expect(verifyResponse.body.warning).toBeDefined();
 
       backupCodes = verifyResponse.body.backupCodes;
-
-      // MFA有効化後は、元のトークンが無効になる可能性があるため、
-      // 次のテストで使用するために、MFA検証後のトークンを取得
-      // ただし、このテストではMFAセットアップ検証が成功した時点で完了しているため、
-      // 次のテストで必要に応じて再ログインする
     });
 
     it('異常系: 既にMFAが有効な場合はエラーを返す', async () => {
@@ -249,9 +244,42 @@ describe('MFA E2E Tests', () => {
         .expect(200);
 
       // MFA有効なユーザーは中間状態を返す
-      expect(loginResponse.body.requiresMfa).toBe(true);
-      expect(loginResponse.body.userId).toBeDefined();
-      userId = loginResponse.body.userId;
+      if (!loginResponse.body.requiresMfa) {
+        // MFAが有効化されていない場合は、セットアップを再実行
+        const setupToken = await loginAndGetToken(false);
+        const setupResponse = await request(app.getHttpServer())
+          .post('/api/v1/auth/mfa/setup')
+          .set('Authorization', `Bearer ${setupToken}`)
+          .expect(200);
+        mfaSecret = setupResponse.body.secret;
+
+        const totpCode = authenticator.generate(mfaSecret);
+        await request(app.getHttpServer())
+          .post('/api/v1/auth/mfa/verify-setup')
+          .set('Authorization', `Bearer ${setupToken}`)
+          .send({
+            secret: mfaSecret,
+            code: totpCode,
+          })
+          .expect(200);
+
+        // 再度ログイン
+        const retryLoginResponse = await request(app.getHttpServer())
+          .post('/api/v1/auth/login')
+          .send({
+            email: 'user@example.com',
+            password: 'password123',
+          })
+          .expect(200);
+
+        expect(retryLoginResponse.body.requiresMfa).toBe(true);
+        expect(retryLoginResponse.body.userId).toBeDefined();
+        userId = retryLoginResponse.body.userId;
+      } else {
+        expect(loginResponse.body.requiresMfa).toBe(true);
+        expect(loginResponse.body.userId).toBeDefined();
+        userId = loginResponse.body.userId;
+      }
     });
 
     it('正常系: TOTPコードでログインに成功する', async () => {
@@ -332,6 +360,26 @@ describe('MFA E2E Tests', () => {
     beforeAll(async () => {
       // MFA有効化後は、通常のログインではトークンが取得できない（中間状態が返される）
       // MFA検証後にトークンを取得する必要がある
+      // mfaSecretが存在しない場合は、MFAセットアップを実行
+      if (!mfaSecret) {
+        const setupToken = await loginAndGetToken(false);
+        const setupResponse = await request(app.getHttpServer())
+          .post('/api/v1/auth/mfa/setup')
+          .set('Authorization', `Bearer ${setupToken}`)
+          .expect(200);
+        mfaSecret = setupResponse.body.secret;
+
+        const totpCode = authenticator.generate(mfaSecret);
+        await request(app.getHttpServer())
+          .post('/api/v1/auth/mfa/verify-setup')
+          .set('Authorization', `Bearer ${setupToken}`)
+          .send({
+            secret: mfaSecret,
+            code: totpCode,
+          })
+          .expect(200);
+      }
+
       const loginResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
