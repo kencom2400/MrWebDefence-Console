@@ -59,7 +59,6 @@ interface RequestWithUser extends Request {
 }
 
 @Controller('api/v1/auth/mfa')
-@UseGuards(JwtAuthGuard)
 export class MfaController {
   constructor(
     @Inject(SetupMfaUseCase)

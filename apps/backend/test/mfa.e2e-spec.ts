@@ -175,6 +175,13 @@ describe('MFA E2E Tests', () => {
       // このテストでは、MFAセットアップ検証後にMFAが有効になっているため、
       // 通常のログインでは中間状態が返される
       // MFA検証後にトークンを取得してから、MFAセットアップを試みる
+
+      // mfaSecretが設定されていることを確認
+      // 前のテストでMFAセットアップ検証が完了しているはず
+      if (!mfaSecret) {
+        throw new Error('mfaSecret is not set. Previous test may have failed.');
+      }
+
       const loginResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
@@ -188,6 +195,8 @@ describe('MFA E2E Tests', () => {
       const currentUserId = loginResponse.body.userId;
 
       // TOTPコードでMFA検証してトークンを取得
+      // MFAセットアップ検証後に永続化されたシークレットを使用
+      // mfaSecretは、MFAセットアップ検証時に永続化されているため、それを使用
       const totpCode = authenticator.generate(mfaSecret);
       const verifyResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/mfa/verify')
@@ -197,6 +206,9 @@ describe('MFA E2E Tests', () => {
         })
         .expect(200);
 
+      expect(verifyResponse.body.accessToken).toBeDefined();
+      expect(verifyResponse.body.tokenType).toBe('Bearer');
+      expect(verifyResponse.body.expiresIn).toBeDefined();
       const mfaToken = verifyResponse.body.accessToken;
 
       // MFAが既に有効な状態でセットアップを試みる
