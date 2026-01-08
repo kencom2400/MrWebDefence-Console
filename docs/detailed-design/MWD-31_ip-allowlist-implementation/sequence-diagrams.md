@@ -48,7 +48,7 @@ sequenceDiagram
         RemoveIpAllowListUseCase->>IpAllowListRepository: delete(ipAllowListId)
         IpAllowListRepository-->>RemoveIpAllowListUseCase: success
         RemoveIpAllowListUseCase-->>IpAllowListController: success
-        IpAllowListController-->>Client: 200 OK
+        IpAllowListController-->>Client: 204 No Content
     else IpAllowList not found or not belongs to user
         RemoveIpAllowListUseCase-->>IpAllowListController: NotFoundException
         IpAllowListController-->>Client: 404 Not Found
