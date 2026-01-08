@@ -623,3 +623,85 @@ export class IpAddressService {
 **理由**:
 - クライアント側での扱いの容易さ
 - レスポンス形式の簡素化
+
+### 13-14. データベースインデックスの冗長性排除とRESTful API設計（PR #39）
+
+**学習元**: PR #39 - IP AllowList機能の詳細設計（Geminiレビュー指摘）
+
+#### データベースインデックスの冗長性排除
+
+**問題**: `UNIQUE(user_id, ip_address)`制約により、`(user_id, ip_address)`の複合インデックスが既に作成されます。多くのデータベース（PostgreSQLやMySQLなど）では、複合インデックスの先頭カラム（この場合は`user_id`）に対するクエリでも、その複合インデックスが効率的に利用されます。
+
+**解決策**: `user_id`カラムの個別インデックスは冗長であり、削除してもパフォーマンスに影響はありません。
+
+```sql
+-- Bad: 冗長なインデックス
+CREATE TABLE ip_allowlists (
+  user_id UUID NOT NULL,
+  ip_address VARCHAR(45) NOT NULL,
+  UNIQUE(user_id, ip_address)
+);
+CREATE INDEX idx_ip_allowlists_user_id ON ip_allowlists(user_id); -- 冗長
+
+-- Good: 複合インデックスのみ
+CREATE TABLE ip_allowlists (
+  user_id UUID NOT NULL,
+  ip_address VARCHAR(45) NOT NULL,
+  UNIQUE(user_id, ip_address) -- これにより複合インデックスが作成される
+);
+```
+
+**理由**:
+- ストレージ使用量の削減
+- 書き込み（INSERT/UPDATE/DELETE）時のインデックス更新コストの削減
+- スキーマの簡素化
+
+#### RESTful API設計: DELETE操作のレスポンス
+
+**問題**: `DELETE`操作の成功時にステータスコード`200 OK`とメッセージを含むJSONボディを返却しているが、クライアントに返すべきコンテンツがない場合、よりRESTfulな設計が推奨される。
+
+**解決策**: `DELETE`操作が成功し、クライアントに返すべきコンテンツがない場合、ステータスコード`204 No Content`と空のボディを返す。
+
+```typescript
+// Bad: 200 OK with message
+@Delete(':id')
+async remove(@Param('id') id: string) {
+  await this.removeIpAllowListUseCase.execute(userId, id);
+  return { message: 'IP address removed from allowlist successfully' };
+}
+
+// Good: 204 No Content
+@Delete(':id')
+@HttpCode(HttpStatus.NO_CONTENT)
+async remove(@Param('id') id: string) {
+  await this.removeIpAllowListUseCase.execute(userId, id);
+  // 空のボディを返す（何も返さない）
+}
+```
+
+**理由**:
+- クライアントはレスポンスボディをパースする必要がなくなり、処理がシンプルになる
+- APIの意図がより明確になる（「削除が成功し、返すコンテンツはない」）
+- RESTのベストプラクティスに準拠
+
+#### シーケンス図における責務分担の明確化
+
+**問題**: シーケンス図で`VerifyIpAllowListUseCase`が`IpAddressService`の`isInRange`メソッドを呼び出すように描かれているが、設計方針では`isInRange`のようなドメインロジックは`IpAddress` Value Object内にカプセル化する方針が示されている。
+
+**解決策**: `VerifyIpAllowListUseCase`は、取得した各`IpAddress` Value Objectの`isInRange(clientIp)`メソッドを直接呼び出して検証を行う。
+
+```mermaid
+sequenceDiagram
+    VerifyIpAllowListUseCase->>IpAllowListRepository: findByUserId(userId)
+    IpAllowListRepository-->>VerifyIpAllowListUseCase: IpAllowList[]
+    
+    loop For each IpAllowList
+        VerifyIpAllowListUseCase->>IpAddress: isInRange(clientIp)
+        IpAddress-->>VerifyIpAllowListUseCase: true/false
+    end
+```
+
+**理由**:
+- ドメインロジックがValue Objectに集約される
+- `IpAddressService`はVOの生成（ファクトリ）や外部ライブラリとの連携といったインフラ層の責務に特化
+- 設計の一貫性を保つ
