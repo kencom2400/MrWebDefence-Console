@@ -10,7 +10,6 @@ import {
   Post,
   Get,
   Body,
-  UseGuards,
   Request,
   HttpCode,
   HttpStatus,
@@ -20,7 +19,6 @@ import {
   UnauthorizedException,
   Inject,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { Public } from '../decorators/public.decorator';
 import { Roles } from '../decorators/roles.decorator';
 import { UserRole } from '../../domain/entities/user-role.enum';
