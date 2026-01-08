@@ -14,10 +14,9 @@ sequenceDiagram
     Client->>IpAllowListController: POST /api/v1/auth/ip-allowlist<br/>{ ipAddress, description }
     IpAllowListController->>AddIpAllowListUseCase: execute(userId, ipAddress, description)
     
-    AddIpAllowListUseCase->>IpAddressService: validate(ipAddress)
-    IpAddressService-->>AddIpAllowListUseCase: true (valid)
-    
-    AddIpAllowListUseCase->>IpAddressService: parse(ipAddress)
+    AddIpAllowListUseCase->>IpAddressService: createFromString(ipAddress)
+    IpAddressService->>IpAddress: new IpAddress(ipAddress)
+    IpAddress-->>IpAddressService: IpAddress value object
     IpAddressService-->>AddIpAllowListUseCase: IpAddress value object
     
     AddIpAllowListUseCase->>IpAllowListRepository: exists(userId, ipAddress)
@@ -107,8 +106,8 @@ sequenceDiagram
         VerifyIpAllowListUseCase-->>LoginUseCase: true (allow all)
     else IP AllowList is not empty
         loop For each IpAllowList
-            VerifyIpAllowListUseCase->>IpAddressService: isInRange(clientIp, ipAddress)
-            IpAddressService-->>VerifyIpAllowListUseCase: true/false
+            VerifyIpAllowListUseCase->>IpAddress: isInRange(clientIp)
+            IpAddress-->>VerifyIpAllowListUseCase: true/false
         end
         
         alt IP address matches

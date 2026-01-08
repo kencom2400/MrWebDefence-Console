@@ -83,12 +83,12 @@ IPv6もサポート:
 **パスパラメータ**:
 - `id`: UUID形式のIP AllowList ID
 
-**レスポンス** (200 OK):
-```json
-{
-  "message": "IP address removed from allowlist successfully"
-}
+**レスポンス** (204 No Content):
 ```
+(空のボディ)
+```
+
+**注意**: `DELETE`操作が成功し、クライアントに返すべきコンテンツがない場合、ステータスコード`204 No Content`と空のボディを返すのが一般的なRESTのプラクティスです。これにより、クライアントはレスポンスボディをパースする必要がなくなり、処理がシンプルになります。
 
 **エラー** (404 Not Found):
 ```json
@@ -209,10 +209,12 @@ CREATE TABLE ip_allowlists (
   UNIQUE(user_id, ip_address)
 );
 
-CREATE INDEX idx_ip_allowlists_user_id ON ip_allowlists(user_id);
-```
+**注意**: `UNIQUE(user_id, ip_address)`制約により、`(user_id, ip_address)`の複合インデックスが既に作成されます。多くのデータベース（PostgreSQLやMySQLなど）では、複合インデックスの先頭カラム（この場合は`user_id`）に対するクエリでも、その複合インデックスが効率的に利用されます。したがって、`user_id`カラムの個別インデックスは冗長であり、削除してもパフォーマンスに影響はありません。IPアドレスの重複チェックや検索は、通常`user_id`とセットで行われるため、この複合インデックスで効率的に処理できます。
 
-**注意**: `UNIQUE(user_id, ip_address)`制約により、`(user_id, ip_address)`の複合インデックスが既に作成されます。IPアドレスの重複チェックや検索は、通常`user_id`とセットで行われるため、この複合インデックスで効率的に処理できます。単独の`ip_address`インデックスは、全ユーザーを横断してIPアドレスを検索するような特殊なケースでなければ不要です。
+インデックスを削除することで、以下のメリットがあります：
+- ストレージ使用量の削減
+- 書き込み（INSERT/UPDATE/DELETE）時のインデックス更新コストの削減
+- スキーマの簡素化
 ```
 
 **制約**:
