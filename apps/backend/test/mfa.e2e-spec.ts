@@ -28,18 +28,27 @@ describe('MFA E2E Tests', () => {
       })
       .expect(200);
 
-    if (loginResponse.body.requiresMfa && useMfa && mfaSecret) {
-      // MFA有効な場合は、MFA検証が必要
-      const currentUserId = loginResponse.body.userId;
-      const totpCode = authenticator.generate(mfaSecret);
-      const verifyResponse = await request(app.getHttpServer())
-        .post('/api/v1/auth/mfa/verify')
-        .send({
-          userId: currentUserId,
-          code: totpCode,
-        })
-        .expect(200);
-      return verifyResponse.body.accessToken;
+    // MFA有効な場合は、MFA検証が必要
+    if (loginResponse.body.requiresMfa) {
+      if (useMfa && mfaSecret) {
+        // MFA検証を実行
+        const currentUserId = loginResponse.body.userId;
+        const totpCode = authenticator.generate(mfaSecret);
+        const verifyResponse = await request(app.getHttpServer())
+          .post('/api/v1/auth/mfa/verify')
+          .send({
+            userId: currentUserId,
+            code: totpCode,
+          })
+          .expect(200);
+        return verifyResponse.body.accessToken;
+      } else {
+        // MFA有効だが、useMfa=false の場合はエラー
+        // この場合は、MFAを無効化するか、useMfa=true で呼び出す必要がある
+        throw new Error(
+          'User has MFA enabled, but useMfa=false was specified. Use useMfa=true or disable MFA first.',
+        );
+      }
     } else {
       // MFA無効な場合は、通常のトークンを返す
       return loginResponse.body.accessToken;
@@ -99,6 +108,58 @@ describe('MFA E2E Tests', () => {
   });
 
   describe('MFA Setup Flow', () => {
+    beforeAll(async () => {
+      // このテストスイートの前に、ユーザーのMFA状態を確認し、必要に応じて無効化する
+      const initialLoginResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'user@example.com',
+          password: 'password123',
+        })
+        .expect(200);
+
+      if (initialLoginResponse.body.requiresMfa) {
+        // MFA有効化されている場合は、無効化する
+        // ただし、mfaSecretが存在しない場合は、無効化できない
+        // この場合は、テストをスキップするか、エラーを投げる
+        if (!mfaSecret) {
+          // mfaSecretが存在しない場合は、MFAを無効化できない
+          // この場合は、テストをスキップするか、エラーを投げる
+          // 実際には、MfaRepositoryから直接シークレットを取得する必要があるが、
+          // E2Eテストではリポジトリに直接アクセスできない
+          // そのため、このテストスイートをスキップする
+          throw new Error(
+            'MFA is already enabled but mfaSecret is not set. Cannot proceed with MFA Setup Flow tests.',
+          );
+        }
+
+        // MFA検証を実行してトークンを取得
+        const currentUserId = initialLoginResponse.body.userId;
+        const totpCode = authenticator.generate(mfaSecret);
+        const verifyResponse = await request(app.getHttpServer())
+          .post('/api/v1/auth/mfa/verify')
+          .send({
+            userId: currentUserId,
+            code: totpCode,
+          })
+          .expect(200);
+
+        const mfaToken = verifyResponse.body.accessToken;
+
+        // MFAを無効化
+        await request(app.getHttpServer())
+          .post('/api/v1/auth/mfa/disable')
+          .set('Authorization', `Bearer ${mfaToken}`)
+          .send({
+            password: 'password123',
+          })
+          .expect(200);
+
+        // mfaSecretをクリア
+        mfaSecret = undefined as any;
+      }
+    });
+
     it('正常系: ログインしてMFAセットアップを開始する', async () => {
       // ログイン
       const loginResponse = await request(app.getHttpServer())
@@ -225,9 +286,30 @@ describe('MFA E2E Tests', () => {
     beforeAll(async () => {
       // MFAセットアップ検証が完了していることを確認
       // もし完了していない場合は、セットアップを実行
+      // 注意: このテストは、MFA Setup Flowのテストの後に実行されることを前提としている
+      // そのため、mfaSecretが設定されていることを期待する
       if (!mfaSecret) {
+        // mfaSecretが設定されていない場合は、MFA Setup Flowのテストが実行されていない可能性がある
+        // この場合は、MFAセットアップを実行する
+        const initialLoginResponse = await request(app.getHttpServer())
+          .post('/api/v1/auth/login')
+          .send({
+            email: 'user@example.com',
+            password: 'password123',
+          })
+          .expect(200);
+
+        if (initialLoginResponse.body.requiresMfa) {
+          // 既にMFA有効化されている場合は、エラーを投げる
+          // この場合は、MFA Setup Flowのテストが先に実行されているはずなので、
+          // mfaSecretが設定されているはず
+          throw new Error(
+            'MFA is already enabled but mfaSecret is not set. MFA Setup Flow test should run first.',
+          );
+        }
+
         // MFAセットアップを実行
-        const setupToken = await loginAndGetToken(false); // MFA無効な状態でログイン
+        const setupToken = initialLoginResponse.body.accessToken;
         const setupResponse = await request(app.getHttpServer())
           .post('/api/v1/auth/mfa/setup')
           .set('Authorization', `Bearer ${setupToken}`)
@@ -257,41 +339,12 @@ describe('MFA E2E Tests', () => {
 
       // MFA有効なユーザーは中間状態を返す
       if (!loginResponse.body.requiresMfa) {
-        // MFAが有効化されていない場合は、セットアップを再実行
-        const setupToken = await loginAndGetToken(false);
-        const setupResponse = await request(app.getHttpServer())
-          .post('/api/v1/auth/mfa/setup')
-          .set('Authorization', `Bearer ${setupToken}`)
-          .expect(200);
-        mfaSecret = setupResponse.body.secret;
-
-        const totpCode = authenticator.generate(mfaSecret);
-        await request(app.getHttpServer())
-          .post('/api/v1/auth/mfa/verify-setup')
-          .set('Authorization', `Bearer ${setupToken}`)
-          .send({
-            secret: mfaSecret,
-            code: totpCode,
-          })
-          .expect(200);
-
-        // 再度ログイン
-        const retryLoginResponse = await request(app.getHttpServer())
-          .post('/api/v1/auth/login')
-          .send({
-            email: 'user@example.com',
-            password: 'password123',
-          })
-          .expect(200);
-
-        expect(retryLoginResponse.body.requiresMfa).toBe(true);
-        expect(retryLoginResponse.body.userId).toBeDefined();
-        userId = retryLoginResponse.body.userId;
-      } else {
-        expect(loginResponse.body.requiresMfa).toBe(true);
-        expect(loginResponse.body.userId).toBeDefined();
-        userId = loginResponse.body.userId;
+        throw new Error('MFA setup verification failed - requiresMfa is not true');
       }
+
+      expect(loginResponse.body.requiresMfa).toBe(true);
+      expect(loginResponse.body.userId).toBeDefined();
+      userId = loginResponse.body.userId;
     });
 
     it('正常系: TOTPコードでログインに成功する', async () => {
@@ -374,7 +427,41 @@ describe('MFA E2E Tests', () => {
       // MFA検証後にトークンを取得する必要がある
       // mfaSecretが存在しない場合は、MFAセットアップを実行
       if (!mfaSecret) {
-        const setupToken = await loginAndGetToken(false);
+        // まず、ユーザーがMFA有効化されているか確認
+        const initialLoginResponse = await request(app.getHttpServer())
+          .post('/api/v1/auth/login')
+          .send({
+            email: 'user@example.com',
+            password: 'password123',
+          })
+          .expect(200);
+
+        if (initialLoginResponse.body.requiresMfa) {
+          // 既にMFA有効化されている場合は、MFAを無効化してからセットアップを実行
+          const mfaToken = await loginAndGetToken(true); // MFA有効な状態でログイン
+          await request(app.getHttpServer())
+            .post('/api/v1/auth/mfa/disable')
+            .set('Authorization', `Bearer ${mfaToken}`)
+            .send({
+              password: 'password123',
+            })
+            .expect(200);
+        }
+
+        // MFAセットアップを実行
+        const setupTokenResponse = await request(app.getHttpServer())
+          .post('/api/v1/auth/login')
+          .send({
+            email: 'user@example.com',
+            password: 'password123',
+          })
+          .expect(200);
+
+        if (setupTokenResponse.body.requiresMfa) {
+          throw new Error('MFA is still enabled after disable attempt');
+        }
+
+        const setupToken = setupTokenResponse.body.accessToken;
         const setupResponse = await request(app.getHttpServer())
           .post('/api/v1/auth/mfa/setup')
           .set('Authorization', `Bearer ${setupToken}`)
