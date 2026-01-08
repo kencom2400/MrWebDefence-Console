@@ -16,4 +16,3 @@ export class LoginRequestDto {
   @MaxLength(128, { message: 'password must be shorter than or equal to 128 characters' })
   public password!: string;
 }
-

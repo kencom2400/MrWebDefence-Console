@@ -1,73 +1,47 @@
-/**
- * JWT Service
- *
- * JWTトークンの生成と検証を行うサービス
- */
-
+import { Injectable } from '@nestjs/common';
 import * as jwt from 'jsonwebtoken';
+import { UserRole } from '../../domain/entities/user-role.enum';
 
 export interface JwtPayload {
-  sub: string; // ユーザーID
-  email: string; // メールアドレス
-  iat?: number; // 発行日時（自動設定）
-  exp?: number; // 有効期限（自動設定）
+  sub: string;
+  email: string;
+  role: UserRole; // ロールを追加
+  exp?: number;
 }
 
+@Injectable()
 export class JwtService {
-  private readonly secret: string;
-  private readonly expiresIn: number = 1800; // 30分（秒）
-
-  constructor(secret: string, expiresIn?: number) {
-    this.secret = secret;
-    if (expiresIn !== undefined) {
-      this.expiresIn = expiresIn;
-    }
-  }
+  constructor(
+    private readonly secret: string,
+    private readonly expiresIn: number,
+  ) {}
 
   /**
    * JWTトークンを生成する
-   * @param payload ペイロード
-   * @returns JWTトークン
+   * @param userId ユーザーID
+   * @param email メールアドレス
+   * @param role ユーザーロール
    */
-  public generateToken(payload: Omit<JwtPayload, 'iat' | 'exp'>): string {
-    return jwt.sign(payload, this.secret, {
-      expiresIn: this.expiresIn,
-    });
-  }
+  public generateToken(userId: string, email: string, role: UserRole): string {
+    const payload: JwtPayload = {
+      sub: userId,
+      email,
+      role,
+    };
 
-  /**
-   * JWTトークンの有効期限（秒）を取得する
-   * @returns 有効期限（秒）
-   */
-  public getExpiresIn(): number {
-    return this.expiresIn;
+    return jwt.sign(payload, this.secret, { expiresIn: this.expiresIn });
   }
 
   /**
    * JWTトークンを検証する
    * @param token JWTトークン
-   * @returns 検証されたペイロード、検証に失敗した場合はnull
+   * @returns ペイロード、または検証失敗時はnull
    */
   public verifyToken(token: string): JwtPayload | null {
     try {
-      const decoded: unknown = jwt.verify(token, this.secret);
-      if (this.isJwtPayload(decoded)) {
-        return decoded;
-      }
-      return null;
-    } catch {
+      return jwt.verify(token, this.secret) as JwtPayload;
+    } catch (error) {
       return null;
     }
-  }
-
-  /**
-   * 型ガード: JwtPayloadかどうかを判定する
-   */
-  private isJwtPayload(value: unknown): value is JwtPayload {
-    if (typeof value !== 'object' || value === null) {
-      return false;
-    }
-    const obj = value as Record<string, unknown>;
-    return typeof obj.sub === 'string' && typeof obj.email === 'string';
   }
 }

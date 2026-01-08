@@ -10,7 +10,6 @@ import { AuthController } from './auth.controller';
 import { LoginUseCase, AuthenticationError } from '../../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../../application/use-cases/logout.use-case';
 import { LoginRequestDto } from '../dto/login-request.dto';
-import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -38,20 +37,8 @@ describe('AuthController', () => {
           provide: LogoutUseCase,
           useValue: mockLogoutUseCase,
         },
-        {
-          provide: 'JwtService',
-          useValue: {
-            verifyToken: jest.fn(),
-          },
-        },
-        {
-          provide: 'ITokenBlacklistRepository',
-          useValue: {
-            isBlacklisted: jest.fn(),
-          },
-        },
       ],
-    }).overrideGuard(JwtAuthGuard).useValue({ canActivate: () => true }).compile();
+    }).compile();
 
     controller = module.get<AuthController>(AuthController);
   });

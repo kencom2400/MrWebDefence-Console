@@ -9,4 +9,3 @@ export class LoginResponseDto {
   public tokenType!: string;
   public expiresIn!: number;
 }
-

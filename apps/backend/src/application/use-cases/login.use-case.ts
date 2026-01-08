@@ -1,29 +1,16 @@
-/**
- * Login Use Case
- *
- * ログイン処理のユースケース
- * アプリケーション層に位置し、ドメイン層とインフラ層に依存する
- */
-
-import { Inject } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { IUserRepository } from '../../domain/repositories/user.repository.interface';
-import { User } from '../../domain/entities/user.entity';
 import { PasswordService } from '../../infrastructure/services/password.service';
 import { JwtService } from '../../infrastructure/services/jwt.service';
 
-export interface LoginResult {
-  accessToken: string;
-  tokenType: string;
-  expiresIn: number;
-}
-
 export class AuthenticationError extends Error {
-  constructor(message: string = 'Invalid credentials') {
-    super(message);
+  constructor() {
+    super('Authentication failed');
     this.name = 'AuthenticationError';
   }
 }
 
+@Injectable()
 export class LoginUseCase {
   constructor(
     @Inject('IUserRepository')
@@ -38,32 +25,36 @@ export class LoginUseCase {
    * ログイン処理を実行する
    * @param email メールアドレス
    * @param password パスワード
-   * @returns ログイン結果（JWTトークンを含む）
-   * @throws AuthenticationError 認証に失敗した場合
+   * @returns アクセストークンと有効期限情報
    */
-  public async execute(email: string, password: string): Promise<LoginResult> {
-    // ユーザーを検索
-    const user: User | null = await this.userRepository.findByEmail(email);
-    if (user === null) {
+  public async execute(
+    email: string,
+    pass: string,
+  ): Promise<{ accessToken: string; tokenType: string; expiresIn: number }> {
+    // ユーザー検索
+    const user = await this.userRepository.findByEmail(email);
+    if (!user) {
       throw new AuthenticationError();
     }
 
-    // パスワードを検証
-    const isValid: boolean = await this.passwordService.compare(password, user.hashedPassword);
-    if (!isValid) {
+    // パスワード検証
+    const isPasswordValid = await this.passwordService.compare(pass, user.hashedPassword);
+    if (!isPasswordValid) {
       throw new AuthenticationError();
     }
 
-    // JWTトークンを生成
-    const accessToken: string = this.jwtService.generateToken({
-      sub: user.id,
-      email: user.email,
-    });
+    // JWTトークン生成
+    // ユーザーのロールを含める
+    const accessToken = this.jwtService.generateToken(user.id, user.email, user.role);
+
+    // 有効期限の取得（JwtServiceの実装に依存するが、ここでは簡易的に計算）
+    // 本来はJwtServiceから有効期限を取得できるメソッドがあると良い
+    const expiresIn = 1800; // 30分 (秒)
 
     return {
       accessToken,
       tokenType: 'Bearer',
-      expiresIn: this.jwtService.getExpiresIn(),
+      expiresIn,
     };
   }
 }

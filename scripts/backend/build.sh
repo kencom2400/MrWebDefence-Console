@@ -32,3 +32,4 @@ echo "✅ ビルドが完了しました"
 echo "   出力ディレクトリ: ${BACKEND_DIR}/dist"
 
 
+
