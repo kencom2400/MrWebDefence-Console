@@ -14,7 +14,6 @@ import {
   HttpStatus,
   UnauthorizedException,
   Inject,
-  UseGuards,
   Request,
 } from '@nestjs/common';
 import { Request as ExpressRequest } from 'express';
@@ -22,8 +21,10 @@ import { LoginUseCase, AuthenticationError } from '../../application/use-cases/l
 import { LogoutUseCase } from '../../application/use-cases/logout.use-case';
 import { LoginRequestDto } from '../dto/login-request.dto';
 import { LoginResponseDto } from '../dto/login-response.dto';
-import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { JwtPayload } from '../../infrastructure/services/jwt.service';
+import { Public } from '../decorators/public.decorator';
+import { Roles } from '../decorators/roles.decorator';
+import { UserRole } from '../../domain/entities/user-role.enum';
 
 interface RequestWithUser extends ExpressRequest {
   user: JwtPayload;
@@ -42,6 +43,7 @@ export class AuthController {
    * ログイン処理
    * POST /api/v1/auth/login
    */
+  @Public() // ログインは認証不要
   @Post('login')
   @HttpCode(HttpStatus.OK)
   public async login(@Body() loginRequest: LoginRequestDto): Promise<LoginResponseDto> {
@@ -65,8 +67,10 @@ export class AuthController {
    * ログアウト処理
    * POST /api/v1/auth/logout
    */
+  // 認証必要（Global Guardによりデフォルトで保護される）
+  // ログアウトは全てのロールで可能
+  @Roles(UserRole.SERVICE_MEMBER, UserRole.SERVICE_ADMIN)
   @Post('logout')
-  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   public async logout(@Request() req: RequestWithUser): Promise<void> {
     // Authorizationヘッダーからトークンを取得（Guardで検証済みなので存在するはずだが念のため）
@@ -80,8 +84,9 @@ export class AuthController {
    * プロフィール取得（セッション確認用）
    * GET /api/v1/auth/profile
    */
+  // 認証必要（デフォルト保護）
+  @Roles(UserRole.SERVICE_MEMBER, UserRole.SERVICE_ADMIN)
   @Get('profile')
-  @UseGuards(JwtAuthGuard)
   public getProfile(@Request() req: RequestWithUser): JwtPayload {
     return req.user;
   }

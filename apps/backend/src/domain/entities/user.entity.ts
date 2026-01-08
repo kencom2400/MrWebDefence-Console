@@ -5,17 +5,28 @@
  * ドメイン層の最内層に位置し、外部に依存しない
  */
 
+import { UserRole } from './user-role.enum';
+
 export class User {
   public readonly id: string;
   public readonly email: string;
   public readonly hashedPassword: string;
+  public readonly role: UserRole;
   public readonly createdAt: Date;
   public readonly updatedAt: Date;
 
-  constructor(id: string, email: string, hashedPassword: string, createdAt: Date, updatedAt: Date) {
+  constructor(
+    id: string,
+    email: string,
+    hashedPassword: string,
+    role: UserRole,
+    createdAt: Date,
+    updatedAt: Date,
+  ) {
     this.id = id;
     this.email = email;
     this.hashedPassword = hashedPassword;
+    this.role = role;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }
@@ -23,9 +34,14 @@ export class User {
   /**
    * ユーザーエンティティを作成する
    */
-  public static create(id: string, email: string, hashedPassword: string): User {
+  public static create(
+    id: string,
+    email: string,
+    hashedPassword: string,
+    role: UserRole = UserRole.SERVICE_MEMBER,
+  ): User {
     const now: Date = new Date();
-    return new User(id, email, hashedPassword, now, now);
+    return new User(id, email, hashedPassword, role, now, now);
   }
 
   /**
@@ -35,10 +51,10 @@ export class User {
     id: string,
     email: string,
     hashedPassword: string,
+    role: UserRole,
     createdAt: Date,
     updatedAt: Date,
   ): User {
-    return new User(id, email, hashedPassword, createdAt, updatedAt);
+    return new User(id, email, hashedPassword, role, createdAt, updatedAt);
   }
 }
-

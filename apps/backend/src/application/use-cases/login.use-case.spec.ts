@@ -7,6 +7,7 @@
 import { LoginUseCase, AuthenticationError } from './login.use-case';
 import { IUserRepository } from '../../domain/repositories/user.repository.interface';
 import { User } from '../../domain/entities/user.entity';
+import { UserRole } from '../../domain/entities/user-role.enum';
 import { PasswordService } from '../../infrastructure/services/password.service';
 import { JwtService } from '../../infrastructure/services/jwt.service';
 
@@ -32,7 +33,7 @@ describe('LoginUseCase', () => {
     mockJwtService = {
       generateToken: jest.fn(),
       verifyToken: jest.fn(),
-      getExpiresIn: jest.fn().mockReturnValue(86400),
+      getExpiresIn: jest.fn().mockReturnValue(1800),
     } as any;
 
     loginUseCase = new LoginUseCase(mockUserRepository, mockPasswordService, mockJwtService);
@@ -43,10 +44,18 @@ describe('LoginUseCase', () => {
     const password: string = 'password123';
     const hashedPassword: string = '$2b$10$hashedpassword';
     const userId: string = 'user-id-123';
+    const role: UserRole = UserRole.SERVICE_MEMBER;
 
     it('正常系: ログインに成功する', async () => {
       // Arrange
-      const user: User = User.reconstruct(userId, email, hashedPassword, new Date(), new Date());
+      const user: User = User.reconstruct(
+        userId,
+        email,
+        hashedPassword,
+        role,
+        new Date(),
+        new Date(),
+      );
       const accessToken: string = 'jwt-token';
 
       mockUserRepository.findByEmail.mockResolvedValue(user);
@@ -59,13 +68,10 @@ describe('LoginUseCase', () => {
       // Assert
       expect(result.accessToken).toBe(accessToken);
       expect(result.tokenType).toBe('Bearer');
-      expect(result.expiresIn).toBe(86400);
+      expect(result.expiresIn).toBe(1800);
       expect(mockUserRepository.findByEmail).toHaveBeenCalledWith(email);
       expect(mockPasswordService.compare).toHaveBeenCalledWith(password, hashedPassword);
-      expect(mockJwtService.generateToken).toHaveBeenCalledWith({
-        sub: userId,
-        email,
-      });
+      expect(mockJwtService.generateToken).toHaveBeenCalledWith(userId, email, role);
     });
 
     it('異常系: ユーザーが見つからない場合はAuthenticationErrorを投げる', async () => {
@@ -81,7 +87,14 @@ describe('LoginUseCase', () => {
 
     it('異常系: パスワードが一致しない場合はAuthenticationErrorを投げる', async () => {
       // Arrange
-      const user: User = User.reconstruct(userId, email, hashedPassword, new Date(), new Date());
+      const user: User = User.reconstruct(
+        userId,
+        email,
+        hashedPassword,
+        role,
+        new Date(),
+        new Date(),
+      );
 
       mockUserRepository.findByEmail.mockResolvedValue(user);
       mockPasswordService.compare.mockResolvedValue(false);
@@ -94,4 +107,3 @@ describe('LoginUseCase', () => {
     });
   });
 });
-

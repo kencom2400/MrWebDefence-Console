@@ -6,14 +6,16 @@
  */
 
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { AuthController } from './controllers/auth.controller';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../application/use-cases/logout.use-case';
 import { UserRepository } from '../infrastructure/repositories/user.repository';
-// import { InMemoryTokenBlacklistRepository } from '../infrastructure/repositories/in-memory-token-blacklist.repository';
 import { RedisTokenBlacklistRepository } from '../infrastructure/repositories/redis-token-blacklist.repository';
 import { PasswordService } from '../infrastructure/services/password.service';
 import { JwtService } from '../infrastructure/services/jwt.service';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { RolesGuard } from './guards/roles.guard';
 
 @Module({
   controllers: [AuthController],
@@ -47,6 +49,15 @@ import { JwtService } from '../infrastructure/services/jwt.service';
         const expiresIn: number = parseInt(process.env.JWT_EXPIRES_IN || '1800', 10);
         return new JwtService(secret || 'default-secret-key-change-in-production', expiresIn);
       },
+    },
+    // Global Guards: 登録順序が重要 (JwtAuthGuard -> RolesGuard)
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
 })

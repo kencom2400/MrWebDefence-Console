@@ -8,34 +8,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import * as bcrypt from 'bcrypt';
+import { UserRole } from '../src/domain/entities/user-role.enum';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
-  const testDataFile: string = path.join(process.cwd(), 'data', 'users.json');
-  const testUserEmail: string = 'test@example.com';
+  // UserRepository(インメモリ)に初期登録されているユーザーを使用
+  const testUserEmail: string = 'user@example.com';
   const testUserPassword: string = 'password123';
 
   beforeAll(async () => {
-    // テスト用ユーザーを作成
-    const hashedPassword: string = await bcrypt.hash(testUserPassword, 10);
-    const testUser = {
-      id: 'test-user-id',
-      email: testUserEmail,
-      hashedPassword: hashedPassword,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    // データディレクトリが存在しない場合は作成
-    const dataDir: string = path.dirname(testDataFile);
-    await fs.mkdir(dataDir, { recursive: true });
-
-    // テスト用ユーザーを保存
-    await fs.writeFile(testDataFile, JSON.stringify([testUser], null, 2), 'utf-8');
-
     // アプリケーションを起動
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -53,12 +34,6 @@ describe('AuthController (e2e)', () => {
   });
 
   afterAll(async () => {
-    // テスト用データファイルを削除
-    try {
-      await fs.unlink(testDataFile);
-    } catch {
-      // ファイルが存在しない場合は無視
-    }
     await app.close();
   });
 
@@ -175,6 +150,7 @@ describe('AuthController (e2e)', () => {
         .expect(200)
         .expect((res: request.Response) => {
           expect(res.body.email).toBe(testUserEmail);
+          expect(res.body.role).toBe(UserRole.SERVICE_MEMBER);
         });
     });
 
