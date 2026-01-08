@@ -3,8 +3,8 @@ version: '3.8'
 services:
   backend:
     build:
-      context: ./apps/backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/backend/Dockerfile
       target: development
     container_name: mrwebdefence-console-backend
     ports:
@@ -13,24 +13,67 @@ services:
       - NODE_ENV=development
       - PORT=3001
       - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
-      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-86400}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-1800}
       - BCRYPT_SALT_ROUNDS=${BCRYPT_SALT_ROUNDS:-10}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
+      - REDIS_HOST=redis-dev
+      - REDIS_PORT=6379
     volumes:
-      # Mount source code for hot reload
-      - ./apps/backend/src:/app/src
-      - ./apps/backend/test:/app/test
-      - ./apps/backend/tsconfig.json:/app/tsconfig.json
-      - ./apps/backend/nest-cli.json:/app/nest-cli.json
-      # Exclude node_modules from volume mount (use container's node_modules)
+      # Mount backend source code
+      - ./apps/backend:/app/apps/backend
+      # Persist node_modules to avoid overwriting them with local (potentially empty or incompatible) modules
       - /app/node_modules
-      # Mount data directory for JSON file storage
-      - ./apps/backend/data:/app/data
+      - /app/apps/backend/node_modules
     restart: unless-stopped
+    depends_on:
+      - redis-dev
     networks:
       - mrwebdefence-network
+
+  redis-dev:
+    image: redis:alpine
+    container_name: mrwebdefence-console-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-dev-data:/data
+    networks:
+      - mrwebdefence-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-test:
+    image: redis:alpine
+    container_name: mrwebdefence-console-redis-test
+    ports:
+      - "6380:6379"
+    networks:
+      - mrwebdefence-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-e2e:
+    image: redis:alpine
+    container_name: mrwebdefence-console-redis-e2e
+    ports:
+      - "6381:6379"
+    networks:
+      - mrwebdefence-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
   mrwebdefence-network:
     driver: bridge
 
+volumes:
+  redis-dev-data:

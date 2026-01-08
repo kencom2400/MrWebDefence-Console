@@ -15,7 +15,7 @@ export interface JwtPayload {
 
 export class JwtService {
   private readonly secret: string;
-  private readonly expiresIn: number = 86400; // 24時間（秒）
+  private readonly expiresIn: number = 1800; // 30分（秒）
 
   constructor(secret: string, expiresIn?: number) {
     this.secret = secret;
@@ -71,4 +71,3 @@ export class JwtService {
     return typeof obj.sub === 'string' && typeof obj.email === 'string';
   }
 }
-

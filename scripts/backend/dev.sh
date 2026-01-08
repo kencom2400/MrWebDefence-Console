@@ -1,45 +1,39 @@
 #!/bin/bash
 
-# 開発サーバー起動スクリプト
+# 開発サーバー起動スクリプト (Docker版)
 # 
-# NestJSバックエンドの開発サーバーを起動します。
-# ホットリロードが有効で、ファイル変更時に自動的に再起動されます。
+# Docker Composeを使用してバックエンド開発サーバーとRedisを起動します。
+# 開発用Redis (redis-dev) も自動的に起動します。
 
 set -euo pipefail
 
 # スクリプトのディレクトリを取得
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-BACKEND_DIR="${PROJECT_ROOT}/apps/backend"
 
-# 環境変数の設定（デフォルト値）
-PORT="${PORT:-3001}"
-NODE_ENV="${NODE_ENV:-development}"
-JWT_SECRET="${JWT_SECRET:-default-secret-key-change-in-production}"
-JWT_EXPIRES_IN="${JWT_EXPIRES_IN:-86400}"
-
-echo "🚀 開発サーバーを起動します..."
-echo ""
-echo "📋 設定:"
-echo "   PORT: ${PORT}"
-echo "   NODE_ENV: ${NODE_ENV}"
-echo "   Backend Directory: ${BACKEND_DIR}"
+echo "🚀 開発サーバーを起動します (Docker)..."
+echo "   構成: Backend + Redis (dev)"
 echo ""
 
-# バックエンドディレクトリに移動
-cd "${BACKEND_DIR}"
+# プロジェクトルートに移動
+cd "${PROJECT_ROOT}"
 
-# 依存関係の確認
-if [ ! -d "node_modules" ]; then
-  echo "📦 依存関係をインストール中..."
-  pnpm install
+# Docker Composeの確認
+if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
+  echo "❌ エラー: docker-compose または docker compose が見つかりません"
+  exit 1
 fi
 
-# 開発サーバーを起動
-echo "🔄 開発サーバーを起動中..."
-echo "   URL: http://localhost:${PORT}"
+# サービスを起動
+# backendはdepends_onでredis-devに依存しているため、自動的にredis-devも起動します
+echo "🔄 Docker Composeでサービスを起動中..."
+echo "   URL: http://localhost:3001"
+echo "   (Ctrl+C で停止)"
 echo ""
 
-exec pnpm run start:dev
-
-
+# docker-compose コマンドの互換性チェック
+if command -v docker-compose &> /dev/null; then
+  docker-compose up backend
+else
+  docker compose up backend
+fi
