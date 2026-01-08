@@ -29,7 +29,7 @@ export class LoginUseCase {
    */
   public async execute(
     email: string,
-    pass: string,
+    password: string,
   ): Promise<{ accessToken: string; tokenType: string; expiresIn: number }> {
     // ユーザー検索
     const user = await this.userRepository.findByEmail(email);
@@ -38,7 +38,7 @@ export class LoginUseCase {
     }
 
     // パスワード検証
-    const isPasswordValid = await this.passwordService.compare(pass, user.hashedPassword);
+    const isPasswordValid = await this.passwordService.compare(password, user.hashedPassword);
     if (!isPasswordValid) {
       throw new AuthenticationError();
     }
@@ -47,9 +47,8 @@ export class LoginUseCase {
     // ユーザーのロールを含める
     const accessToken = this.jwtService.generateToken(user.id, user.email, user.role);
 
-    // 有効期限の取得（JwtServiceの実装に依存するが、ここでは簡易的に計算）
-    // 本来はJwtServiceから有効期限を取得できるメソッドがあると良い
-    const expiresIn = 1800; // 30分 (秒)
+    // 有効期限の取得
+    const expiresIn = this.jwtService.getExpiresIn();
 
     return {
       accessToken,

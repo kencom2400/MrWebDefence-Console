@@ -44,4 +44,11 @@ export class JwtService {
       return null;
     }
   }
+
+  /**
+   * トークンの有効期限（秒）を取得する
+   */
+  public getExpiresIn(): number {
+    return this.expiresIn;
+  }
 }
