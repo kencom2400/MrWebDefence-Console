@@ -34,7 +34,6 @@ import { DisableMfaUseCase } from '../../application/use-cases/disable-mfa.use-c
 import { GenerateBackupCodesUseCase } from '../../application/use-cases/generate-backup-codes.use-case';
 import { IMfaRepository } from '../../domain/repositories/mfa.repository.interface';
 import {
-  SetupMfaRequestDto,
   SetupMfaResponseDto,
   VerifySetupMfaRequestDto,
   VerifySetupMfaResponseDto,

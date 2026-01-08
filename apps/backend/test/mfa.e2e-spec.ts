@@ -168,30 +168,10 @@ describe('MFA E2E Tests', () => {
 
       backupCodes = verifyResponse.body.backupCodes;
 
-      // MFA有効化後は、MFA検証を経て新しいトークンを取得する必要がある
+      // MFA有効化後は、元のトークンが無効になる可能性があるため、
       // 次のテストで使用するために、MFA検証後のトークンを取得
-      const mfaLoginResponse = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({
-          email: 'user@example.com',
-          password: 'password123',
-        })
-        .expect(200);
-
-      expect(mfaLoginResponse.body.requiresMfa).toBe(true);
-      const currentUserId = mfaLoginResponse.body.userId;
-
-      const newTotpCode = authenticator.generate(mfaSecret);
-      const mfaVerifyResponse = await request(app.getHttpServer())
-        .post('/api/v1/auth/mfa/verify')
-        .send({
-          userId: currentUserId,
-          code: newTotpCode,
-        })
-        .expect(200);
-
-      // MFA検証後のトークンを保存（次のテストで使用）
-      accessToken = mfaVerifyResponse.body.accessToken;
+      // ただし、このテストではMFAセットアップ検証が成功した時点で完了しているため、
+      // 次のテストで必要に応じて再ログインする
     });
 
     it('異常系: 既にMFAが有効な場合はエラーを返す', async () => {

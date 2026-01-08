@@ -60,5 +60,7 @@ export interface IMfaRepository {
    * @param userId ユーザーID
    * @returns バックアップコードレコードの配列（ハッシュを含む）
    */
-  getAllBackupCodeRecords(userId: string): Promise<Array<{ id: string; codeHash: string; usedAt: Date | null }>>;
+  getAllBackupCodeRecords(
+    userId: string,
+  ): Promise<Array<{ id: string; codeHash: string; usedAt: Date | null }>>;
 }
