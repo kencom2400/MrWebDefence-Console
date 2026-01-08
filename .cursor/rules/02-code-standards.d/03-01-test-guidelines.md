@@ -17,8 +17,8 @@ const result: any = await service.execute();
 ```typescript
 // ✅ テストでも適切な型定義を使用
 const mockData: CreditCardEntity = {
-  id: '1',
-  issuer: 'Test Card',
+  id: "1",
+  issuer: "Test Card",
   // ... 必要なプロパティを全て定義
 };
 
@@ -33,7 +33,7 @@ const mockRepository = {
 
 ```typescript
 // ❌ 絶対に禁止
-it.skip('should process payment', () => {
+it.skip("should process payment", () => {
   // 理由なしのskipは禁止
 });
 
@@ -50,13 +50,13 @@ try {
 ```typescript
 // ✅ 一時的にスキップする場合は理由とTODOを明記
 // TODO: #456 - APIモックの修正後にこのテストを有効化
-it.skip('should process payment', () => {
+it.skip("should process payment", () => {
   // ...
 });
 
 // エラーは適切にテスト
-it('should throw error when invalid data', async () => {
-  await expect(service.execute(invalidData)).rejects.toThrow('Invalid data');
+it("should throw error when invalid data", async () => {
+  await expect(service.execute(invalidData)).rejects.toThrow("Invalid data");
 });
 ```
 
@@ -94,7 +94,7 @@ pnpm test:e2e --detectOpenHandles
 // テストセットアップ（test-setup.ts）
 export async function createTestApp(
   moduleBuilder: TestingModuleBuilder,
-  options: TestAppOptions = {}
+  options: TestAppOptions = {},
 ): Promise<INestApplication> {
   const moduleFixture = await moduleBuilder.compile();
   const app = moduleFixture.createNestApplication();
@@ -153,21 +153,21 @@ pnpm test <module-name>
 ### テストの構造（AAA パターン）
 
 ```typescript
-describe('CreditCardEntity', () => {
-  describe('constructor', () => {
-    it('should create a valid credit card entity', () => {
+describe("CreditCardEntity", () => {
+  describe("constructor", () => {
+    it("should create a valid credit card entity", () => {
       // Arrange - 準備
       const cardData = {
-        id: 'cc_123',
-        cardName: 'テストカード',
+        id: "cc_123",
+        cardName: "テストカード",
       };
 
       // Act - 実行
       const creditCard = new CreditCardEntity(/* ... */);
 
       // Assert - 検証
-      expect(creditCard.id).toBe('cc_123');
-      expect(creditCard.cardName).toBe('テストカード');
+      expect(creditCard.id).toBe("cc_123");
+      expect(creditCard.cardName).toBe("テストカード");
     });
   });
 });
@@ -180,7 +180,7 @@ describe('CreditCardEntity', () => {
 #### ✅ 推奨パターン（統一すべきアプローチ）
 
 ```typescript
-describe('MyService', () => {
+describe("MyService", () => {
   let service: MyService;
   // 1. describeスコープでspy変数を宣言
   let consoleErrorSpy: jest.SpyInstance;
@@ -189,9 +189,9 @@ describe('MyService', () => {
 
   beforeEach(async () => {
     // 2. beforeEachでspyインスタンスを代入
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation(() => {});
+    consoleLogSpy = jest.spyOn(console, "log").mockImplementation(() => {});
 
     // テストモジュールのセットアップ
     const module = await Test.createTestingModule({
@@ -210,7 +210,7 @@ describe('MyService', () => {
     consoleLogSpy.mockRestore();
   });
 
-  it('should handle errors gracefully', async () => {
+  it("should handle errors gracefully", async () => {
     // テストロジック
   });
 });
@@ -225,7 +225,7 @@ describe('MyService', () => {
 ```typescript
 // ✅ 良い例: クリーンアップがまとまっている
 beforeEach(() => {
-  consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -236,7 +236,7 @@ afterEach(() => {
 // ❌ 避けるべき: beforeEachにclearAllMocksがある
 beforeEach(() => {
   jest.clearAllMocks(); // ここにあると、セットアップとクリーンアップが分散
-  consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
 });
 ```
 
@@ -252,16 +252,16 @@ beforeEach(() => {
 
 ```typescript
 // ✅ 良い例: 全引数を受け取り、すべてをリダイレクト
-consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation((...args) => {
-  if (typeof args[0] === 'string' && args[0].includes('not wrapped in act')) {
+consoleErrorSpy = jest.spyOn(console, "error").mockImplementation((...args) => {
+  if (typeof args[0] === "string" && args[0].includes("not wrapped in act")) {
     return; // 特定のエラーのみ抑制
   }
   console.warn(...args); // すべての引数を渡す
 });
 
 // ❌ 避けるべき: 第一引数のみを受け取る
-consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation((message) => {
-  if (typeof message === 'string' && message.includes('not wrapped in act')) {
+consoleErrorSpy = jest.spyOn(console, "error").mockImplementation((message) => {
+  if (typeof message === "string" && message.includes("not wrapped in act")) {
     return;
   }
   console.warn(message); // 第一引数しか渡されない
@@ -284,7 +284,7 @@ afterEach(() => {
 
 // ❌ パターン2: spy変数を保存しない
 beforeEach(() => {
-  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.spyOn(console, "error").mockImplementation(() => {});
   // 変数に保存していないため、個別にrestoreできない
 });
 
@@ -326,13 +326,13 @@ afterEach(() => {
 
 ```typescript
 // ✅ 良い例: テスト後にデータをクリーンアップ
-describe('Transaction API (e2e)', () => {
+describe("Transaction API (e2e)", () => {
   let app: INestApplication;
 
   afterEach(async () => {
     // 各テストで作成したデータをクリーンアップ
-    await connection.manager.query('DELETE FROM transactions;');
-    await connection.manager.query('DELETE FROM categories;');
+    await connection.manager.query("DELETE FROM transactions;");
+    await connection.manager.query("DELETE FROM categories;");
   });
 
   afterAll(async () => {
@@ -354,7 +354,7 @@ describe('Transaction API (e2e)', () => {
 // ❌ 悪い例: 固定時間待機
 await select.selectOption(newOption);
 await page.waitForTimeout(1000); // 不安定・遅い
-const updatedCategory = await page.locator('...').textContent();
+const updatedCategory = await page.locator("...").textContent();
 ```
 
 **問題**:
@@ -367,9 +367,9 @@ const updatedCategory = await page.locator('...').textContent();
 // ✅ 良い例: UI状態の確認で待機
 await select.selectOption(newOption);
 // カテゴリが変更されたことを確認（元のカテゴリ名とは異なる）
-await expect(page.locator('tbody tr:first-child button').first()).not.toHaveText(
-  originalCategory || ''
-);
+await expect(
+  page.locator("tbody tr:first-child button").first(),
+).not.toHaveText(originalCategory || "");
 ```
 
 **原則**:
@@ -389,7 +389,7 @@ await page
       return element.value.length > 0;
     },
     await nameInput.elementHandle(),
-    { timeout: 10000 }
+    { timeout: 10000 },
   )
   .catch(async () => {
     // タイムアウトした場合は、少し待ってから再確認
@@ -418,13 +418,13 @@ await expect(nameInput).not.toBeEmpty({ timeout: 10000 }); // より堅牢な待
 
 ```typescript
 // ❌ 不十分な例: APIレスポンスのみを検証
-it('取引のカテゴリを更新できる', async () => {
+it("取引のカテゴリを更新できる", async () => {
   const response = await request(app.getHttpServer())
     .patch(`/transactions/${id}/category`)
     .send({ category: newCategory })
     .expect(200);
 
-  expect(response.body.data.category.id).toBe('cat-002');
+  expect(response.body.data.category.id).toBe("cat-002");
   // データベースに履歴が記録されているかは未検証
 });
 ```
@@ -433,23 +433,23 @@ it('取引のカテゴリを更新できる', async () => {
 
 ```typescript
 // ✅ 良い例: データベース状態も検証
-it('取引のカテゴリを更新できる', async () => {
+it("取引のカテゴリを更新できる", async () => {
   const response = await request(app.getHttpServer())
     .patch(`/transactions/${id}/category`)
     .send({ category: newCategory })
     .expect(200);
 
   // 1. APIレスポンスの検証
-  expect(response.body.data.category.id).toBe('cat-002');
+  expect(response.body.data.category.id).toBe("cat-002");
 
   // 2. データベース状態の検証
   const history = await dataSource.query(
-    'SELECT * FROM transaction_category_change_history WHERE transactionId = ?',
-    [id]
+    "SELECT * FROM transaction_category_change_history WHERE transactionId = ?",
+    [id],
   );
   expect(history).toHaveLength(1);
-  expect(history[0].oldCategoryId).toBe('cat-001');
-  expect(history[0].newCategoryId).toBe('cat-002');
+  expect(history[0].oldCategoryId).toBe("cat-001");
+  expect(history[0].newCategoryId).toBe("cat-002");
 });
 ```
 
@@ -465,8 +465,11 @@ it('取引のカテゴリを更新できる', async () => {
 
 ```typescript
 // ✅ 良い例: 変更履歴が作成されることを検証
-it('取引のカテゴリを正しく更新できる', async () => {
-  const result = await useCase.execute({ transactionId, category: newCategory });
+it("取引のカテゴリを正しく更新できる", async () => {
+  const result = await useCase.execute({
+    transactionId,
+    category: newCategory,
+  });
 
   expect(mockRepository.findById).toHaveBeenCalledWith(transactionId);
   expect(mockHistoryRepository.create).toHaveBeenCalled(); // 履歴作成を検証
@@ -497,9 +500,11 @@ Jestの`toThrow`マッチャーは、例外のインスタンスを渡すこと�
 
 ```typescript
 // ❌ useCase.executeが2回呼び出される（非効率）
-await expect(useCase.execute({ creditCardId })).rejects.toThrow(NotFoundException);
 await expect(useCase.execute({ creditCardId })).rejects.toThrow(
-  `Credit card not found with ID: ${creditCardId}`
+  NotFoundException,
+);
+await expect(useCase.execute({ creditCardId })).rejects.toThrow(
+  `Credit card not found with ID: ${creditCardId}`,
 );
 ```
 
@@ -514,7 +519,7 @@ await expect(useCase.execute({ creditCardId })).rejects.toThrow(
 ```typescript
 // ✅ 一度の呼び出しで型とメッセージの両方を検証
 await expect(useCase.execute({ creditCardId })).rejects.toThrow(
-  new NotFoundException(`Credit card not found with ID: ${creditCardId}`)
+  new NotFoundException(`Credit card not found with ID: ${creditCardId}`),
 );
 ```
 
@@ -529,20 +534,20 @@ await expect(useCase.execute({ creditCardId })).rejects.toThrow(
 
 ```typescript
 // AccountService
-it('should throw NotFoundException when account does not exist', async () => {
+it("should throw NotFoundException when account does not exist", async () => {
   mockRepository.findById.mockResolvedValue(null);
 
   await expect(service.getAccount(accountId)).rejects.toThrow(
-    new NotFoundException(`Account not found: ${accountId}`)
+    new NotFoundException(`Account not found: ${accountId}`),
   );
 });
 
 // UserService
-it('should throw BadRequestException for invalid email', async () => {
-  const invalidEmail = 'invalid-email';
+it("should throw BadRequestException for invalid email", async () => {
+  const invalidEmail = "invalid-email";
 
   await expect(service.createUser({ email: invalidEmail })).rejects.toThrow(
-    new BadRequestException(`Invalid email format: ${invalidEmail}`)
+    new BadRequestException(`Invalid email format: ${invalidEmail}`),
   );
 });
 ```
@@ -573,7 +578,7 @@ try {
     await this.fetchTransactions(abortSignal);
   } catch (error) {
     // ここでエラーをログに出力して再スロー
-    this.logger.error('取引取得エラー', error);
+    this.logger.error("取引取得エラー", error);
     throw error;
   }
 
@@ -606,20 +611,23 @@ try {
     await this.fetchTransactions(abortSignal);
   } catch (error) {
     // ✅ キャンセルエラーの場合は、CANCELLEDステータスを設定して早期return
-    if (error instanceof Error && error.message === 'Transaction fetch was cancelled') {
-      this.logger.log('同期キャンセル');
+    if (
+      error instanceof Error &&
+      error.message === "Transaction fetch was cancelled"
+    ) {
+      this.logger.log("同期キャンセル");
       syncHistory = syncHistory.markAsCancelled();
       await this.syncHistoryRepository.update(syncHistory);
 
       return {
         success: false,
         status: syncHistory.status, // CANCELLEDステータスを保持
-        errorMessage: 'Sync cancelled',
+        errorMessage: "Sync cancelled",
       };
     }
 
     // その他のエラーは再スロー
-    this.logger.error('取引取得エラー', error);
+    this.logger.error("取引取得エラー", error);
     throw error;
   }
 
@@ -664,13 +672,13 @@ if (error instanceof CancellationError) {
 }
 
 // パターン2: エラーメッセージで判定
-if (error instanceof Error && error.message.includes('cancelled')) {
+if (error instanceof Error && error.message.includes("cancelled")) {
   // キャンセル処理
   return handleCancellation();
 }
 
 // パターン3: カスタムプロパティで判定
-if (error instanceof Error && 'isCancelled' in error && error.isCancelled) {
+if (error instanceof Error && "isCancelled" in error && error.isCancelled) {
   // キャンセル処理
   return handleCancellation();
 }
@@ -697,7 +705,10 @@ if (error instanceof Error && 'isCancelled' in error && error.isCancelled) {
 try {
   await fetchData();
 } catch (error) {
-  if (error instanceof Error && error.message === 'Transaction fetch was cancelled') {
+  if (
+    error instanceof Error &&
+    error.message === "Transaction fetch was cancelled"
+  ) {
     // キャンセル処理
   }
 }
@@ -714,16 +725,16 @@ try {
 ```typescript
 // ✅ カスタムエラークラスを定義
 export class CancellationError extends Error {
-  constructor(message: string = 'Operation was cancelled') {
+  constructor(message: string = "Operation was cancelled") {
     super(message);
-    this.name = 'CancellationError';
+    this.name = "CancellationError";
     Error.captureStackTrace?.(this, CancellationError);
   }
 }
 
 // エラーのスロー
 if (abortSignal?.aborted) {
-  throw new CancellationError('Transaction fetch was cancelled');
+  throw new CancellationError("Transaction fetch was cancelled");
 }
 
 // エラーの判定（型安全）
@@ -753,18 +764,18 @@ try {
 export class ValidationError extends Error {
   constructor(
     message: string,
-    public field: string
+    public field: string,
   ) {
     super(message);
-    this.name = 'ValidationError';
+    this.name = "ValidationError";
     Error.captureStackTrace?.(this, ValidationError);
   }
 }
 
 // 使用例
 try {
-  if (!email.includes('@')) {
-    throw new ValidationError('Invalid email format', 'email');
+  if (!email.includes("@")) {
+    throw new ValidationError("Invalid email format", "email");
   }
 } catch (error) {
   if (error instanceof ValidationError) {
@@ -943,7 +954,7 @@ async classify(@Body() dto: ClassificationRequestDto): Promise<ClassificationRes
 4. **ログ出力**
 
    ```typescript
-   this.logger.error('エラーメッセージ', error);
+   this.logger.error("エラーメッセージ", error);
    ```
 
 **参考**: Issue #296 / PR #312 - Gemini指摘：エラーハンドリングでの適切なステータスコード使用
@@ -962,9 +973,9 @@ async classify(@Body() dto: ClassificationRequestDto): Promise<ClassificationRes
 try {
   await aggregationApi.aggregate({ cardId, startMonth, endMonth });
 } catch (err) {
-  console.error('Failed to aggregate:', err);
+  console.error("Failed to aggregate:", err);
   // ❌ 固定文字列で、具体的なエラー原因が分からない
-  showErrorToast('error', '集計の実行に失敗しました');
+  showErrorToast("error", "集計の実行に失敗しました");
 }
 ```
 
@@ -980,10 +991,11 @@ try {
 try {
   await aggregationApi.aggregate({ cardId, startMonth, endMonth });
 } catch (err) {
-  console.error('Failed to aggregate:', err);
+  console.error("Failed to aggregate:", err);
   // ✅ エラーメッセージがあればそれを表示、なければデフォルトメッセージ
-  const errorMessage = err instanceof Error ? err.message : '集計の実行に失敗しました';
-  showErrorToast('error', errorMessage);
+  const errorMessage =
+    err instanceof Error ? err.message : "集計の実行に失敗しました";
+  showErrorToast("error", errorMessage);
 }
 ```
 
@@ -997,20 +1009,21 @@ try {
 
 ```typescript
 // パターン1: Error型の判定
-const errorMessage = error instanceof Error ? error.message : 'デフォルトメッセージ';
+const errorMessage =
+  error instanceof Error ? error.message : "デフォルトメッセージ";
 
 // パターン2: エラーオブジェクトのプロパティ確認
-const errorMessage = error?.message || 'デフォルトメッセージ';
+const errorMessage = error?.message || "デフォルトメッセージ";
 
 // パターン3: 型ガードを使用
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
     return error.message;
   }
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return error;
   }
-  return '予期せぬエラーが発生しました';
+  return "予期せぬエラーが発生しました";
 }
 ```
 
@@ -1041,16 +1054,18 @@ function getErrorMessage(error: unknown): string {
 try {
   await aggregationApi.aggregate({ cardId, startMonth, endMonth });
 } catch (err) {
-  const errorMessage = err instanceof Error ? err.message : '集計の実行に失敗しました';
-  showErrorToast('error', errorMessage);
+  const errorMessage =
+    err instanceof Error ? err.message : "集計の実行に失敗しました";
+  showErrorToast("error", errorMessage);
 }
 
 // PaymentStatusCard.tsx
 try {
   await paymentStatusApi.updateStatus(cardSummaryId, { newStatus, notes });
 } catch (error) {
-  const errorMessage = error instanceof Error ? error.message : 'ステータスの更新に失敗しました';
-  showErrorToast('error', errorMessage);
+  const errorMessage =
+    error instanceof Error ? error.message : "ステータスの更新に失敗しました";
+  showErrorToast("error", errorMessage);
 }
 ```
 
@@ -1064,34 +1079,37 @@ try {
 
 ```typescript
 // utils/error.utils.ts
-export function getErrorMessage(error: unknown, defaultMessage: string): string {
+export function getErrorMessage(
+  error: unknown,
+  defaultMessage: string,
+): string {
   if (error instanceof Error) {
     return error.message;
   }
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return error;
   }
   return defaultMessage;
 }
 
 // AggregateButton.tsx
-import { getErrorMessage } from '@/utils/error.utils';
+import { getErrorMessage } from "@/utils/error.utils";
 
 try {
   await aggregationApi.aggregate({ cardId, startMonth, endMonth });
 } catch (err) {
-  const errorMessage = getErrorMessage(err, '集計の実行に失敗しました');
-  showErrorToast('error', errorMessage);
+  const errorMessage = getErrorMessage(err, "集計の実行に失敗しました");
+  showErrorToast("error", errorMessage);
 }
 
 // PaymentStatusCard.tsx
-import { getErrorMessage } from '@/utils/error.utils';
+import { getErrorMessage } from "@/utils/error.utils";
 
 try {
   await paymentStatusApi.updateStatus(cardSummaryId, { newStatus, notes });
 } catch (error) {
-  const errorMessage = getErrorMessage(error, 'ステータスの更新に失敗しました');
-  showErrorToast('error', errorMessage);
+  const errorMessage = getErrorMessage(error, "ステータスの更新に失敗しました");
+  showErrorToast("error", errorMessage);
 }
 ```
 
@@ -1106,25 +1124,31 @@ try {
 
 ```typescript
 // パターン1: シンプルなエラーメッセージ抽出
-export function getErrorMessage(error: unknown, defaultMessage: string): string {
+export function getErrorMessage(
+  error: unknown,
+  defaultMessage: string,
+): string {
   if (error instanceof Error) {
     return error.message;
   }
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return error;
   }
   return defaultMessage;
 }
 
 // パターン2: より詳細な型判定
-export function getErrorMessage(error: unknown, defaultMessage: string): string {
+export function getErrorMessage(
+  error: unknown,
+  defaultMessage: string,
+): string {
   if (error instanceof Error) {
     return error.message || defaultMessage;
   }
-  if (typeof error === 'string' && error.length > 0) {
+  if (typeof error === "string" && error.length > 0) {
     return error;
   }
-  if (error && typeof error === 'object' && 'message' in error) {
+  if (error && typeof error === "object" && "message" in error) {
     return String(error.message);
   }
   return defaultMessage;
@@ -1267,9 +1291,9 @@ const handleSync = async (): Promise<void> => {
     // 同期完了後、一覧を更新
     onUpdate();
   } catch (error) {
-    const errorMessage = getErrorMessage(error, '同期処理に失敗しました');
-    showErrorToast('error', errorMessage);
-    console.error('同期処理中にエラーが発生しました:', error);
+    const errorMessage = getErrorMessage(error, "同期処理に失敗しました");
+    showErrorToast("error", errorMessage);
+    console.error("同期処理中にエラーが発生しました:", error);
     // ❌ エラー発生時に状態更新をスキップしている
     // サーバー側で金融機関のステータスが更新されている可能性がある
   } finally {
@@ -1297,9 +1321,9 @@ const handleSync = async (): Promise<void> => {
     // 同期完了後、一覧を更新
     onUpdate();
   } catch (error) {
-    const errorMessage = getErrorMessage(error, '同期処理に失敗しました');
-    showErrorToast('error', errorMessage);
-    console.error('同期処理中にエラーが発生しました:', error);
+    const errorMessage = getErrorMessage(error, "同期処理に失敗しました");
+    showErrorToast("error", errorMessage);
+    console.error("同期処理中にエラーが発生しました:", error);
     // ✅ エラー発生時でも、サーバー側で状態が更新されている可能性があるため、
     // UIを最新の状態に更新する
     onUpdate();
@@ -1374,7 +1398,7 @@ export class SyncAllTransactionsUseCase {
     private readonly securitiesAccountRepository: ISecuritiesAccountRepository,
     // 実際に使用するのはこれら
     private readonly fetchCreditCardTransactionsUseCase: FetchCreditCardTransactionsUseCase,
-    private readonly fetchSecurityTransactionsUseCase: FetchSecurityTransactionsUseCase
+    private readonly fetchSecurityTransactionsUseCase: FetchSecurityTransactionsUseCase,
   ) {}
 }
 ```
@@ -1398,7 +1422,7 @@ export class SyncAllTransactionsUseCase {
     private readonly configService: ConfigService,
     // ✅ 実際に使用する依存関係のみ
     private readonly fetchCreditCardTransactionsUseCase: FetchCreditCardTransactionsUseCase,
-    private readonly fetchSecurityTransactionsUseCase: FetchSecurityTransactionsUseCase
+    private readonly fetchSecurityTransactionsUseCase: FetchSecurityTransactionsUseCase,
   ) {}
 }
 ```
@@ -1442,22 +1466,24 @@ Enum値と実際の使用箇所で異なる文字列リテラルを使用する�
 ```typescript
 // libs/types/src/institution.types.ts
 export enum InstitutionType {
-  BANK = 'bank',
-  CREDIT_CARD = 'credit_card', // ❌ アンダースコア
-  SECURITIES = 'securities',
+  BANK = "bank",
+  CREDIT_CARD = "credit_card", // ❌ アンダースコア
+  SECURITIES = "securities",
 }
 
 // 実際の使用箇所
 interface SyncTarget {
-  institutionType: 'bank' | 'credit-card' | 'securities'; // ❌ ハイフン
+  institutionType: "bank" | "credit-card" | "securities"; // ❌ ハイフン
 }
 
 // ❌ 変換関数が必要になる
-function convertInstitutionType(type: InstitutionType): 'bank' | 'credit-card' | 'securities' {
+function convertInstitutionType(
+  type: InstitutionType,
+): "bank" | "credit-card" | "securities" {
   if (type === InstitutionType.CREDIT_CARD) {
-    return 'credit-card';
+    return "credit-card";
   }
-  return type as 'bank' | 'credit-card' | 'securities';
+  return type as "bank" | "credit-card" | "securities";
 }
 ```
 
@@ -1472,9 +1498,9 @@ function convertInstitutionType(type: InstitutionType): 'bank' | 'credit-card' |
 ```typescript
 // libs/types/src/institution.types.ts
 export enum InstitutionType {
-  BANK = 'bank',
-  CREDIT_CARD = 'credit-card', // ✅ ハイフンで統一
-  SECURITIES = 'securities',
+  BANK = "bank",
+  CREDIT_CARD = "credit-card", // ✅ ハイフンで統一
+  SECURITIES = "securities",
 }
 
 // 実際の使用箇所

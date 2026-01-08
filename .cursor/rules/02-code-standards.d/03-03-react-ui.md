@@ -88,7 +88,7 @@ const handleBatchClassify = async () => {
   for (const classificationResult of result.results) {
     if (classificationResult.success && classificationResult.subcategoryId) {
       const txIndex = updatedTransactions.findIndex(
-        (tx) => tx.id === classificationResult.transactionId
+        (tx) => tx.id === classificationResult.transactionId,
       );
       if (txIndex !== -1) {
         // 配列の要素を直接変更（ミュータブル）
@@ -118,7 +118,9 @@ const handleBatchClassify = async () => {
 
   // 結果をMapに変換して効率的に検索
   const resultMap = new Map(
-    result.results.filter((r) => r.success && r.subcategoryId).map((r) => [r.transactionId, r])
+    result.results
+      .filter((r) => r.success && r.subcategoryId)
+      .map((r) => [r.transactionId, r]),
   );
 
   // mapを使用してイミュータブルに更新
@@ -134,7 +136,7 @@ const handleBatchClassify = async () => {
         };
       }
       return tx;
-    })
+    }),
   );
 };
 ```
@@ -297,11 +299,15 @@ export const useSubcategoryStore = create<SubcategoryStore>((set, get) => ({
 ```typescript
 // ❌ 悪い例: 再帰的にfilterを呼び出す
 const buildTree = (allSubcategories: Subcategory[]): Subcategory[] => {
-  const rootCategories = allSubcategories.filter((sub) => sub.parentId === null);
+  const rootCategories = allSubcategories.filter(
+    (sub) => sub.parentId === null,
+  );
 
   const buildChildren = (parentId: string | null): Subcategory[] => {
     // 毎回配列全体を走査（O(n)）
-    const children = allSubcategories.filter((sub) => sub.parentId === parentId);
+    const children = allSubcategories.filter(
+      (sub) => sub.parentId === parentId,
+    );
     return children.map((child) => ({
       ...child,
       children: buildChildren(child.id), // 再帰的にfilterを呼び出し
@@ -426,8 +432,8 @@ const tree = useMemo(() => {
 
 ```typescript
 // ❌ 悪い例: 固定時間での待機
-test('フィルターが機能する', async ({ page }) => {
-  await page.getByLabel('カテゴリ').selectOption('EXPENSE');
+test("フィルターが機能する", async ({ page }) => {
+  await page.getByLabel("カテゴリ").selectOption("EXPENSE");
   await page.waitForTimeout(500); // 固定時間での待機
   // アサーション
 });
@@ -443,16 +449,16 @@ test('フィルターが機能する', async ({ page }) => {
 
 ```typescript
 // ✅ 良い例: UIの状態変化を待つ
-test('フィルターが機能する', async ({ page }) => {
+test("フィルターが機能する", async ({ page }) => {
   // ページが読み込まれるまで待機
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState("networkidle");
 
   // フィルターを選択
-  await page.getByLabel('カテゴリ').selectOption('EXPENSE');
+  await page.getByLabel("カテゴリ").selectOption("EXPENSE");
 
   // フィルターが適用されることを確認（テーブルが表示されるか、メッセージが表示される）
   await expect(
-    page.getByRole('table').or(page.getByText('該当する取引がありません'))
+    page.getByRole("table").or(page.getByText("該当する取引がありません")),
   ).toBeVisible();
 });
 ```
@@ -467,10 +473,10 @@ test('フィルターが機能する', async ({ page }) => {
 
 ```typescript
 // ❌ 悪い例: idをgetByLabelで探す
-const checkbox = page.getByLabel('unclassified-only'); // idはgetByLabelの対象ではない
+const checkbox = page.getByLabel("unclassified-only"); // idはgetByLabelの対象ではない
 
 // ✅ 良い例: ロールとアクセシブルネームで要素を特定
-const checkbox = page.getByRole('checkbox', { name: '未分類のみ' });
+const checkbox = page.getByRole("checkbox", { name: "未分類のみ" });
 ```
 
 **利点**:

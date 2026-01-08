@@ -59,7 +59,7 @@ function process(data: DataType): void {}
 
 // ✅ 型が不明な場合はunknown
 function process(data: unknown): void {
-  if (typeof data === 'string') {
+  if (typeof data === "string") {
     // 型ガードで安全に使用
   }
 }
@@ -112,8 +112,8 @@ const mockRepo = { findById: jest.fn() } as any;
 export function isHttpError(error: unknown): error is HttpError {
   return (
     error instanceof Error &&
-    'statusCode' in error &&
-    typeof (error as HttpError).statusCode === 'number' // ← 問題
+    "statusCode" in error &&
+    typeof (error as HttpError).statusCode === "number" // ← 問題
   );
 }
 ```
@@ -131,8 +131,8 @@ export function isHttpError(error: unknown): error is HttpError {
 export function isHttpError(error: unknown): error is HttpError {
   return (
     error instanceof Error &&
-    'statusCode' in error &&
-    typeof (error as { statusCode: unknown }).statusCode === 'number'
+    "statusCode" in error &&
+    typeof (error as { statusCode: unknown }).statusCode === "number"
   );
 }
 ```

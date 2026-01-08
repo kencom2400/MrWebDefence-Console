@@ -18,5 +18,5 @@ ISSUE_KEY=$1
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # transition-issue.sh を呼び出す
-"${SCRIPT_DIR}/transition-issue.sh" "$ISSUE_KEY" "In Progress"
+"${SCRIPT_DIR}/../transition-issue.sh" "$ISSUE_KEY" "In Progress"
 
