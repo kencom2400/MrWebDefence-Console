@@ -39,8 +39,8 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     // リクエストにユーザー情報を付与
-    // @ts-expect-error request.user is not typed in Express.Request by default
-    request['user'] = payload;
+    // 型アサーションを使用して型安全性を維持
+    (request as Request & { user: JwtPayload }).user = payload;
 
     return true;
   }

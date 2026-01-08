@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { ITokenBlacklistRepository } from '../../domain/repositories/token-blacklist.repository.interface';
 
@@ -8,10 +9,11 @@ export class RedisTokenBlacklistRepository
 {
   private readonly logger = new Logger(RedisTokenBlacklistRepository.name);
   private redisClient: Redis;
+  private readonly KEY_PREFIX = 'blacklist:';
 
-  constructor() {
-    const host = process.env.REDIS_HOST || 'localhost';
-    const port = parseInt(process.env.REDIS_PORT || '6379', 10);
+  constructor(private readonly configService: ConfigService) {
+    const host = this.configService.get<string>('REDIS_HOST', 'localhost');
+    const port = this.configService.get<number>('REDIS_PORT', 6379);
     
     this.redisClient = new Redis({
       host,
@@ -44,9 +46,8 @@ export class RedisTokenBlacklistRepository
     const ttl = expiresAt - now;
 
     if (ttl > 0) {
-      // blacklist:プレフィックスを付けて保存
       // 値は空文字でOK。TTLを設定して自動的に消えるようにする。
-      await this.redisClient.set(`blacklist:${token}`, '1', 'EX', ttl);
+      await this.redisClient.set(`${this.KEY_PREFIX}${token}`, '1', 'EX', ttl);
     }
   }
 
@@ -56,7 +57,7 @@ export class RedisTokenBlacklistRepository
    * @returns ブラックリストに含まれている場合はtrue
    */
   public async isBlacklisted(token: string): Promise<boolean> {
-    const result = await this.redisClient.exists(`blacklist:${token}`);
+    const result = await this.redisClient.exists(`${this.KEY_PREFIX}${token}`);
     return result === 1;
   }
 }

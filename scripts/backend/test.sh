@@ -77,18 +77,15 @@ case "${TEST_TYPE}" in
     run_test_in_docker "pnpm run test:e2e" "redis-e2e"
     ;;
   "all")
-    echo "📝 ユニットテストを実行中..."
-    run_test_in_docker "pnpm run test" "redis-test"
+    # ユニットテストはカバレッジレポート生成時に実行されるため重複を避ける
+    echo "📊 カバレッジレポートを生成中 (ユニットテスト含む)..."
+    run_test_in_docker "pnpm run test:cov" "redis-test"
     
     echo ""
     echo "🔗 E2Eテストを実行中..."
     # redis-testを停止してredis-e2eを起動（ポート衝突はしないがリソース節約）
     $DOCKER_COMPOSE stop redis-test
     run_test_in_docker "pnpm run test:e2e" "redis-e2e"
-    
-    echo ""
-    echo "📊 カバレッジレポートを生成中..."
-    run_test_in_docker "pnpm run test:cov" "redis-test"
     ;;
   *)
     echo "❌ エラー: 不明なテストタイプ '${TEST_TYPE}'"
