@@ -53,6 +53,8 @@ describe('LoginUseCase', () => {
         email,
         hashedPassword,
         role,
+        false, // mfaEnabled
+        null, // mfaSecret
         new Date(),
         new Date(),
       );
@@ -92,6 +94,8 @@ describe('LoginUseCase', () => {
         email,
         hashedPassword,
         role,
+        false, // mfaEnabled
+        null, // mfaSecret
         new Date(),
         new Date(),
       );

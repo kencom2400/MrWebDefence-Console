@@ -21,6 +21,8 @@ export class UserRepository implements IUserRepository {
       'user@example.com',
       '$2b$10$he31Fy7fUPv9rO2E2coIA.z/3/AStVeVgDSlJMCwNDqLOaw0R/67O',
       UserRole.SERVICE_MEMBER, // デフォルトロール
+      false, // mfaEnabled
+      null, // mfaSecret
       new Date(),
       new Date(),
     );
@@ -32,6 +34,8 @@ export class UserRepository implements IUserRepository {
       'admin@example.com',
       '$2b$10$he31Fy7fUPv9rO2E2coIA.z/3/AStVeVgDSlJMCwNDqLOaw0R/67O', // 同じパスワード
       UserRole.SERVICE_ADMIN, // 管理者ロール
+      false, // mfaEnabled
+      null, // mfaSecret
       new Date(),
       new Date(),
     );
@@ -45,6 +49,20 @@ export class UserRepository implements IUserRepository {
    */
   async findByEmail(email: string): Promise<User | null> {
     return this.users.get(email) || null;
+  }
+
+  /**
+   * ユーザーIDからユーザーを検索する
+   * @param id ユーザーID
+   * @returns ユーザーエンティティ、またはnull
+   */
+  async findById(id: string): Promise<User | null> {
+    for (const user of this.users.values()) {
+      if (user.id === id) {
+        return user;
+      }
+    }
+    return null;
   }
 
   /**

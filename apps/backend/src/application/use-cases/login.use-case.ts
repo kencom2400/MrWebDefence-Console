@@ -25,12 +25,15 @@ export class LoginUseCase {
    * ログイン処理を実行する
    * @param email メールアドレス
    * @param password パスワード
-   * @returns アクセストークンと有効期限情報
+   * @returns アクセストークンと有効期限情報、またはMFA検証が必要な場合の中間状態
    */
   public async execute(
     email: string,
     password: string,
-  ): Promise<{ accessToken: string; tokenType: string; expiresIn: number }> {
+  ): Promise<
+    | { accessToken: string; tokenType: string; expiresIn: number }
+    | { requiresMfa: true; userId: string }
+  > {
     // ユーザー検索
     const user = await this.userRepository.findByEmail(email);
     if (!user) {
@@ -41,6 +44,14 @@ export class LoginUseCase {
     const isPasswordValid = await this.passwordService.compare(password, user.hashedPassword);
     if (!isPasswordValid) {
       throw new AuthenticationError();
+    }
+
+    // MFA有効な場合は中間状態を返す
+    if (user.mfaEnabled) {
+      return {
+        requiresMfa: true,
+        userId: user.id,
+      };
     }
 
     // JWTトークン生成

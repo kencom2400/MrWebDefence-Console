@@ -9,6 +9,13 @@ export interface IUserRepository {
   findByEmail(email: string): Promise<User | null>;
 
   /**
+   * ユーザーIDからユーザーを検索する
+   * @param id ユーザーID
+   * @returns ユーザーエンティティ、またはnull
+   */
+  findById(id: string): Promise<User | null>;
+
+  /**
    * ユーザーを保存する
    * @param user ユーザーエンティティ
    */
