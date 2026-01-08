@@ -1,66 +1,43 @@
 
-### 13-8. 設定管理とテスト効率化（PR #34）
+### 13-10. ガードパイプラインと型の一貫性（PR #35）
 
-**学習元**: PR #34 - Task 3.2: セッション管理機能実装 (Redis導入)（Geminiレビュー指摘）
+**学習元**: PR #35 - Task 3.3: RBAC実装設計（Geminiレビュー指摘）
 
-#### ConfigModuleの使用
+#### ガード実行パイプラインの明確化
 
-**問題**: 環境変数を`process.env`から直接読み込むと、テスト時のモック化が難しく、設定の一元管理ができない。
+**問題**: シーケンス図などで、認可ガード（`RolesGuard`）が認証ガード（`JwtAuthGuard`）を直接呼び出すように描くと、NestJSの実行モデル（パイプライン処理）と矛盾し、誤解を招く。
 
-**解決策**: NestJSの`ConfigModule`と`ConfigService`を使用する。
+**解決策**:
+1. **グローバルガードの順序定義**: `AppModule` に両方のガードを登録し、実行順序を明確にする（認証 → 認可）。
+2. **依存関係の分離**: `RolesGuard` は `JwtAuthGuard` を呼び出すのではなく、前のパイプラインで処理された結果（`request.user`）を利用する設計にする。
+3. **公開エンドポイントの扱い**: `JwtAuthGuard` 側で `@Public` を検知し、認証エラーをスローせずに通過させる（Optional Auth）。
 
-```typescript
-// ✅ 良い例
-constructor(private readonly configService: ConfigService) {
-  const host = this.configService.get<string>('REDIS_HOST', 'localhost');
-  // ...
-}
+```mermaid
+sequenceDiagram
+    participant Client
+    participant JwtAuthGuard
+    participant RolesGuard
+    
+    Client->>JwtAuthGuard: 1. Authentication
+    alt Public
+        JwtAuthGuard-->>RolesGuard: Pass
+    else
+        JwtAuthGuard->>JwtAuthGuard: Validate Token
+        JwtAuthGuard-->>RolesGuard: User Attached
+    end
+    
+    RolesGuard->>RolesGuard: 2. Authorization (Check Roles)
 ```
 
 **理由**:
-- テスト容易性の向上（ConfigServiceをモックできる）
-- 設定の一元管理と型安全性
-- デフォルト値の管理が容易
+- フレームワークの仕組みに沿った正確な設計
+- 各ガードの責務の明確化（認証と認可の分離）
 
-#### マジックストリングの排除
+#### クラス図における型表記
 
-**問題**: Redisのキープレフィックスなどがハードコードされており、変更時の保守性が低い。
+**問題**: クラス図などの設計書で `String` のような言語固有のクラス型とプリミティブ型 `string` が混在すると、実装時に混乱する。
 
-**解決策**: クラス定数として定義する。
-
-```typescript
-// ✅ 良い例
-private readonly KEY_PREFIX = 'blacklist:';
-
-// 使用時
-await this.redisClient.set(`${this.KEY_PREFIX}${token}`, ...);
-```
+**解決策**: TypeScript/JavaScriptのコンテキストでは、プリミティブ型には小文字の `string`, `number`, `boolean` を使用し、コードの実装と一致させる。
 
 **理由**:
-- コードの可読性と保守性の向上
-- 一貫性の維持
-
-#### 型アサーションの活用（@ts-ignoreの回避）
-
-**問題**: 型定義が不足している場合に`@ts-ignore`を使用すると、意図しない型エラーまで隠蔽してしまう。
-
-**解決策**: 適切な型定義を行うか、交差型を使用した型アサーションを行う。
-
-```typescript
-// ✅ 良い例
-(request as Request & { user: JwtPayload }).user = payload;
-```
-
-**理由**:
-- 型安全性の維持
-- コードの意図が明確になる
-
-#### テスト実行の効率化
-
-**問題**: `pnpm run test`（ユニットテスト）と`pnpm run test:cov`（カバレッジ付きユニットテスト）を両方実行しており、処理が重複していた。
-
-**解決策**: CIや全テスト実行時は、カバレッジ付きテストのみを実行する。
-
-**理由**:
-- CI時間の短縮
-- リソースの有効活用
+- 設計と実装の一貫性維持
