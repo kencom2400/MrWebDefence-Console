@@ -70,23 +70,27 @@
 ### 1. Domain Layer
 
 - **User Entity**: `mfaEnabled` フラグと `mfaSecret` を追加
-- **MfaSecret Value Object**: MFAシークレットをカプセル化
-- **BackupCode Value Object**: バックアップコードをカプセル化
+- **MfaSecret Value Object**: MFAシークレットをカプセル化（バリデーション、不変性）
+- **BackupCode Value Object**: バックアップコードの値そのものをカプセル化（バリデーション、不変性）
+- **BackupCodeMetadata Value Object**: バックアップコードのメタデータ（使用状態、作成日時など）をカプセル化
 - **IMfaRepository**: MFA関連データのリポジトリインターフェース
+
+**注意**: Value Objectは技術的な詳細（生成アルゴリズム、ハッシュ化など）を含まない。これらはInfrastructure層の責務。
 
 ### 2. Application Layer
 
 - **SetupMfaUseCase**: MFAセットアップ処理
-  - シークレット生成
-  - QRコード生成
+  - シークレット生成（TotpService経由）
+  - QRコード生成（QrCodeService経由）
   - 一時保存（検証前）
-- **GenerateBackupCodesUseCase**: バックアップコード生成処理（検証成功後）
-  - バックアップコード生成
-  - ハッシュ化
-  - 永続化
 - **VerifyMfaUseCase**: MFA検証処理
-  - TOTPコード検証
-  - バックアップコード検証
+  - TOTPコード検証（TotpService経由）
+  - バックアップコード検証（BackupCodeService経由）
+  - 検証成功時にバックアップコード生成・永続化（GenerateBackupCodesUseCaseを内部で呼び出し）
+- **GenerateBackupCodesUseCase**: バックアップコード生成処理
+  - バックアップコード生成（BackupCodeService経由）
+  - ハッシュ化（BackupCodeService経由）
+  - 永続化（MfaRepository経由）
 - **DisableMfaUseCase**: MFA無効化処理
 - **LoginUseCase (Modified)**: MFA有効なユーザーの場合、二段階認証を要求
 
@@ -95,7 +99,10 @@
 - **MfaRepository**: MFAシークレットとバックアップコードの永続化
 - **TotpService**: TOTPコードの生成・検証（RFC 6238準拠）
 - **QrCodeService**: QRコード生成（OTPAUTH URI形式）
-- **BackupCodeService**: バックアップコードの生成・検証・ハッシュ化
+- **BackupCodeService**: バックアップコードの技術的な処理
+  - コード生成（ランダム文字列生成アルゴリズム）
+  - ハッシュ化（bcrypt）
+  - 検証（ハッシュ比較）
 
 ### 4. Presentation Layer
 
@@ -119,10 +126,12 @@
 5. クライアントにQRコードのみを返却（バックアップコードはまだ生成しない）
 6. ユーザーが認証アプリでQRコードをスキャン
 7. ユーザーがTOTPコードを入力して検証
-8. 検証成功後、`BackupCodeService` がバックアップコードを生成
-9. `MfaRepository` にシークレットとバックアップコード（ハッシュ化済み）を永続化
-10. ユーザーエンティティの `mfaEnabled` を `true` に設定
-11. クライアントにバックアップコードを返却（一度だけ表示可能）
+8. `VerifyMfaUseCase` がTOTPコードを検証
+9. 検証成功後、`GenerateBackupCodesUseCase` がバックアップコードを生成（`BackupCodeService`経由）
+10. `GenerateBackupCodesUseCase` がバックアップコードをハッシュ化（`BackupCodeService`経由）
+11. `MfaRepository` にシークレットとバックアップコード（ハッシュ化済み）を永続化
+12. ユーザーエンティティの `mfaEnabled` を `true` に設定
+13. クライアントにバックアップコード（平文）を返却（一度だけ表示可能）
 
 ### 2. ログイン時のMFA認証フロー
 
@@ -152,6 +161,9 @@
 - **バックアップコードの再生成**: ユーザーがバックアップコードを再生成できる機能を提供（既存コードは無効化）
 - **バックアップコードの提供タイミング**: セットアップ検証成功後にのみバックアップコードを生成・返却（セキュリティ向上）
 - **責務分離**: Domain層（Value Objects）とInfrastructure層（Services）の責務を明確に分離
+  - Domain層: ビジネスロジック、バリデーション、不変性の保証
+  - Infrastructure層: 技術的な詳細（生成アルゴリズム、ハッシュ化、外部ライブラリの利用）
+- **ユースケースの役割**: 各ユースケースの責務を明確化（`VerifyMfaUseCase`は検証、`GenerateBackupCodesUseCase`は生成）
 
 ## 実装詳細
 

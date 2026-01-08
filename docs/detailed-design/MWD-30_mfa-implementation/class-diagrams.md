@@ -29,12 +29,16 @@ classDiagram
     class BackupCode {
         <<ValueObject>>
         +string code
-        +string hash
+        +validate()
+        +equals(other): boolean
+    }
+    
+    class BackupCodeMetadata {
+        <<ValueObject>>
+        +string id
         +boolean used
         +Date createdAt
-        +generate()
-        +hash()
-        +verify(input)
+        +Date usedAt
     }
 
     class SetupMfaUseCase {
@@ -49,13 +53,20 @@ classDiagram
         -TotpService totpService
         -IMfaRepository mfaRepository
         -BackupCodeService backupCodeService
-        +execute(userId, code, type): boolean
+        +execute(userId, code, type): VerifyMfaResult
+    }
+    
+    class VerifyMfaResult {
+        +boolean success
+        +string? accessToken
+        +string? tokenType
+        +number? expiresIn
     }
 
     class GenerateBackupCodesUseCase {
         -IMfaRepository mfaRepository
         -BackupCodeService backupCodeService
-        +execute(userId): BackupCode[]
+        +execute(userId): string[]
     }
 
     class DisableMfaUseCase {
@@ -75,7 +86,8 @@ classDiagram
     }
 
     class BackupCodeService {
-        +generateCodes(count): BackupCode[]
+        <<Infrastructure>>
+        +generateCodes(count): string[]
         +hashCode(code): string
         +verifyCode(code, hash): boolean
     }
@@ -95,7 +107,7 @@ classDiagram
     }
 
     User --> MfaSecret : has
-    User --> BackupCode : has many
+    User --> BackupCodeMetadata : has many
     SetupMfaUseCase --> TotpService
     SetupMfaUseCase --> QrCodeService
     VerifyMfaUseCase --> TotpService

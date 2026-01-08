@@ -9,6 +9,8 @@ sequenceDiagram
     participant SetupMfaUseCase
     participant TotpService
     participant QrCodeService
+    participant VerifyMfaUseCase
+    participant GenerateBackupCodesUseCase
     participant BackupCodeService
     participant UserRepository
     participant MfaRepository
@@ -32,21 +34,27 @@ sequenceDiagram
     Client->>MfaController: POST /api/v1/auth/mfa/verify-setup<br/>{ tempToken, code }
     MfaController->>VerifyMfaUseCase: execute(userId, code, "TOTP")
     
-    VerifyMfaUseCase->>MfaRepository: getSecret(userId)
+    VerifyMfaUseCase->>MfaRepository: getSecret(userId) [temporary]
     MfaRepository-->>VerifyMfaUseCase: secret
     
     VerifyMfaUseCase->>TotpService: verifyToken(secret, code)
     TotpService-->>VerifyMfaUseCase: true
     
-    VerifyMfaUseCase->>BackupCodeService: generateCodes(10)
-    BackupCodeService-->>VerifyMfaUseCase: backupCodes[]
+    Note over VerifyMfaUseCase: Verification successful, generate backup codes
     
-    VerifyMfaUseCase->>BackupCodeService: hashCode(backupCodes)
-    BackupCodeService-->>VerifyMfaUseCase: hashedCodes[]
+    VerifyMfaUseCase->>GenerateBackupCodesUseCase: execute(userId)
+    
+    GenerateBackupCodesUseCase->>BackupCodeService: generateCodes(10)
+    BackupCodeService-->>GenerateBackupCodesUseCase: codes[] (plain strings)
+    
+    GenerateBackupCodesUseCase->>BackupCodeService: hashCode(codes)
+    BackupCodeService-->>GenerateBackupCodesUseCase: hashedCodes[]
+    
+    GenerateBackupCodesUseCase->>MfaRepository: saveBackupCodes(userId, hashedCodes) [permanent]
+    GenerateBackupCodesUseCase-->>VerifyMfaUseCase: codes[] (plain strings for response)
     
     VerifyMfaUseCase->>UserRepository: enableMfa(userId, secret)
     VerifyMfaUseCase->>MfaRepository: saveSecret(userId, secret) [permanent]
-    VerifyMfaUseCase->>MfaRepository: saveBackupCodes(userId, hashedCodes) [permanent]
     
     VerifyMfaUseCase-->>MfaController: { success: true, backupCodes }
     MfaController-->>Client: 200 OK { message: "MFA enabled", backupCodes }

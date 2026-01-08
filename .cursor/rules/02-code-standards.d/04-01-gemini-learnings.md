@@ -123,21 +123,85 @@ VerifyMfaUseCase -> return { message, backupCodes }
 - **Infrastructure層**: `BackupCodeService`（技術的な詳細：生成アルゴリズム、ハッシュ化）
 
 ```typescript
-// Domain Layer
+// Domain Layer - Value Object (ビジネスロジックのみ)
 class BackupCode {
   private constructor(private readonly code: string) {}
-  static create(code: string): BackupCode { /* validation */ }
+  static create(code: string): BackupCode { 
+    // バリデーション: 形式チェック（例: /^[A-Z0-9]{4}-[A-Z0-9]{4}$/）
+    if (!this.isValidFormat(code)) {
+      throw new Error('Invalid backup code format');
+    }
+    return new BackupCode(code);
+  }
   getValue(): string { return this.code; }
+  equals(other: BackupCode): boolean { return this.code === other.code; }
+  private static isValidFormat(code: string): boolean { /* validation logic */ }
 }
 
-// Infrastructure Layer
+// Infrastructure Layer - Service (技術的な詳細)
 class BackupCodeService {
-  generateCodes(count: number): BackupCode[] { /* technical implementation */ }
-  hashCode(code: string): string { /* bcrypt hashing */ }
-  verifyCode(code: string, hash: string): boolean { /* hash comparison */ }
+  // 技術的な実装: ランダム文字列生成アルゴリズム
+  generateCodes(count: number): string[] { 
+    // 外部ライブラリや技術的な詳細を含む
+    return Array.from({ length: count }, () => this.generateRandomCode());
+  }
+  // 技術的な実装: bcryptハッシュ化
+  hashCode(code: string): string { 
+    return bcrypt.hashSync(code, 10);
+  }
+  // 技術的な実装: ハッシュ比較
+  verifyCode(code: string, hash: string): boolean { 
+    return bcrypt.compareSync(code, hash);
+  }
 }
 ```
 
 **理由**:
 - Onion Architectureの原則に従った明確な責務分離
 - テスト容易性の向上（Domain層の独立性）
+- 技術的な詳細の変更がDomain層に影響しない
+
+#### ユースケースの役割の明確化
+
+**問題**: 複数のユースケースが混在し、各ユースケースの責務が不明確になる。
+
+**解決策**: 各ユースケースは単一の責務を持つように設計し、必要に応じて他のユースケースを呼び出す。
+
+```typescript
+// Bad: 1つのユースケースが複数の責務を持つ
+class VerifyMfaUseCase {
+  execute(userId, code, type) {
+    // 検証処理
+    // バックアップコード生成処理 ← 別の責務
+    // 永続化処理
+  }
+}
+
+// Good: 責務を分離
+class VerifyMfaUseCase {
+  constructor(
+    private generateBackupCodesUseCase: GenerateBackupCodesUseCase
+  ) {}
+  
+  execute(userId, code, type) {
+    // 検証処理のみ
+    if (this.verifyCode(code)) {
+      // 必要に応じて他のユースケースを呼び出す
+      if (type === 'SETUP') {
+        return this.generateBackupCodesUseCase.execute(userId);
+      }
+    }
+  }
+}
+
+class GenerateBackupCodesUseCase {
+  execute(userId) {
+    // バックアップコード生成・永続化のみ
+  }
+}
+```
+
+**理由**:
+- 単一責任の原則（SRP）に従う
+- テスト容易性の向上
+- 再利用性の向上
