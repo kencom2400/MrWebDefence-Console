@@ -5,7 +5,7 @@
  * Application層に位置し、ドメイン層とインフラストラクチャ層に依存する
  */
 
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { IUserRepository } from '../../domain/repositories/user.repository.interface';
 import { IMfaRepository } from '../../domain/repositories/mfa.repository.interface';
 import { TotpService } from '../../infrastructure/services/totp.service';
@@ -35,11 +35,8 @@ export class VerifyMfaUseCase {
     private readonly userRepository: IUserRepository,
     @Inject('IMfaRepository')
     private readonly mfaRepository: IMfaRepository,
-    @Inject('TotpService')
     private readonly totpService: TotpService,
-    @Inject('BackupCodeService')
     private readonly backupCodeService: BackupCodeService,
-    @Inject('GenerateBackupCodesUseCase')
     private readonly generateBackupCodesUseCase: GenerateBackupCodesUseCase,
   ) {}
 
@@ -63,7 +60,7 @@ export class VerifyMfaUseCase {
     // ユーザーを取得
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundException('User not found');
     }
 
     let isValid = false;
@@ -75,14 +72,14 @@ export class VerifyMfaUseCase {
       if (context === MfaVerificationContext.SETUP) {
         // セットアップ時は一時的なシークレットを使用
         if (!secret) {
-          throw new Error('Secret is required for setup verification');
+          throw new BadRequestException('Secret is required for setup verification');
         }
         mfaSecret = secret;
       } else {
         // ログイン時は永続化されたシークレットを使用
         mfaSecret = await this.mfaRepository.getSecret(userId);
         if (!mfaSecret) {
-          throw new Error('MFA secret not found');
+          throw new NotFoundException('MFA secret not found');
         }
       }
 
@@ -92,24 +89,22 @@ export class VerifyMfaUseCase {
       const backupCode = BackupCode.create(code);
       const allRecords = await this.mfaRepository.getAllBackupCodeRecords(userId);
 
-      // 全てのバックアップコードのハッシュと比較
-      for (const record of allRecords) {
-        if (record.usedAt !== null) {
-          continue; // 使用済みのコードはスキップ
-        }
+      // 全ての未使用バックアップコードのハッシュと提供されたコードを並行して比較
+      // タイミング攻撃を緩和するため、Promise.allを使用して全ての検証を並行実行
+      const verificationPromises = allRecords
+        .filter((record) => record.usedAt === null)
+        .map(async (record) => ({
+          isMatch: await this.backupCodeService.verify(backupCode.getValue(), record.codeHash),
+          hash: record.codeHash,
+        }));
 
-        // バックアップコードのハッシュと比較
-        const isCodeValid = await this.backupCodeService.verify(
-          backupCode.getValue(),
-          record.codeHash,
-        );
+      const verificationResults = await Promise.all(verificationPromises);
+      const validResult = verificationResults.find((result) => result.isMatch);
 
-        if (isCodeValid) {
-          isValid = true;
-          // 使用済みとしてマーク
-          await this.mfaRepository.markBackupCodeAsUsed(userId, record.codeHash);
-          break;
-        }
+      if (validResult) {
+        isValid = true;
+        // 使用済みとしてマーク
+        await this.mfaRepository.markBackupCodeAsUsed(userId, validResult.hash);
       }
     }
 
@@ -121,7 +116,7 @@ export class VerifyMfaUseCase {
     if (context === MfaVerificationContext.SETUP) {
       // セットアップ検証成功時は、シークレットを永続化し、バックアップコードを生成
       if (!secret) {
-        throw new Error('Secret is required for setup verification');
+        throw new BadRequestException('Secret is required for setup verification');
       }
 
       // ユーザーのMFAを有効化
@@ -139,12 +134,8 @@ export class VerifyMfaUseCase {
         backupCodes: backupCodesResult.codes,
       };
     } else {
-      // ログイン検証成功時は、バックアップコードを使用済みとしてマーク（バックアップコードの場合）
-      if (type === MfaVerificationType.BACKUP_CODE) {
-        // TODO: 使用したバックアップコードを特定してマーク
-        // 現在の実装では、どのハッシュが使用されたかを特定できない
-      }
-
+      // ログイン検証成功時
+      // バックアップコードの場合は、上記の検証処理で既に使用済みとしてマークされている
       return { success: true };
     }
   }

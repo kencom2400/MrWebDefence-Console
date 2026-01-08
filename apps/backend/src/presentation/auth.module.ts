@@ -64,26 +64,10 @@ import { RolesGuard } from './guards/roles.guard';
     VerifyMfaUseCase,
     DisableMfaUseCase,
     GenerateBackupCodesUseCase,
-    {
-      provide: 'GenerateBackupCodesUseCase',
-      useClass: GenerateBackupCodesUseCase,
-    },
     // MFA Services
     TotpService,
-    {
-      provide: 'TotpService',
-      useClass: TotpService,
-    },
     QrCodeService,
-    {
-      provide: 'QrCodeService',
-      useClass: QrCodeService,
-    },
     BackupCodeService,
-    {
-      provide: 'BackupCodeService',
-      useClass: BackupCodeService,
-    },
     // MFA Repository
     {
       provide: 'IMfaRepository',

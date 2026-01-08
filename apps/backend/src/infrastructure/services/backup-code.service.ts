@@ -8,7 +8,7 @@
 
 import { Injectable } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { BackupCode } from '../../domain/value-objects/backup-code.value-object';
+import { randomInt } from 'crypto';
 
 @Injectable()
 export class BackupCodeService {
@@ -23,17 +23,18 @@ export class BackupCodeService {
   public generateCodes(): string[] {
     const codes: string[] = [];
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const partLength = this.codeLength / 2; // 4文字
 
     for (let i = 0; i < this.codeCount; i++) {
       let code = '';
       // 4文字を生成
-      for (let j = 0; j < 4; j++) {
-        code += characters.charAt(Math.floor(Math.random() * characters.length));
+      for (let j = 0; j < partLength; j++) {
+        code += characters.charAt(randomInt(characters.length));
       }
       code += '-';
       // さらに4文字を生成
-      for (let j = 0; j < 4; j++) {
-        code += characters.charAt(Math.floor(Math.random() * characters.length));
+      for (let j = 0; j < partLength; j++) {
+        code += characters.charAt(randomInt(characters.length));
       }
       codes.push(code);
     }

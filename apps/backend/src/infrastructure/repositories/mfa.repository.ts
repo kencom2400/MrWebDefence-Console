@@ -92,25 +92,6 @@ export class MfaRepository implements IMfaRepository {
   }
 
   /**
-   * バックアップコードのハッシュからレコードを検索する
-   * @param userId ユーザーID
-   * @param codeHash バックアップコードのハッシュ
-   * @returns バックアップコードレコード、またはnull
-   */
-  public async findBackupCodeByHash(
-    userId: string,
-    codeHash: string,
-  ): Promise<BackupCodeRecord | null> {
-    const records = this.backupCodes.get(userId);
-    if (!records) {
-      return null;
-    }
-
-    const record = records.find((r) => r.codeHash === codeHash);
-    return record || null;
-  }
-
-  /**
    * ユーザーの全てのバックアップコードを削除する
    */
   public async deleteBackupCodes(userId: string): Promise<void> {

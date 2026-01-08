@@ -5,7 +5,7 @@
  * Application層に位置し、ドメイン層とインフラストラクチャ層に依存する
  */
 
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ConflictException } from '@nestjs/common';
 import { IUserRepository } from '../../domain/repositories/user.repository.interface';
 import { TotpService } from '../../infrastructure/services/totp.service';
 import { QrCodeService } from '../../infrastructure/services/qr-code.service';
@@ -20,9 +20,7 @@ export class SetupMfaUseCase {
   constructor(
     @Inject('IUserRepository')
     private readonly userRepository: IUserRepository,
-    @Inject('TotpService')
     private readonly totpService: TotpService,
-    @Inject('QrCodeService')
     private readonly qrCodeService: QrCodeService,
   ) {}
 
@@ -30,18 +28,19 @@ export class SetupMfaUseCase {
    * MFAセットアップ処理を実行する
    * @param userId ユーザーID
    * @returns QRコードのData URLとシークレット
-   * @throws Error ユーザーが見つからない場合、またはMFAが既に有効な場合
+   * @throws NotFoundException ユーザーが見つからない場合
+   * @throws ConflictException MFAが既に有効な場合
    */
   public async execute(userId: string): Promise<SetupMfaResult> {
     // ユーザーを取得
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new Error('User not found');
+      throw new NotFoundException('User not found');
     }
 
     // 既にMFAが有効な場合はエラー
     if (user.mfaEnabled) {
-      throw new Error('MFA is already enabled');
+      throw new ConflictException('MFA is already enabled');
     }
 
     // MFAシークレットを生成
