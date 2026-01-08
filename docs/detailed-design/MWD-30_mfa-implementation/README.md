@@ -37,6 +37,7 @@
 │  Application Layer                  │
 │  - SetupMfaUseCase (New)            │
 │  - VerifyMfaUseCase (New)           │
+│  - GenerateBackupCodesUseCase (New) │
 │  - DisableMfaUseCase (New)          │
 │  - LoginUseCase (Modified)          │
 └──────────────┬──────────────────────┘
@@ -169,7 +170,9 @@
 
 ### TOTP仕様
 
-- **アルゴリズム**: HMAC-SHA1（RFC 6238準拠）
+- **アルゴリズム**: HMAC-SHA1（RFC 6238準拠、デフォルト）
+  - 注: RFC 6238ではHMAC-SHA256、HMAC-SHA512もサポートされているが、互換性のためHMAC-SHA1を使用
+  - 将来的にアルゴリズムを変更する場合は、OTPAUTH URIの `algorithm` パラメータで指定可能
 - **時間ステップ**: 30秒
 - **桁数**: 6桁
 - **許容時間ウィンドウ**: ±1ステップ（30秒前後を許容）
@@ -201,7 +204,14 @@ otpauth://totp/MrWebDefence:user@example.com?secret=JBSWY3DPEHPK3PXP&issuer=MrWe
 
 - `users` テーブルに `mfa_enabled` (boolean) カラムを追加
 - `users` テーブルに `mfa_secret` (encrypted string) カラムを追加
-- `backup_codes` テーブルを新規作成（`user_id`, `code_hash`, `used_at`, `created_at`）
+- `backup_codes` テーブルを新規作成
+  - `id` (UUID, プライマリキー)
+  - `user_id` (UUID, 外部キー)
+  - `code_hash` (string, bcryptハッシュ)
+  - `used_at` (timestamp, NULL可能) - NULLの場合は未使用、値がある場合は使用済み
+  - `created_at` (timestamp)
+
+**注意**: `used` フラグは冗長のため削除。`used_at` が NULL かどうかで使用状態を判定する。
 
 ## テスト戦略
 

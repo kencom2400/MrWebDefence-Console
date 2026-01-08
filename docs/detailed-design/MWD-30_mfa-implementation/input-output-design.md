@@ -197,12 +197,11 @@
   "backupCodes": [
     {
       "id": "uuid-1",
-      "used": false,
+      "usedAt": null,
       "createdAt": "2026-01-08T10:00:00Z"
     },
     {
       "id": "uuid-2",
-      "used": true,
       "usedAt": "2026-01-08T11:00:00Z",
       "createdAt": "2026-01-08T10:00:00Z"
     }
@@ -213,7 +212,10 @@
 }
 ```
 
-**注意**: 実際のコード値は返却されません（セキュリティ上の理由）。使用済み/未使用の状態のみを返却します。
+**注意**: 
+- 実際のコード値は返却されません（セキュリティ上の理由）
+- `usedAt` が `null` の場合は未使用、値がある場合は使用済みと判定
+- `used` フラグは冗長のため削除（`usedAt` の有無で判定）
 
 ### 6. バックアップコード再生成
 
@@ -328,9 +330,10 @@
 | id | string (UUID) | Yes | - | プライマリキー |
 | user_id | string (UUID) | Yes | - | ユーザーID（外部キー） |
 | code_hash | string | Yes | - | バックアップコードのハッシュ（bcrypt） |
-| used | boolean | Yes | `false` | 使用済みフラグ |
-| used_at | timestamp | No | `NULL` | 使用日時 |
+| used_at | timestamp | No | `NULL` | 使用日時（NULLの場合は未使用、値がある場合は使用済み） |
 | created_at | timestamp | Yes | `CURRENT_TIMESTAMP` | 作成日時 |
+
+**設計方針**: `used` フラグは冗長のため削除。`used_at` が NULL かどうかで使用状態を判定することで、データの整合性を保ち、ストレージを節約する。
 
 ## バリデーションルール
 

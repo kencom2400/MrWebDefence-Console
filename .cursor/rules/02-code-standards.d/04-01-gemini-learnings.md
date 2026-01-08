@@ -205,3 +205,70 @@ class GenerateBackupCodesUseCase {
 - 単一責任の原則（SRP）に従う
 - テスト容易性の向上
 - 再利用性の向上
+
+### 13-13. TOTP仕様の明確化とデータベース設計の冗長性排除（PR #37）
+
+**学習元**: PR #37 - MFA機能実装設計（Geminiレビュー指摘）
+
+#### TOTPハッシュアルゴリズムの明確化
+
+**問題**: TOTPのアルゴリズム仕様が簡潔すぎて、将来の拡張性や互換性について不明確。
+
+**解決策**: RFC 6238の仕様を明確に記載し、デフォルトアルゴリズムと将来の拡張性について説明を追加する。
+
+```markdown
+### TOTP仕様
+
+- **アルゴリズム**: HMAC-SHA1（RFC 6238準拠、デフォルト）
+  - 注: RFC 6238ではHMAC-SHA256、HMAC-SHA512もサポートされているが、互換性のためHMAC-SHA1を使用
+  - 将来的にアルゴリズムを変更する場合は、OTPAUTH URIの `algorithm` パラメータで指定可能
+```
+
+**理由**:
+- 実装時の混乱を防止
+- 将来の拡張性を考慮した設計の明確化
+
+#### データベース設計の冗長性排除
+
+**問題**: `backup_codes` テーブルに `used` (boolean) と `used_at` (timestamp) の両方があると、データの冗長性が発生し、整合性の問題が生じる可能性がある。
+
+**解決策**: `used` フラグを削除し、`used_at` の有無で使用状態を判定する。
+
+```sql
+-- Bad: 冗長な設計
+CREATE TABLE backup_codes (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  code_hash VARCHAR(255) NOT NULL,
+  used BOOLEAN NOT NULL DEFAULT false,  -- 冗長
+  used_at TIMESTAMP NULL,               -- used_at があれば used = true
+  created_at TIMESTAMP NOT NULL
+);
+
+-- Good: 冗長性を排除
+CREATE TABLE backup_codes (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  code_hash VARCHAR(255) NOT NULL,
+  used_at TIMESTAMP NULL,  -- NULL = 未使用、値あり = 使用済み
+  created_at TIMESTAMP NOT NULL
+);
+```
+
+**理由**:
+- データの整合性向上（単一の真実の源）
+- ストレージの節約
+- クエリの簡素化（`used_at IS NULL` で未使用を判定）
+
+#### 設計書間の一貫性確保
+
+**問題**: クラス図、シーケンス図、API仕様、データベーススキーマの間で不整合があると、実装時に混乱が生じる。
+
+**解決策**: 
+1. データベーススキーマ変更時は、関連する全ての設計書を同時に更新する
+2. レビュー時に設計書間の整合性を確認する
+3. 変更履歴を追跡しやすくするため、設計書を一括で更新する
+
+**理由**:
+- 実装時の混乱防止
+- 設計の信頼性向上

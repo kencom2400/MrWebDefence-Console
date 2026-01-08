@@ -131,18 +131,20 @@ classDiagram
         +saveSecret(userId, secret): Promise~void~
         +getSecret(userId): Promise~string | null~
         +deleteSecret(userId): Promise~void~
-        +saveBackupCodes(userId, codes): Promise~void~
-        +getBackupCodes(userId): Promise~BackupCode[]~
+        +saveBackupCodes(userId, codeHashes): Promise~void~
+        +getBackupCodes(userId): Promise~BackupCodeMetadata[]~
         +markBackupCodeAsUsed(userId, codeHash): Promise~void~
+        +deleteBackupCodes(userId): Promise~void~
     }
 
     class MfaRepository {
         +saveSecret(userId, secret): Promise~void~
         +getSecret(userId): Promise~string | null~
         +deleteSecret(userId): Promise~void~
-        +saveBackupCodes(userId, codes): Promise~void~
-        +getBackupCodes(userId): Promise~BackupCode[]~
+        +saveBackupCodes(userId, codeHashes): Promise~void~
+        +getBackupCodes(userId): Promise~BackupCodeMetadata[]~
         +markBackupCodeAsUsed(userId, codeHash): Promise~void~
+        +deleteBackupCodes(userId): Promise~void~
     }
 
     IMfaRepository <|.. MfaRepository
