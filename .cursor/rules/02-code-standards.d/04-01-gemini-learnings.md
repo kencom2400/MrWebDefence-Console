@@ -503,3 +503,123 @@ export class MfaRepository implements IMfaRepository {
 - コードの可読性向上
 - 混乱の防止
 - 保守の負担軽減
+
+### 13-13. Guardの適用タイミングとログイン時のIP検証（PR #39）
+
+**学習元**: PR #39 - IP AllowList機能の詳細設計（Geminiレビュー指摘）
+
+#### Guardは認証前に動作するため、ログインエンドポイントには適用できない
+
+**問題**: Guardはコントローラーのメソッドが実行される「前」に動作するため、ログインエンドポイントに適用すると、ユーザー認証が完了しておらず`userId`を取得できません。そのため、Guard内でIP検証を行うことは困難です。
+
+**解決策**: ログイン時のIP検証は`LoginUseCase`内で認証成功後に実行する。
+
+```typescript
+// Bad: Guardでログイン時のIP検証を試みる（認証前にuserIdが取得できない）
+@Injectable()
+export class IpAllowListGuard implements CanActivate {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const userId = request.user?.sub; // ログイン前は取得できない
+    // ...
+  }
+}
+
+// Good: LoginUseCase内で認証成功後にIP検証
+@Injectable()
+export class LoginUseCase {
+  async execute(email: string, password: string, clientIp: string): Promise<LoginResult> {
+    // パスワード認証
+    const user = await this.userRepository.findByEmail(email);
+    // ...
+    
+    // 認証成功後、IP検証
+    const isAllowed = await this.verifyIpAllowListUseCase.execute(user.id, clientIp);
+    if (!isAllowed) {
+      throw new ForbiddenException('Access denied from this IP address');
+    }
+    
+    // JWTトークン生成
+    return { accessToken, ... };
+  }
+}
+```
+
+**理由**:
+- Guardの実行タイミングと認証フローの整合性
+- 実装時の誤解を防ぐ
+
+#### グローバルガードとして登録する際の注意
+
+**問題**: `IpAllowListGuard`をグローバルガード（`APP_GUARD`）として登録すると、認証前のパブリックなエンドポイント（ログイン画面など）へのアクセスもブロックしてしまいます。
+
+**解決策**: IP検証が必要なエンドポイントにのみ適用するか、`LoginUseCase`内で処理する設計を採用する。
+
+**理由**:
+- パブリックエンドポイントへの影響を回避
+- 設計の一貫性
+
+#### Value ObjectとServiceの責務分担
+
+**問題**: `IpAddress` Value Objectと`IpAddressService`の間で、責務の重複が見られる。`validate`や`isInRange`といったメソッドが両方のクラスに存在しており、どちらが主たる責務を負うのかが不明確。
+
+**解決策**: Value Objectの関心事をクラス内にカプセル化するため、バリデーション、CIDRパース、範囲チェック（`isInRange`）などのロジックは`IpAddress` Value Objectに集約する。`IpAddressService`は、外部ライブラリとの連携など、よりインフラストラクチャ層に近い純粋な技術的処理に特化させる。
+
+```typescript
+// Good: Value Object内にバリデーションと範囲チェックをカプセル化
+export class IpAddress {
+  private readonly value: string;
+  private readonly cidr?: number;
+
+  constructor(value: string) {
+    this.validate(value); // Value Object内でバリデーション
+    this.value = value;
+    this.parseCidr(value); // Value Object内でCIDRパース
+  }
+
+  public isInRange(ip: string): boolean {
+    // Value Object内で範囲チェック
+    // CIDR記法の場合、指定されたIPアドレスが範囲内かチェック
+    // 単一IPアドレスの場合は完全一致をチェック
+  }
+
+  private validate(value: string): void {
+    // IPv4/IPv6形式、CIDR記法の検証
+  }
+}
+
+// Good: Serviceは外部ライブラリとの連携に特化
+@Injectable()
+export class IpAddressService {
+  public createFromString(value: string): IpAddress {
+    // 外部ライブラリ（ipaddr.js等）を使用して検証
+    // IpAddress Value Objectのファクトリメソッドとして機能
+    return new IpAddress(value);
+  }
+}
+```
+
+**理由**:
+- ドメイン駆動設計の原則に沿った設計
+- Value Objectの不変性と正当性を維持する責務の明確化
+- 設計の一貫性
+
+#### データベースインデックスの最適化
+
+**問題**: `ip_address`カラムに対する個別のインデックス`idx_ip_allowlists_ip_address`は、冗長である可能性があります。`UNIQUE(user_id, ip_address)`制約により、`(user_id, ip_address)`の複合インデックスが既に作成されます。
+
+**解決策**: IPアドレスの重複チェックや検索は、通常`user_id`とセットで行われるため、複合インデックスで効率的に処理できます。単独の`ip_address`インデックスは、全ユーザーを横断してIPアドレスを検索するような特殊なケースでなければ削除する。
+
+**理由**:
+- インデックスの冗長性を排除
+- スキーマのシンプル化
+- パフォーマンスへの影響を最小化
+
+#### APIレスポンス形式の簡素化
+
+**問題**: 一覧取得APIのレスポンス形式について、`ipAllowLists`というキーでラップされていますが、ページネーションのメタデータを含まない場合、よりシンプルな形式も検討の余地がある。
+
+**解決策**: ページネーション（`limit`, `offset`など）のメタデータを含まない場合、クライアント側での扱いを容易にするため、レスポンスボディのルートを直接配列 `[...]` にする。将来的にページネーションを導入する計画がある場合は、オブジェクト形式を維持する。
+
+**理由**:
+- クライアント側での扱いの容易さ
+- レスポンス形式の簡素化

@@ -77,7 +77,7 @@
 - **IpAddress Value Object**: IPアドレスをカプセル化（バリデーション、不変性、CIDR記法のサポート）
 - **IIpAllowListRepository**: IP AllowList関連データのリポジトリインターフェース
 
-**注意**: Value Objectは技術的な詳細（IPアドレスのパース、CIDR計算など）を含まない。これらはInfrastructure層の責務。
+**注意**: Value Objectは自身の不変性と正当性を維持する責務を持ちます。IPアドレスのバリデーション、CIDR記法のパース、範囲チェック（`isInRange`）などのロジックは`IpAddress` Value Object内にカプセル化します。外部ライブラリとの連携など、より技術的な詳細はInfrastructure層の`IpAddressService`が担当します。
 
 ### 2. Application Layer
 
@@ -99,10 +99,9 @@
 ### 3. Infrastructure Layer
 
 - **IpAllowListRepository**: IP AllowListの永続化（初期実装はインメモリ）
-- **IpAddressService**: IPアドレスの検証・パース・CIDR計算
-  - IPv4/IPv6の検証
-  - CIDR記法のパース
-  - IPアドレスの範囲チェック（CIDRマッチング）
+- **IpAddressService**: 外部ライブラリとの連携など、より技術的な詳細を担当
+  - 外部IPアドレス検証ライブラリ（`ipaddr.js`等）との連携
+  - `IpAddress` Value Objectのファクトリメソッドとして機能（必要に応じて）
 
 ### 4. Presentation Layer
 
@@ -110,11 +109,9 @@
   - `POST /api/v1/auth/ip-allowlist` - IPアドレス追加
   - `DELETE /api/v1/auth/ip-allowlist/:id` - IPアドレス削除
   - `GET /api/v1/auth/ip-allowlist` - IP AllowList一覧取得
-- **IpAllowListGuard**: ログイン時のIPアドレス検証Guard
-  - リクエスト元IPアドレスの取得
-  - VerifyIpAllowListUseCaseを呼び出し
-  - 検証失敗時は403 Forbiddenを返す
 - **DTOs**: リクエスト/レスポンスの型定義
+
+**注意**: ログイン時のIP検証は`LoginUseCase`内で実行します。Guardは認証前に動作するため、ログインエンドポイントには適用しません。
 
 ## データフロー
 
@@ -131,12 +128,14 @@
 ### ログイン時のIP検証フロー
 
 1. クライアントが `POST /api/v1/auth/login` を呼び出し
-2. `IpAllowListGuard` がリクエストをインターセプト
-3. リクエスト元IPアドレスを取得
+2. `LoginUseCase` がパスワード認証を実行
+3. 認証成功後、リクエスト元IPアドレスを取得
 4. `VerifyIpAllowListUseCase` が実行される
 5. ユーザーのIP AllowListを取得
-6. `IpAddressService` でIPアドレスのマッチング（CIDR記法対応）
-7. マッチするIPアドレスがあれば許可、なければ403 Forbidden
+6. `IpAddress` Value ObjectでIPアドレスのマッチング（CIDR記法対応）
+7. マッチするIPアドレスがあればJWTトークンを返却、なければ403 Forbidden
+
+**注意**: Guardは認証前に動作するため、ログインエンドポイントには適用できません。`LoginUseCase`内で認証成功後にIP検証を行います。
 
 ## セキュリティ考慮事項
 
@@ -173,53 +172,33 @@ export class IpAddress {
 
   constructor(value: string) {
     // バリデーション: IPv4/IPv6形式、CIDR記法の検証
+    this.validate(value);
     this.value = value;
     // CIDR記法の場合はプレフィックス長を抽出
+    this.parseCidr(value);
   }
 
   public isInRange(ip: string): boolean {
     // CIDR記法の場合、指定されたIPアドレスが範囲内かチェック
     // 単一IPアドレスの場合は完全一致をチェック
-  }
-}
-```
-
-### IP AllowList Guard
-
-```typescript
-@Injectable()
-export class IpAllowListGuard implements CanActivate {
-  constructor(
-    private readonly verifyIpAllowListUseCase: VerifyIpAllowListUseCase,
-  ) {}
-
-  async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
-    const clientIp = this.extractClientIp(request);
-    const userId = request.user?.sub; // JWTから取得
-
-    if (!userId) {
-      return false; // 認証されていない場合は拒否
-    }
-
-    const isAllowed = await this.verifyIpAllowListUseCase.execute(userId, clientIp);
-    if (!isAllowed) {
-      throw new ForbiddenException('Access denied from this IP address');
-    }
-
-    return true;
+    // このロジックはValue Object内にカプセル化
   }
 
-  private extractClientIp(request: Request): string {
-    // X-Forwarded-For ヘッダーから取得（リバースプロキシ経由の場合）
-    // なければ request.ip を使用
+  private validate(value: string): void {
+    // IPv4/IPv6形式、CIDR記法の検証
+  }
+
+  private parseCidr(value: string): void {
+    // CIDR記法の場合はプレフィックス長を抽出
   }
 }
 ```
 
 ### ログインUseCaseの統合
 
-`LoginUseCase` は、ログイン成功後に `IpAllowListGuard` による検証を通過する必要があります。ただし、Guardはグローバルに設定するのではなく、ログインエンドポイントにのみ適用することを推奨します。
+`LoginUseCase` は、パスワード認証成功後に`VerifyIpAllowListUseCase`を呼び出してIP検証を行います。検証に失敗した場合は403 Forbiddenを返します。
+
+**注意**: Guardは認証前に動作するため、ログインエンドポイントには適用できません。`LoginUseCase`内で認証成功後にIP検証を行います。
 
 ## データベース設計
 

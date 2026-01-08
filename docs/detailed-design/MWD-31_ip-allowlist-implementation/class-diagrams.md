@@ -17,12 +17,19 @@ classDiagram
 
     class IpAddress {
         <<ValueObject>>
-        +string value
-        +number? cidr
-        +validate()
+        -string value
+        -number? cidr
+        +constructor(value: string)
+        +getValue(): string
+        +getCidr(): number | undefined
         +isInRange(ip: string): boolean
         +equals(other: IpAddress): boolean
+        +toString(): string
+        -validate(value: string): void
+        -parseCidr(value: string): void
     }
+
+    note for IpAddress "バリデーション、CIDRパース、範囲チェックを\nValue Object内にカプセル化"
 
     class IpAllowList {
         <<Entity>>
@@ -74,12 +81,12 @@ classDiagram
     }
 
     class IpAddressService {
-        +validate(ipAddress: string): boolean
-        +parse(ipAddress: string): IpAddress
-        +isInRange(ip: string, cidr: string): boolean
-        +isValidIpv4(ip: string): boolean
-        +isValidIpv6(ip: string): boolean
+        <<Infrastructure>>
+        +createFromString(value: string): IpAddress
+        +validateWithLibrary(ipAddress: string): boolean
     }
+
+    note for IpAddressService "外部ライブラリとの連携を担当\nIpAddress Value Objectのファクトリメソッドとして機能"
 
     class IpAllowListRepository {
         -Map~string, IpAllowList[]~ storage
@@ -116,18 +123,18 @@ classDiagram
     IpAllowList --> User : belongs to
     IpAllowList --> IpAddress : contains
     AddIpAllowListUseCase --> IIpAllowListRepository : uses
-    AddIpAllowListUseCase --> IpAddressService : uses
+    AddIpAllowListUseCase --> IpAddressService : uses (factory)
     RemoveIpAllowListUseCase --> IIpAllowListRepository : uses
     GetIpAllowListUseCase --> IIpAllowListRepository : uses
     VerifyIpAllowListUseCase --> IIpAllowListRepository : uses
-    VerifyIpAllowListUseCase --> IpAddressService : uses
+    VerifyIpAllowListUseCase --> IpAddress : uses
     IpAllowListController --> AddIpAllowListUseCase : uses
     IpAllowListController --> RemoveIpAllowListUseCase : uses
     IpAllowListController --> GetIpAllowListUseCase : uses
-    IpAllowListGuard --> VerifyIpAllowListUseCase : uses
     IpAllowListRepository ..|> IIpAllowListRepository : implements
     LoginUseCase --> VerifyIpAllowListUseCase : uses
     AuthController --> LoginUseCase : uses
+    IpAddressService --> IpAddress : creates
 ```
 
 ## モジュール構成
@@ -141,8 +148,10 @@ classDiagram
 
     class AppModule {
         +imports: ConfigModule, AuthModule
-        +providers: APP_GUARD (JwtAuthGuard, RolesGuard, IpAllowListGuard)
+        +providers: APP_GUARD (JwtAuthGuard, RolesGuard)
     }
+
+    note for AppModule "IpAllowListGuardはグローバルガードとして登録しない\nログイン時のIP検証はLoginUseCase内で実行"
 
     AppModule --> AuthModule : imports
 ```

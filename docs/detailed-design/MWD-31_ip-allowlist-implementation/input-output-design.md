@@ -116,24 +116,31 @@ IPv6もサポート:
 
 **レスポンス** (200 OK):
 ```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "ipAddress": "192.168.1.1",
+    "description": "Home office",
+    "createdAt": "2024-01-15T10:30:00Z",
+    "updatedAt": "2024-01-15T10:30:00Z"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "ipAddress": "192.168.1.0/24",
+    "description": "Office network",
+    "createdAt": "2024-01-15T11:00:00Z",
+    "updatedAt": "2024-01-15T11:00:00Z"
+  }
+]
+```
+
+**注意**: ページネーションを導入する場合は、以下の形式に変更します：
+```json
 {
-  "ipAllowLists": [
-    {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
-      "ipAddress": "192.168.1.1",
-      "description": "Home office",
-      "createdAt": "2024-01-15T10:30:00Z",
-      "updatedAt": "2024-01-15T10:30:00Z"
-    },
-    {
-      "id": "660e8400-e29b-41d4-a716-446655440001",
-      "ipAddress": "192.168.1.0/24",
-      "description": "Office network",
-      "createdAt": "2024-01-15T11:00:00Z",
-      "updatedAt": "2024-01-15T11:00:00Z"
-    }
-  ],
-  "totalCount": 2
+  "ipAllowLists": [...],
+  "totalCount": 2,
+  "limit": 50,
+  "offset": 0
 }
 ```
 
@@ -203,7 +210,9 @@ CREATE TABLE ip_allowlists (
 );
 
 CREATE INDEX idx_ip_allowlists_user_id ON ip_allowlists(user_id);
-CREATE INDEX idx_ip_allowlists_ip_address ON ip_allowlists(ip_address);
+```
+
+**注意**: `UNIQUE(user_id, ip_address)`制約により、`(user_id, ip_address)`の複合インデックスが既に作成されます。IPアドレスの重複チェックや検索は、通常`user_id`とセットで行われるため、この複合インデックスで効率的に処理できます。単独の`ip_address`インデックスは、全ユーザーを横断してIPアドレスを検索するような特殊なケースでなければ不要です。
 ```
 
 **制約**:

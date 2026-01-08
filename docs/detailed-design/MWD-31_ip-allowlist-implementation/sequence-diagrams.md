@@ -84,7 +84,7 @@ sequenceDiagram
     participant LoginUseCase
     participant VerifyIpAllowListUseCase
     participant IpAllowListRepository
-    participant IpAddressService
+    participant IpAddress
     participant UserRepository
     participant PasswordService
     participant JwtService
@@ -129,47 +129,4 @@ sequenceDiagram
     end
 ```
 
-## IP AllowList Guardによる検証フロー（代替案）
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant IpAllowListGuard
-    participant VerifyIpAllowListUseCase
-    participant IpAllowListRepository
-    participant IpAddressService
-    participant AuthController
-    participant LoginUseCase
-
-    Client->>AuthController: POST /api/v1/auth/login<br/>{ email, password }
-    
-    Note over IpAllowListGuard: Guard intercepts request
-    
-    IpAllowListGuard->>IpAllowListGuard: extractClientIp(request)
-    IpAllowListGuard->>IpAllowListGuard: getUserId(request.user)
-    
-    IpAllowListGuard->>VerifyIpAllowListUseCase: execute(userId, clientIp)
-    
-    VerifyIpAllowListUseCase->>IpAllowListRepository: findByUserId(userId)
-    IpAllowListRepository-->>VerifyIpAllowListUseCase: IpAllowList[]
-    
-    alt IP AllowList is empty
-        VerifyIpAllowListUseCase-->>IpAllowListGuard: true (allow all)
-    else IP AllowList is not empty
-        VerifyIpAllowListUseCase->>IpAddressService: isInRange(clientIp, ipAddress)
-        IpAddressService-->>VerifyIpAllowListUseCase: true/false
-        VerifyIpAllowListUseCase-->>IpAllowListGuard: true/false
-    end
-    
-    alt IP is allowed
-        IpAllowListGuard-->>AuthController: allow
-        AuthController->>LoginUseCase: execute(email, password)
-        LoginUseCase-->>AuthController: { accessToken, ... }
-        AuthController-->>Client: 200 OK
-    else IP is not allowed
-        IpAllowListGuard-->>Client: 403 Forbidden
-    end
-```
-
-**注意**: Guardによる検証は、ログイン前にユーザーIDが取得できないため、ログイン成功後に検証する方式（LoginUseCase内での検証）を推奨します。
 
