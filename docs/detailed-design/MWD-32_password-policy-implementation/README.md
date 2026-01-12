@@ -135,7 +135,9 @@
 3. `ValidatePasswordPolicyUseCase` が実行される
 4. パスワードの複雑さチェック（PasswordPolicy Value Object経由）
 5. パスワード強度スコアを計算（PasswordPolicyService経由）
-6. 検証結果と強度スコアを返却
+6. パスワードをハッシュ化（PasswordService経由）
+7. パスワード履歴をチェック（PasswordHistoryRepository経由）
+8. 検証結果、強度スコア、再利用フラグを返却
 
 ## セキュリティ考慮事項
 

@@ -81,8 +81,9 @@ sequenceDiagram
     PasswordPolicyService-->>ValidatePasswordPolicyUseCase: strengthScore
     
     alt Password validation fails
-        ValidatePasswordPolicyUseCase-->>PasswordController: { isValid: false, errors, strengthScore }
-        PasswordController-->>Client: 200 OK { isValid: false, errors, strengthScore }
+        Note over ValidatePasswordPolicyUseCase: 検証失敗時も強度スコアを計算して返却
+        ValidatePasswordPolicyUseCase-->>PasswordController: { isValid: false, errors, strengthScore, isReused: false }
+        PasswordController-->>Client: 200 OK { isValid: false, errors, strengthScore, isReused: false }
     else Password validation passes
         ValidatePasswordPolicyUseCase->>PasswordService: hash(password)
         PasswordService-->>ValidatePasswordPolicyUseCase: hashedPassword
