@@ -705,3 +705,272 @@ sequenceDiagram
 - ドメインロジックがValue Objectに集約される
 - `IpAddressService`はVOの生成（ファクトリ）や外部ライブラリとの連携といったインフラ層の責務に特化
 - 設計の一貫性を保つ
+
+### 13-16. パスワードポリシー設計におけるValue ObjectとServiceの責務分担（PR #40）
+
+**学習元**: PR #40 - パスワードポリシー機能の詳細設計（Geminiレビュー指摘）
+
+#### Value ObjectとServiceの責務分担
+
+**問題**: `PasswordPolicy` Value Objectと`PasswordPolicyService`の間で、責務の重複が見られる。`validateComplexity`や`checkComplexity`といったメソッドが両方のクラスに存在しており、どちらが主たる責務を負うのかが不明確。
+
+**解決策**: Value Objectの関心事をクラス内にカプセル化するため、バリデーション、複雑さチェック（`validate`、`checkComplexity`）などのロジックは`PasswordPolicy` Value Objectに集約する。`PasswordPolicyService`は、Value Objectの生成（ファクトリメソッド）やパスワード強度スコア計算など、よりインフラストラクチャ層に近い純粋な技術的処理に特化させる。
+
+```typescript
+// Good: Value Object内にバリデーションと複雑さチェックをカプセル化
+export class PasswordPolicy {
+  private readonly minLength: number;
+  private readonly maxLength: number;
+  private readonly requireUppercase: boolean;
+  private readonly requireLowercase: boolean;
+  private readonly requireNumbers: boolean;
+  private readonly requireSymbols: boolean;
+  private readonly historyCount: number;
+
+  constructor(
+    minLength: number,
+    maxLength: number,
+    requireUppercase: boolean,
+    requireLowercase: boolean,
+    requireNumbers: boolean,
+    requireSymbols: boolean,
+    historyCount: number,
+  ) {
+    this.minLength = minLength;
+    this.maxLength = maxLength;
+    this.requireUppercase = requireUppercase;
+    this.requireLowercase = requireLowercase;
+    this.requireNumbers = requireNumbers;
+    this.requireSymbols = requireSymbols;
+    this.historyCount = historyCount;
+  }
+
+  public validate(password: string): ComplexityResult {
+    // Value Object内でバリデーションと複雑さチェック
+    const errors: string[] = [];
+    
+    if (password.length < this.minLength) {
+      errors.push(`Password must be at least ${this.minLength} characters long`);
+    }
+    if (password.length > this.maxLength) {
+      errors.push(`Password must be at most ${this.maxLength} characters long`);
+    }
+    if (this.requireUppercase && !/[A-Z]/.test(password)) {
+      errors.push('Password must contain at least one uppercase letter');
+    }
+    if (this.requireLowercase && !/[a-z]/.test(password)) {
+      errors.push('Password must contain at least one lowercase letter');
+    }
+    if (this.requireNumbers && !/[0-9]/.test(password)) {
+      errors.push('Password must contain at least one number');
+    }
+    if (this.requireSymbols && !/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)) {
+      errors.push('Password must contain at least one symbol');
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors,
+    };
+  }
+}
+
+// Good: ServiceはValue Objectの生成（ファクトリ）や技術的な処理に特化
+@Injectable()
+export class PasswordPolicyService {
+  public createPasswordPolicy(): PasswordPolicy {
+    // 設定値からPasswordPolicy Value Objectを生成
+    return new PasswordPolicy(
+      parseInt(process.env.PASSWORD_MIN_LENGTH || '8', 10),
+      parseInt(process.env.PASSWORD_MAX_LENGTH || '128', 10),
+      process.env.PASSWORD_REQUIRE_UPPERCASE !== 'false',
+      process.env.PASSWORD_REQUIRE_LOWERCASE !== 'false',
+      process.env.PASSWORD_REQUIRE_NUMBERS !== 'false',
+      process.env.PASSWORD_REQUIRE_SYMBOLS !== 'false',
+      parseInt(process.env.PASSWORD_HISTORY_COUNT || '5', 10),
+    );
+  }
+
+  public calculateStrengthScore(password: string): number {
+    // 技術的なアルゴリズムによる強度スコア計算
+    // 長さ、文字種の多様性、一般的なパターンの回避などを考慮
+    let score = 0;
+    // ... スコア計算ロジック
+    return Math.min(100, score);
+  }
+}
+```
+
+**理由**:
+- ドメイン駆動設計の原則に沿った設計
+- Value Objectの不変性と正当性を維持する責務の明確化
+- 設計の一貫性（IP AllowList設計と同様の原則）
+
+#### パスワード履歴管理の責務分担
+
+**問題**: パスワード履歴のチェックが`PasswordPolicyService`に含まれているが、これはRepositoryの責務であるべき。
+
+**解決策**: パスワード履歴の保存・取得・検証は`PasswordHistoryRepository`の責務とする。`PasswordPolicyService`は技術的な処理（強度スコア計算など）に特化する。
+
+```typescript
+// Good: Repositoryが履歴管理を担当
+@Injectable()
+export class PasswordHistoryRepository implements IPasswordHistoryRepository {
+  public async checkPasswordInHistory(
+    userId: string,
+    passwordHash: string,
+    count: number,
+  ): Promise<boolean> {
+    const history = await this.getPasswordHistory(userId, count);
+    return history.some((hash) => hash === passwordHash);
+  }
+
+  public async deleteOldHistory(userId: string, keepCount: number): Promise<void> {
+    // 最新N個を保持し、古い履歴を削除
+    // ...
+  }
+}
+```
+
+**理由**:
+- 責務の明確化（Repositoryはデータアクセス、Serviceは技術的処理）
+- 設計の一貫性
+
+### 13-17. 設計ドキュメントの一貫性確保（PR #40）
+
+**学習元**: PR #40 - パスワードポリシー機能の詳細設計（Geminiレビュー指摘）
+
+#### Value Objectのメソッドの冗長性排除
+
+**問題**: `PasswordPolicy` Value Objectに`validate`と`checkComplexity`の両方が存在し、責務が重複している。
+
+**解決策**: Value Objectのメソッドは一貫性を保つため、`validate`メソッドのみに統一する。`checkComplexity`は削除する。
+
+```typescript
+// Bad: 冗長なメソッド
+export class PasswordPolicy {
+  public validate(password: string): ValidationResult { ... }
+  public checkComplexity(password: string): ValidationResult { ... } // 冗長
+}
+
+// Good: validateメソッドのみ
+export class PasswordPolicy {
+  public validate(password: string): ValidationResult { ... }
+}
+```
+
+**理由**:
+- メソッドの一貫性
+- 責務の明確化
+
+#### Value Objectの戻り値型の明確化
+
+**問題**: `ComplexityResult`に`strengthScore`が含まれているが、これはValue ObjectではなくServiceが計算する技術的な値である。
+
+**解決策**: Value Objectの戻り値型は`ValidationResult`（`isValid`と`errors`のみ）とし、`strengthScore`はServiceが計算して別途返す。
+
+```typescript
+// Bad: Value Objectが技術的な値を含む
+export class ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  strengthScore: number; // Serviceが計算する技術的な値
+}
+
+// Good: Value Objectはドメインロジックのみ
+export class ValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
+
+// Serviceが強度スコアを計算
+@Injectable()
+export class PasswordPolicyService {
+  public calculateStrengthScore(password: string): number {
+    // 技術的なアルゴリズム
+  }
+}
+```
+
+**理由**:
+- Value Objectの責務の明確化（ドメインロジックのみ）
+- Serviceの責務の明確化（技術的な処理）
+
+#### テスト戦略における責務の正確な記述
+
+**問題**: テスト戦略で「PasswordPolicyService: パスワード複雑さチェック」と記述されているが、これはValue Objectの責務である。
+
+**解決策**: テスト戦略では各コンポーネントの実際の責務を正確に記述する。
+
+```markdown
+### ユニットテスト
+
+- **PasswordPolicy Value Object**: ポリシー設定のバリデーション、不変性、パスワードの複雑さチェック
+- **PasswordPolicyService**: Value Objectの生成（ファクトリ）、パスワード強度スコア計算
+```
+
+**理由**:
+- テスト戦略の正確性
+- 実装者の混乱を防ぐ
+
+#### シーケンス図における参加者の明確化
+
+**問題**: シーケンス図で`PasswordPolicy`や`PasswordService`が欠けており、データフローが不明確。
+
+**解決策**: シーケンス図には、実際に呼び出されるすべての参加者を含める。
+
+```mermaid
+sequenceDiagram
+    participant ValidatePasswordPolicyUseCase
+    participant PasswordPolicyService
+    participant PasswordPolicy
+    participant PasswordService
+    participant PasswordHistoryRepository
+```
+
+**理由**:
+- データフローの明確化
+- 設計ドキュメント間の一貫性
+
+#### APIレスポンス形式の一貫性確保
+
+**問題**: パスワード強度チェックAPIのレスポンス形式において、検証失敗時と成功時でレスポンス構造が異なる可能性がある。
+
+**解決策**: APIレスポンス形式は一貫性を保つため、常に同じ構造を返す。検証失敗時でも`isReused`フィールドを含める（`false`を返す）。
+
+```json
+// Good: 一貫したレスポンス構造
+{
+  "isValid": false,
+  "errors": [...],
+  "strengthScore": 45,
+  "isReused": false  // 検証失敗時も含める
+}
+```
+
+**理由**:
+- APIレスポンス形式の一貫性
+- クライアント側での処理の簡素化
+
+#### データフロー記述の完全性
+
+**問題**: データフローの記述において、パスワード履歴チェックなどの重要なステップが省略されている。
+
+**解決策**: データフローには、シーケンス図で示されているすべてのステップを含める。
+
+```markdown
+### パスワード強度チェックフロー
+
+1. クライアントが `POST /api/v1/auth/password/validate` を呼び出し
+2. `PasswordController` がリクエストを受信
+3. `ValidatePasswordPolicyUseCase` が実行される
+4. パスワードの複雑さチェック（PasswordPolicy Value Object経由）
+5. パスワード強度スコアを計算（PasswordPolicyService経由）
+6. パスワードをハッシュ化（PasswordService経由）
+7. パスワード履歴をチェック（PasswordHistoryRepository経由）
+8. 検証結果、強度スコア、再利用フラグを返却
+```
+
+**理由**:
+- データフロー記述の完全性
+- 実装者の理解を助ける
