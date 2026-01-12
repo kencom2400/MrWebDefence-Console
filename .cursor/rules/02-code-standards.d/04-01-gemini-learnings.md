@@ -835,3 +835,99 @@ export class PasswordHistoryRepository implements IPasswordHistoryRepository {
 **理由**:
 - 責務の明確化（Repositoryはデータアクセス、Serviceは技術的処理）
 - 設計の一貫性
+
+### 13-17. 設計ドキュメントの一貫性確保（PR #40）
+
+**学習元**: PR #40 - パスワードポリシー機能の詳細設計（Geminiレビュー指摘）
+
+#### Value Objectのメソッドの冗長性排除
+
+**問題**: `PasswordPolicy` Value Objectに`validate`と`checkComplexity`の両方が存在し、責務が重複している。
+
+**解決策**: Value Objectのメソッドは一貫性を保つため、`validate`メソッドのみに統一する。`checkComplexity`は削除する。
+
+```typescript
+// Bad: 冗長なメソッド
+export class PasswordPolicy {
+  public validate(password: string): ValidationResult { ... }
+  public checkComplexity(password: string): ValidationResult { ... } // 冗長
+}
+
+// Good: validateメソッドのみ
+export class PasswordPolicy {
+  public validate(password: string): ValidationResult { ... }
+}
+```
+
+**理由**:
+- メソッドの一貫性
+- 責務の明確化
+
+#### Value Objectの戻り値型の明確化
+
+**問題**: `ComplexityResult`に`strengthScore`が含まれているが、これはValue ObjectではなくServiceが計算する技術的な値である。
+
+**解決策**: Value Objectの戻り値型は`ValidationResult`（`isValid`と`errors`のみ）とし、`strengthScore`はServiceが計算して別途返す。
+
+```typescript
+// Bad: Value Objectが技術的な値を含む
+export class ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  strengthScore: number; // Serviceが計算する技術的な値
+}
+
+// Good: Value Objectはドメインロジックのみ
+export class ValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
+
+// Serviceが強度スコアを計算
+@Injectable()
+export class PasswordPolicyService {
+  public calculateStrengthScore(password: string): number {
+    // 技術的なアルゴリズム
+  }
+}
+```
+
+**理由**:
+- Value Objectの責務の明確化（ドメインロジックのみ）
+- Serviceの責務の明確化（技術的な処理）
+
+#### テスト戦略における責務の正確な記述
+
+**問題**: テスト戦略で「PasswordPolicyService: パスワード複雑さチェック」と記述されているが、これはValue Objectの責務である。
+
+**解決策**: テスト戦略では各コンポーネントの実際の責務を正確に記述する。
+
+```markdown
+### ユニットテスト
+
+- **PasswordPolicy Value Object**: ポリシー設定のバリデーション、不変性、パスワードの複雑さチェック
+- **PasswordPolicyService**: Value Objectの生成（ファクトリ）、パスワード強度スコア計算
+```
+
+**理由**:
+- テスト戦略の正確性
+- 実装者の混乱を防ぐ
+
+#### シーケンス図における参加者の明確化
+
+**問題**: シーケンス図で`PasswordPolicy`や`PasswordService`が欠けており、データフローが不明確。
+
+**解決策**: シーケンス図には、実際に呼び出されるすべての参加者を含める。
+
+```mermaid
+sequenceDiagram
+    participant ValidatePasswordPolicyUseCase
+    participant PasswordPolicyService
+    participant PasswordPolicy
+    participant PasswordService
+    participant PasswordHistoryRepository
+```
+
+**理由**:
+- データフローの明確化
+- 設計ドキュメント間の一貫性
