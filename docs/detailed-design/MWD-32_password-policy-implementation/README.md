@@ -204,8 +204,8 @@
 
 ### ユニットテスト
 
-- **PasswordPolicy Value Object**: ポリシー設定のバリデーション、不変性
-- **PasswordPolicyService**: パスワード複雑さチェック、強度スコア計算
+- **PasswordPolicy Value Object**: ポリシー設定のバリデーション、不変性、パスワードの複雑さチェック
+- **PasswordPolicyService**: Value Objectの生成（ファクトリ）、パスワード強度スコア計算
 - **Use Cases**: 各Use Caseの正常系・異常系
 - **PasswordHistoryRepository**: 履歴の保存・取得・検証
 

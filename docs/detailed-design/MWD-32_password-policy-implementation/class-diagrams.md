@@ -27,14 +27,12 @@ classDiagram
         +boolean requireNumbers
         +boolean requireSymbols
         +number historyCount
-        +validate(password): ComplexityResult
-        +checkComplexity(password): ComplexityResult
+        +validate(password): ValidationResult
     }
 
-    class ComplexityResult {
+    class ValidationResult {
         +boolean isValid
         +string[] errors
-        +number strengthScore
     }
 
     class ChangePasswordUseCase {
@@ -48,6 +46,7 @@ classDiagram
     class ValidatePasswordPolicyUseCase {
         -IPasswordHistoryRepository passwordHistoryRepository
         -PasswordPolicyService passwordPolicyService
+        -PasswordService passwordService
         +execute(userId, password): ValidatePasswordResult
     }
 
@@ -100,6 +99,7 @@ classDiagram
     ValidatePasswordPolicyUseCase --> IPasswordHistoryRepository
     ValidatePasswordPolicyUseCase --> PasswordPolicy
     ValidatePasswordPolicyUseCase --> PasswordPolicyService
+    ValidatePasswordPolicyUseCase --> PasswordService
     GetPasswordPolicyUseCase --> PasswordPolicyService
     PasswordController --> ChangePasswordUseCase
     PasswordController --> ValidatePasswordPolicyUseCase

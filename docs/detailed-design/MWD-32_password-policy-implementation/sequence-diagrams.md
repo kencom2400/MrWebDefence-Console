@@ -29,12 +29,12 @@ sequenceDiagram
         PasswordPolicyService-->>ChangePasswordUseCase: PasswordPolicy
         
         ChangePasswordUseCase->>PasswordPolicy: validate(newPassword)
-        PasswordPolicy-->>ChangePasswordUseCase: ComplexityResult
+        PasswordPolicy-->>ChangePasswordUseCase: ValidationResult
         
-        alt Password complexity check fails
+        alt Password validation fails
             ChangePasswordUseCase-->>PasswordController: error
             PasswordController-->>Client: 400 Bad Request { errors }
-        else Password complexity check passes
+        else Password validation passes
             ChangePasswordUseCase->>PasswordService: hash(newPassword)
             PasswordService-->>ChangePasswordUseCase: hashedPassword
             
@@ -73,15 +73,15 @@ sequenceDiagram
     PasswordPolicyService-->>ValidatePasswordPolicyUseCase: PasswordPolicy
     
     ValidatePasswordPolicyUseCase->>PasswordPolicy: validate(password)
-    PasswordPolicy-->>ValidatePasswordPolicyUseCase: ComplexityResult { isValid, errors }
+    PasswordPolicy-->>ValidatePasswordPolicyUseCase: ValidationResult { isValid, errors }
     
     ValidatePasswordPolicyUseCase->>PasswordPolicyService: calculateStrengthScore(password)
     PasswordPolicyService-->>ValidatePasswordPolicyUseCase: strengthScore
     
-    alt Password complexity check fails
+    alt Password validation fails
         ValidatePasswordPolicyUseCase-->>PasswordController: { isValid: false, errors, strengthScore }
         PasswordController-->>Client: 200 OK { isValid: false, errors, strengthScore }
-    else Password complexity check passes
+    else Password validation passes
         ValidatePasswordPolicyUseCase->>PasswordService: hash(password)
         PasswordService-->>ValidatePasswordPolicyUseCase: hashedPassword
         
