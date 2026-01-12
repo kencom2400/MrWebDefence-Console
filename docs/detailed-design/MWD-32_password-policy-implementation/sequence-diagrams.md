@@ -25,8 +25,11 @@ sequenceDiagram
         ChangePasswordUseCase-->>PasswordController: error
         PasswordController-->>Client: 401 Unauthorized
     else Current password is valid
-        ChangePasswordUseCase->>PasswordPolicyService: validateComplexity(newPassword)
-        PasswordPolicyService-->>ChangePasswordUseCase: ComplexityResult
+        ChangePasswordUseCase->>PasswordPolicyService: createPasswordPolicy()
+        PasswordPolicyService-->>ChangePasswordUseCase: PasswordPolicy
+        
+        ChangePasswordUseCase->>PasswordPolicy: validate(newPassword)
+        PasswordPolicy-->>ChangePasswordUseCase: ComplexityResult
         
         alt Password complexity check fails
             ChangePasswordUseCase-->>PasswordController: error
@@ -44,6 +47,7 @@ sequenceDiagram
             else Password is not reused
                 ChangePasswordUseCase->>UserRepository: save(user with new hashedPassword)
                 ChangePasswordUseCase->>PasswordHistoryRepository: savePasswordHistory(userId, hashedPassword)
+                ChangePasswordUseCase->>PasswordHistoryRepository: deleteOldHistory(userId, historyCount)
                 
                 ChangePasswordUseCase-->>PasswordController: success
                 PasswordController-->>Client: 200 OK { message: "Password changed successfully" }
@@ -65,8 +69,14 @@ sequenceDiagram
     Client->>PasswordController: POST /api/v1/auth/password/validate<br/>{ password }
     PasswordController->>ValidatePasswordPolicyUseCase: execute(userId, password)
     
-    ValidatePasswordPolicyUseCase->>PasswordPolicyService: validateComplexity(password)
-    PasswordPolicyService-->>ValidatePasswordPolicyUseCase: ComplexityResult { isValid, errors, strengthScore }
+    ValidatePasswordPolicyUseCase->>PasswordPolicyService: createPasswordPolicy()
+    PasswordPolicyService-->>ValidatePasswordPolicyUseCase: PasswordPolicy
+    
+    ValidatePasswordPolicyUseCase->>PasswordPolicy: validate(password)
+    PasswordPolicy-->>ValidatePasswordPolicyUseCase: ComplexityResult { isValid, errors }
+    
+    ValidatePasswordPolicyUseCase->>PasswordPolicyService: calculateStrengthScore(password)
+    PasswordPolicyService-->>ValidatePasswordPolicyUseCase: strengthScore
     
     alt Password complexity check fails
         ValidatePasswordPolicyUseCase-->>PasswordController: { isValid: false, errors, strengthScore }
@@ -95,7 +105,7 @@ sequenceDiagram
     Client->>PasswordController: GET /api/v1/auth/password/policy
     PasswordController->>GetPasswordPolicyUseCase: execute()
     
-    GetPasswordPolicyUseCase->>PasswordPolicyService: getPasswordPolicy()
+    GetPasswordPolicyUseCase->>PasswordPolicyService: createPasswordPolicy()
     PasswordPolicyService-->>GetPasswordPolicyUseCase: PasswordPolicy
     
     GetPasswordPolicyUseCase-->>PasswordController: PasswordPolicyDto

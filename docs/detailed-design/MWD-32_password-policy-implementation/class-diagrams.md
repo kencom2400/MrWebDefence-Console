@@ -27,7 +27,7 @@ classDiagram
         +boolean requireNumbers
         +boolean requireSymbols
         +number historyCount
-        +validate(password): void
+        +validate(password): ComplexityResult
         +checkComplexity(password): ComplexityResult
     }
 
@@ -58,9 +58,8 @@ classDiagram
 
     class PasswordPolicyService {
         <<Infrastructure>>
-        +validateComplexity(password, policy): ComplexityResult
+        +createPasswordPolicy(): PasswordPolicy
         +calculateStrengthScore(password): number
-        +checkPasswordHistory(userId, passwordHash, historyCount): boolean
     }
 
     class PasswordService {
@@ -96,14 +95,16 @@ classDiagram
     ChangePasswordUseCase --> IUserRepository
     ChangePasswordUseCase --> IPasswordHistoryRepository
     ChangePasswordUseCase --> PasswordService
+    ChangePasswordUseCase --> PasswordPolicy
     ChangePasswordUseCase --> PasswordPolicyService
     ValidatePasswordPolicyUseCase --> IPasswordHistoryRepository
+    ValidatePasswordPolicyUseCase --> PasswordPolicy
     ValidatePasswordPolicyUseCase --> PasswordPolicyService
     GetPasswordPolicyUseCase --> PasswordPolicyService
     PasswordController --> ChangePasswordUseCase
     PasswordController --> ValidatePasswordPolicyUseCase
     PasswordController --> GetPasswordPolicyUseCase
-    PasswordPolicyService --> PasswordPolicy
+    PasswordPolicyService --> PasswordPolicy : creates
 ```
 
 ## リポジトリインターフェース
@@ -115,12 +116,14 @@ classDiagram
         +savePasswordHistory(userId, passwordHash): Promise~void~
         +getPasswordHistory(userId, count): Promise~string[]~
         +checkPasswordInHistory(userId, passwordHash, count): Promise~boolean~
+        +deleteOldHistory(userId, keepCount): Promise~void~
     }
 
     class PasswordHistoryRepository {
         +savePasswordHistory(userId, passwordHash): Promise~void~
         +getPasswordHistory(userId, count): Promise~string[]~
         +checkPasswordInHistory(userId, passwordHash, count): Promise~boolean~
+        +deleteOldHistory(userId, keepCount): Promise~void~
     }
 
     IPasswordHistoryRepository <|.. PasswordHistoryRepository

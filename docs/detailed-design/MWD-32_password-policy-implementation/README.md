@@ -79,7 +79,7 @@
   - 履歴保存数
 - **IPasswordHistoryRepository**: パスワード履歴のリポジトリインターフェース
 
-**注意**: Value Objectは自身の不変性と正当性を維持する責務を持ちます。パスワードの複雑さチェックなどのロジックは`PasswordPolicy` Value Object内にカプセル化します。技術的な詳細（ハッシュ化など）はInfrastructure層の`PasswordPolicyService`が担当します。
+**注意**: Value Objectは自身の不変性と正当性を維持する責務を持ちます。パスワードの複雑さチェック（文字種、長さなど）やバリデーションロジックは`PasswordPolicy` Value Object内にカプセル化します。技術的な詳細（ハッシュ化、強度スコア計算など）はInfrastructure層の`PasswordPolicyService`が担当します。
 
 ### 2. Application Layer
 
@@ -99,9 +99,10 @@
 ### 3. Infrastructure Layer
 
 - **PasswordHistoryRepository**: パスワード履歴の永続化（初期実装はインメモリ）
+  - パスワード履歴の保存・取得・検証
 - **PasswordPolicyService**: パスワードポリシー検証の技術的な実装
-  - パスワードの複雑さチェック（文字種、長さなど）
-  - パスワード強度スコア計算
+  - `PasswordPolicy` Value Objectのファクトリメソッドとして機能
+  - パスワード強度スコア計算（技術的なアルゴリズム）
 - **PasswordService (Modified)**: パスワードのハッシュ化と検証（既存機能を拡張）
 
 ### 4. Presentation Layer
@@ -120,7 +121,7 @@
 2. `PasswordController` がリクエストを受信
 3. `ChangePasswordUseCase` が実行される
 4. 現在のパスワードを検証（PasswordService経由）
-5. 新しいパスワードのポリシー検証（PasswordPolicyService経由）
+5. 新しいパスワードのポリシー検証（PasswordPolicy Value Object経由）
 6. パスワード履歴をチェック（PasswordHistoryRepository経由）
 7. 新しいパスワードをハッシュ化（PasswordService経由）
 8. パスワード履歴に保存（PasswordHistoryRepository経由）
@@ -132,8 +133,8 @@
 1. クライアントが `POST /api/v1/auth/password/validate` を呼び出し
 2. `PasswordController` がリクエストを受信
 3. `ValidatePasswordPolicyUseCase` が実行される
-4. パスワードの複雑さチェック（PasswordPolicyService経由）
-5. パスワード強度スコアを計算
+4. パスワードの複雑さチェック（PasswordPolicy Value Object経由）
+5. パスワード強度スコアを計算（PasswordPolicyService経由）
 6. 検証結果と強度スコアを返却
 
 ## セキュリティ考慮事項

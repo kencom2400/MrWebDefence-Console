@@ -167,12 +167,11 @@ CREATE TABLE password_histories (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   password_hash VARCHAR(255) NOT NULL, -- bcryptハッシュ
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_password_histories_user_id (user_id),
   INDEX idx_password_histories_user_id_created_at (user_id, created_at DESC)
 );
 ```
 
-**注意**: `user_id`と`created_at`の複合インデックスにより、ユーザーごとの最新N個のパスワード履歴を効率的に取得できます。`user_id`の個別インデックスは、複合インデックスの先頭カラムとして機能するため、冗長である可能性がありますが、クエリパターンによっては有用な場合があります。
+**注意**: `user_id`と`created_at`の複合インデックスにより、ユーザーごとの最新N個のパスワード履歴を効率的に取得できます。多くのデータベース（PostgreSQLやMySQLなど）では、複合インデックスの先頭カラム（この場合は`user_id`）に対するクエリでも、その複合インデックスが効率的に利用されます。したがって、`user_id`カラムの個別インデックスは冗長であり、削除してもパフォーマンスに影響はありません。
 
 **制約**:
 - `user_id` が削除されると、関連するパスワード履歴も削除（CASCADE）
