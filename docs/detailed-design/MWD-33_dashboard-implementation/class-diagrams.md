@@ -34,6 +34,7 @@ classDiagram
         -IMfaRepository mfaRepository
         -IIpAllowListRepository ipAllowListRepository
         +execute(userId): Promise~DashboardData~
+        -aggregateData(user, mfaSecret, ipAllowListCount): DashboardData
     }
 
     class DashboardController {
@@ -75,22 +76,6 @@ classDiagram
     DashboardController --> DashboardDto : returns
 ```
 
-## リポジトリインターフェース
-
-```mermaid
-classDiagram
-    class IDashboardRepository {
-        <<Interface>>
-        +getDashboardData(userId): Promise~DashboardData~
-    }
-
-    class DashboardRepository {
-        +getDashboardData(userId): Promise~DashboardData~
-    }
-
-    IDashboardRepository <|.. DashboardRepository
-```
-
 ## 依存関係
 
 ```mermaid
@@ -105,11 +90,24 @@ classDiagram
     class GetDashboardDataUseCase {
     }
 
-    class DashboardRepository {
+    class IUserRepository {
+        <<Interface>>
+    }
+
+    class IMfaRepository {
+        <<Interface>>
+    }
+
+    class IIpAllowListRepository {
+        <<Interface>>
     }
 
     AppModule --> DashboardController
     DashboardController --> GetDashboardDataUseCase
-    GetDashboardDataUseCase --> DashboardRepository
+    GetDashboardDataUseCase --> IUserRepository
+    GetDashboardDataUseCase --> IMfaRepository
+    GetDashboardDataUseCase --> IIpAllowListRepository
 ```
+
+**注意**: `GetDashboardDataUseCase`は既存のRepositoryインターフェースに依存します。依存性逆転の原則に従い、具象クラスではなくインターフェースに依存します。
 

@@ -974,3 +974,126 @@ sequenceDiagram
 **理由**:
 - データフロー記述の完全性
 - 実装者の理解を助ける
+
+### 13-18. ダッシュボード設計における責務の明確化と依存性逆転の原則（PR #41）
+
+**学習元**: PR #41 - ダッシュボード機能の詳細設計（Geminiレビュー指摘）
+
+#### データ集計ロジックの責務分担
+
+**問題**: データ集計ロジックの所在が、ユースケースとリポジトリの間で曖昧になっている。`DashboardRepository`が集計ロジックを持つのか、`GetDashboardDataUseCase`が持つのかが不明確。
+
+**解決策**: データ集計ロジックはApplication層のUse Caseが担当する。Repositoryはデータの取得のみを担当し、集計は行わない。
+
+```typescript
+// Bad: Repositoryが集計ロジックを持つ
+@Injectable()
+export class DashboardRepository implements IDashboardRepository {
+  public async getDashboardData(userId: string): Promise<DashboardData> {
+    // 集計ロジックがRepositoryにある（責務が曖昧）
+    const user = await this.userRepository.findById(userId);
+    const mfaSecret = await this.mfaRepository.getSecret(userId);
+    // ...
+    return DashboardData.create(...);
+  }
+}
+
+// Good: Use Caseが集計ロジックを持つ
+@Injectable()
+export class GetDashboardDataUseCase {
+  constructor(
+    @Inject('IUserRepository')
+    private readonly userRepository: IUserRepository,
+    @Inject('IMfaRepository')
+    private readonly mfaRepository: IMfaRepository,
+    @Inject('IIpAllowListRepository')
+    private readonly ipAllowListRepository: IIpAllowListRepository,
+  ) {}
+
+  public async execute(userId: string): Promise<DashboardData> {
+    // 並列実行で高速化
+    const [user, mfaSecret, ipAllowListCount] = await Promise.all([
+      this.userRepository.findById(userId),
+      this.mfaRepository.getSecret(userId),
+      this.ipAllowListRepository.countByUserId(userId),
+    ]);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // 集計ロジックはUse Case内で実行
+    return this.aggregateData(user, mfaSecret, ipAllowListCount);
+  }
+
+  private aggregateData(
+    user: User,
+    mfaSecret: string | null,
+    ipAllowListCount: number,
+  ): DashboardData {
+    return DashboardData.create(
+      user.id,
+      user.email,
+      user.role,
+      user.mfaEnabled,
+      ipAllowListCount,
+      user.createdAt,
+      null, // lastLoginAt（将来実装）
+      null, // loginAttemptCount（将来実装）
+    );
+  }
+}
+```
+
+**理由**:
+- 責務の明確化（Repositoryはデータ取得、Use Caseはビジネスロジック）
+- Onion Architectureの原則に沿った設計
+
+#### 依存性逆転の原則（DIP）の遵守
+
+**問題**: クラス図において、アプリケーション層がインフラストラクチャ層の具象クラス（`DashboardRepository`）に依存しており、依存性逆転の原則に反している。
+
+**解決策**: Application層はDomain層のインターフェース（`IUserRepository`、`IMfaRepository`、`IIpAllowListRepository`）に依存する。具象クラスには依存しない。
+
+```typescript
+// Bad: 具象クラスに依存
+@Injectable()
+export class GetDashboardDataUseCase {
+  constructor(
+    private readonly dashboardRepository: DashboardRepository, // 具象クラス
+  ) {}
+}
+
+// Good: インターフェースに依存
+@Injectable()
+export class GetDashboardDataUseCase {
+  constructor(
+    @Inject('IUserRepository')
+    private readonly userRepository: IUserRepository, // インターフェース
+    @Inject('IMfaRepository')
+    private readonly mfaRepository: IMfaRepository, // インターフェース
+    @Inject('IIpAllowListRepository')
+    private readonly ipAllowListRepository: IIpAllowListRepository, // インターフェース
+  ) {}
+}
+```
+
+**理由**:
+- 依存性逆転の原則（DIP）の遵守
+- テスタビリティの向上
+- 実装の交換可能性
+
+#### ドキュメント間の一貫性確保
+
+**問題**: シーケンス図とクラス図で、`DashboardRepository`の扱いが異なっており、設計の意図が不明確になっている。
+
+**解決策**: すべての設計ドキュメントで一貫した設計を反映する。`DashboardRepository`は将来の統計情報永続化のために予約されているが、初期実装では使用しないことを明記する。
+
+```markdown
+**注意**: 初期実装では、`GetDashboardDataUseCase`が既存のRepository（`IUserRepository`、`IMfaRepository`、`IIpAllowListRepository`）を直接使用してデータを集計します。`DashboardRepository`は将来の統計情報永続化のために予約されていますが、初期実装では使用しません。
+```
+
+**理由**:
+- 設計ドキュメント間の一貫性
+- 実装者の混乱を防ぐ
+- 将来の拡張性を明確化

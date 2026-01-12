@@ -7,30 +7,32 @@ sequenceDiagram
     participant Client
     participant DashboardController
     participant GetDashboardDataUseCase
-    participant UserRepository
-    participant MfaRepository
-    participant IpAllowListRepository
+    participant IUserRepository
+    participant IMfaRepository
+    participant IIpAllowListRepository
     participant DashboardData
 
     Client->>DashboardController: GET /api/v1/dashboard
     DashboardController->>GetDashboardDataUseCase: execute(userId)
     
-    par 並列実行
-        GetDashboardDataUseCase->>UserRepository: findById(userId)
-        UserRepository-->>GetDashboardDataUseCase: user
+    par 並列実行（Promise.all）
+        GetDashboardDataUseCase->>IUserRepository: findById(userId)
+        IUserRepository-->>GetDashboardDataUseCase: user
     and
-        GetDashboardDataUseCase->>MfaRepository: getSecret(userId)
-        MfaRepository-->>GetDashboardDataUseCase: secret | null
+        GetDashboardDataUseCase->>IMfaRepository: getSecret(userId)
+        IMfaRepository-->>GetDashboardDataUseCase: secret | null
     and
-        GetDashboardDataUseCase->>IpAllowListRepository: countByUserId(userId)
-        IpAllowListRepository-->>GetDashboardDataUseCase: count
+        GetDashboardDataUseCase->>IIpAllowListRepository: countByUserId(userId)
+        IIpAllowListRepository-->>GetDashboardDataUseCase: count
     end
     
     alt User not found
         GetDashboardDataUseCase-->>DashboardController: NotFoundException
         DashboardController-->>Client: 404 Not Found
     else User found
-        GetDashboardDataUseCase->>DashboardData: create(user, mfaSecret, ipAllowListCount)
+        Note over GetDashboardDataUseCase: データ集計ロジック（Use Case内で実行）
+        GetDashboardDataUseCase->>GetDashboardDataUseCase: aggregateData(user, mfaSecret, ipAllowListCount)
+        GetDashboardDataUseCase->>DashboardData: create(userId, email, role, mfaEnabled, ipAllowListCount, accountCreatedAt, lastLoginAt, loginAttemptCount)
         DashboardData-->>GetDashboardDataUseCase: DashboardData
         
         GetDashboardDataUseCase-->>DashboardController: DashboardData

@@ -71,9 +71,7 @@
   - セキュリティ状態
   - MFA有効化状態
   - IP AllowList数
-- **IDashboardRepository**: ダッシュボードデータのリポジトリインターフェース
-
-**注意**: Value Objectは自身の不変性と正当性を維持する責務を持ちます。データの集計ロジックはApplication層のUse Caseが担当します。
+**注意**: Value Objectは自身の不変性と正当性を維持する責務を持ちます。データの集計ロジックはApplication層のUse Caseが担当します。`IDashboardRepository`は将来の統計情報永続化のために予約されていますが、初期実装では使用しません。
 
 ### 2. Application Layer
 
@@ -86,9 +84,11 @@
 
 ### 3. Infrastructure Layer
 
-- **DashboardRepository**: ダッシュボードデータの永続化（初期実装はインメモリ、将来はDBに移行）
 - **UserRepository (Existing)**: ユーザー情報の取得
 - **MfaRepository (Existing)**: MFA状態の取得
+- **IpAllowListRepository (Future)**: IP AllowList数の取得（将来実装）
+
+**注意**: 初期実装では、`GetDashboardDataUseCase`が既存のRepository（`IUserRepository`、`IMfaRepository`、`IIpAllowListRepository`）を直接使用してデータを集計します。`DashboardRepository`は将来の統計情報永続化のために予約されていますが、初期実装では使用しません。
 
 ### 4. Presentation Layer
 
@@ -137,7 +137,8 @@
    - `IDashboardRepository` インターフェースの定義
 
 2. **Infrastructure Layer**
-   - `DashboardRepository`（インメモリ実装、初期は集計ロジックのみ）
+   - 既存のRepository（`UserRepository`、`MfaRepository`）を活用
+   - `IpAllowListRepository`は将来実装（初期実装では0を返す）
 
 3. **Application Layer**
    - `GetDashboardDataUseCase`の実装
@@ -161,8 +162,7 @@
 ### ユニットテスト
 
 - **DashboardData Value Object**: データのバリデーション、不変性
-- **GetDashboardDataUseCase**: 各Use Caseの正常系・異常系
-- **DashboardRepository**: データの集計ロジック
+- **GetDashboardDataUseCase**: 各Use Caseの正常系・異常系、データ集計ロジック
 
 ### E2Eテスト
 
