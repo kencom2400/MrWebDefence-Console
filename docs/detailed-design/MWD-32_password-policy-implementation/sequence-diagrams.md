@@ -64,6 +64,8 @@ sequenceDiagram
     participant PasswordController
     participant ValidatePasswordPolicyUseCase
     participant PasswordPolicyService
+    participant PasswordPolicy
+    participant PasswordService
     participant PasswordHistoryRepository
 
     Client->>PasswordController: POST /api/v1/auth/password/validate<br/>{ password }
