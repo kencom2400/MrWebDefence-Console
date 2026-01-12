@@ -1097,3 +1097,75 @@ export class GetDashboardDataUseCase {
 - 設計ドキュメント間の一貫性
 - 実装者の混乱を防ぐ
 - 将来の拡張性を明確化
+
+#### レイヤー構成図における依存関係の明確化
+
+**問題**: README.mdのレイヤー構成図において、初期実装で使用しない`IDashboardRepository`や`DashboardRepository`が含まれており、依存関係が不明確。
+
+**解決策**: レイヤー構成図には、初期実装で実際に使用するコンポーネントのみを含める。将来実装のコンポーネントは別途説明する。
+
+```markdown
+### レイヤ構成
+
+```
+┌─────────────────────────────────────┐
+│  Presentation Layer                 │
+│  - DashboardController (New)       │
+│  - DTOs (DashboardDto, etc.)       │
+└──────────────┬──────────────────────┘
+               │ 依存
+┌──────────────▼──────────────────────┐
+│  Application Layer                  │
+│  - GetDashboardDataUseCase (New)   │
+└──────────────┬──────────────────────┘
+               │ 依存
+┌──────────────▼──────────────────────┐
+│  Domain Layer                       │
+│  - DashboardData Value Object (New)│
+│  - IUserRepository (Existing)      │
+│  - IMfaRepository (Existing)        │
+│  - IIpAllowListRepository (Future)  │
+└──────────────┬──────────────────────┘
+               │ 依存
+┌──────────────▼──────────────────────┐
+│  Infrastructure Layer               │
+│  - UserRepository (Existing)       │
+│  - MfaRepository (Existing)        │
+│  - IpAllowListRepository (Future)  │
+└─────────────────────────────────────┘
+```
+
+**注意**: 初期実装では、`GetDashboardDataUseCase`が既存のRepositoryインターフェースを直接使用します。`IDashboardRepository`と`DashboardRepository`は将来の統計情報永続化のために予約されていますが、初期実装では使用しません。
+```
+
+**理由**:
+- レイヤー構成図の明確化
+- 初期実装のスコープの明確化
+- 実装者の混乱を防ぐ
+
+#### 将来実装フィールドの明確化
+
+**問題**: `lastLoginAt`や`loginAttemptCount`などのフィールドが、Value ObjectやDTOに含まれているが、初期実装のスコープに含まれるかどうかの記述が揺れている。
+
+**解決策**: 初期実装で含まれるフィールドと将来実装で追加されるフィールドを明確に分けて記述する。初期実装では、将来実装のフィールドは`null`を返すことを明記する。
+
+```markdown
+#### 初期実装で含まれるフィールド
+
+- `userId`: ユーザーID
+- `email`: メールアドレス
+- `role`: ユーザーロール
+- `mfaEnabled`: MFA有効化状態
+- `ipAllowListCount`: IP AllowList数（初期実装では0を返す）
+- `accountCreatedAt`: アカウント作成日時
+
+#### 将来実装で追加されるフィールド
+
+- `lastLoginAt`: 最終ログイン日時（初期実装では`null`を返す）
+- `loginAttemptCount`: ログイン試行回数（初期実装では`null`を返す）
+```
+
+**理由**:
+- 初期実装のスコープの明確化
+- 実装者の混乱を防ぐ
+- 将来の拡張性を明確化

@@ -30,13 +30,13 @@ sequenceDiagram
         GetDashboardDataUseCase-->>DashboardController: NotFoundException
         DashboardController-->>Client: 404 Not Found
     else User found
-        Note over GetDashboardDataUseCase: データ集計ロジック（Use Case内で実行）
+        Note over GetDashboardDataUseCase: データ集計ロジック（Use Case内で実行）\n初期実装では lastLoginAt と loginAttemptCount は null
         GetDashboardDataUseCase->>GetDashboardDataUseCase: aggregateData(user, mfaSecret, ipAllowListCount)
-        GetDashboardDataUseCase->>DashboardData: create(userId, email, role, mfaEnabled, ipAllowListCount, accountCreatedAt, lastLoginAt, loginAttemptCount)
+        GetDashboardDataUseCase->>DashboardData: create(userId, email, role, mfaEnabled, ipAllowListCount, accountCreatedAt, null, null)
         DashboardData-->>GetDashboardDataUseCase: DashboardData
         
         GetDashboardDataUseCase-->>DashboardController: DashboardData
-        DashboardController-->>Client: 200 OK { userId, email, role, mfaEnabled, ipAllowListCount, accountCreatedAt, lastLoginAt, loginAttemptCount }
+        DashboardController-->>Client: 200 OK { userId, email, role, mfaEnabled, ipAllowListCount, accountCreatedAt, lastLoginAt: null, loginAttemptCount: null }
     end
 ```
 

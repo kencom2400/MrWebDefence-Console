@@ -45,17 +45,20 @@
 ┌──────────────▼──────────────────────┐
 │  Domain Layer                       │
 │  - DashboardData Value Object (New)│
-│  - IDashboardRepository (New)      │
+│  - IUserRepository (Existing)      │
+│  - IMfaRepository (Existing)       │
+│  - IIpAllowListRepository (Future) │
 └──────────────┬──────────────────────┘
                │ 依存
 ┌──────────────▼──────────────────────┐
 │  Infrastructure Layer               │
-│  - DashboardRepository (New)        │
 │  - UserRepository (Existing)       │
 │  - MfaRepository (Existing)        │
 │  - IpAllowListRepository (Future)  │
 └─────────────────────────────────────┘
 ```
+
+**注意**: 初期実装では、`GetDashboardDataUseCase`が既存のRepositoryインターフェース（`IUserRepository`、`IMfaRepository`、`IIpAllowListRepository`）を直接使用してデータを集計します。`IDashboardRepository`と`DashboardRepository`は将来の統計情報永続化のために予約されていますが、初期実装では使用しません。
 
 ### 技術スタック
 
@@ -67,11 +70,11 @@
 ### 1. Domain Layer
 
 - **DashboardData Value Object**: ダッシュボードデータをカプセル化（不変性、バリデーション）
-  - 認証統計情報
-  - セキュリティ状態
-  - MFA有効化状態
-  - IP AllowList数
-**注意**: Value Objectは自身の不変性と正当性を維持する責務を持ちます。データの集計ロジックはApplication層のUse Caseが担当します。`IDashboardRepository`は将来の統計情報永続化のために予約されていますが、初期実装では使用しません。
+  - 認証統計情報（アカウント作成日時、最終ログイン日時（将来実装）、ログイン試行回数（将来実装））
+  - セキュリティ状態（MFA有効化状態、IP AllowList数（将来実装））
+  - ユーザー情報（email、role）
+
+**注意**: Value Objectは自身の不変性と正当性を維持する責務を持ちます。データの集計ロジックはApplication層のUse Caseが担当します。初期実装では、`lastLoginAt`と`loginAttemptCount`は`null`を返します。
 
 ### 2. Application Layer
 
@@ -182,21 +185,19 @@
 
 ## ダッシュボードデータ構造
 
-### 認証統計情報
+### 初期実装で含まれるフィールド
 
-- アカウント作成日時
-- 最終ログイン日時（将来実装）
-- ログイン試行回数（将来実装）
+- `userId`: ユーザーID
+- `email`: メールアドレス
+- `role`: ユーザーロール
+- `mfaEnabled`: MFA有効化状態
+- `ipAllowListCount`: IP AllowList数（初期実装では0を返す）
+- `accountCreatedAt`: アカウント作成日時
 
-### セキュリティ状態
+### 将来実装で追加されるフィールド
 
-- MFA有効化状態（`mfaEnabled`）
-- IP AllowList数（将来実装）
-- パスワード最終変更日時（将来実装）
-
-### その他
-
-- ユーザー情報（email、role）
+- `lastLoginAt`: 最終ログイン日時（初期実装では`null`を返す）
+- `loginAttemptCount`: ログイン試行回数（初期実装では`null`を返す）
 
 ## エラーハンドリング
 

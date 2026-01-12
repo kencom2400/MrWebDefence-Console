@@ -10,7 +10,7 @@
 
 **リクエスト**: なし（パスパラメータ、クエリパラメータなし）
 
-**レスポンス** (200 OK):
+**レスポンス** (200 OK - 初期実装):
 ```json
 {
   "userId": "test-user-id",
@@ -24,7 +24,9 @@
 }
 ```
 
-**レスポンス例（MFA有効化済み）**:
+**注意**: 初期実装では、`lastLoginAt`と`loginAttemptCount`は常に`null`を返します。`ipAllowListCount`は、IP AllowList機能が実装されていない場合は`0`を返します。
+
+**レスポンス例（MFA有効化済み、将来実装後）**:
 ```json
 {
   "userId": "test-user-id",
@@ -37,6 +39,8 @@
   "loginAttemptCount": 15
 }
 ```
+
+**注意**: このレスポンス例は、将来実装（ログイン統計情報の永続化、IP AllowList機能の実装）が完了した後の形式です。
 
 **エラー** (401 Unauthorized):
 ```json

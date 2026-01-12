@@ -27,7 +27,10 @@ classDiagram
         +Date accountCreatedAt
         +Date? lastLoginAt
         +number? loginAttemptCount
+        +create(userId, email, role, mfaEnabled, ipAllowListCount, accountCreatedAt, lastLoginAt?, loginAttemptCount?): DashboardData
     }
+    
+    note for DashboardData "初期実装では lastLoginAt と loginAttemptCount は null\nipAllowListCount は 0（IP AllowList機能未実装時）"
 
     class GetDashboardDataUseCase {
         -IUserRepository userRepository
