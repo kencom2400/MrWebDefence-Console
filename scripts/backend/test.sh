@@ -90,7 +90,14 @@ case "${TEST_TYPE}" in
   *)
     echo "❌ エラー: 不明なテストタイプ '${TEST_TYPE}'"
     echo ""
-    echo "使用方法: $0 [test|watch|cov|e2e|all]"
+    echo "使用方法: $0 [unit|test|watch|cov|coverage|e2e|all]"
+    echo ""
+    echo "テストタイプ:"
+    echo "  unit, test  - ユニットテストのみ実行"
+    echo "  watch      - ウォッチモードでテスト実行"
+    echo "  cov, coverage - カバレッジレポート生成（ユニットテスト含む）"
+    echo "  e2e        - E2Eテストのみ実行"
+    echo "  all        - カバレッジレポートとE2Eテストの両方を実行"
     exit 1
     ;;
 esac

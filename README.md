@@ -140,21 +140,56 @@ PORT=3001 JWT_SECRET=your-secret ./scripts/backend/dev.sh
 
 #### テストの実行
 
+**Docker Composeを使用したテスト実行（推奨）**:
+
 ```bash
-# すべてのテストを実行
+# すべてのテストを実行（カバレッジレポート + E2Eテスト）
 ./scripts/backend/test.sh all
+# または引数なし（デフォルトでallが実行される）
+./scripts/backend/test.sh
 
-# ユニットテストのみ
+# ユニットテストのみ実行
 ./scripts/backend/test.sh unit
+# または
+./scripts/backend/test.sh test
 
-# カバレッジレポートを生成
-./scripts/backend/test.sh cov
-
-# E2Eテストを実行
+# E2Eテストのみ実行
 ./scripts/backend/test.sh e2e
 
-# pnpm経由でも実行可能
-pnpm backend:test all
+# カバレッジレポートを生成（ユニットテスト含む）
+./scripts/backend/test.sh cov
+# または
+./scripts/backend/test.sh coverage
+
+# ウォッチモードでテスト実行（開発中に便利）
+./scripts/backend/test.sh watch
+```
+
+**テストタイプの説明**:
+
+- `unit` / `test`: ユニットテストのみ実行（`redis-test`コンテナを使用）
+- `e2e`: E2Eテストのみ実行（`redis-e2e`コンテナを使用）
+- `cov` / `coverage`: カバレッジレポート生成（ユニットテスト含む、`redis-test`コンテナを使用）
+- `watch`: ウォッチモードでテスト実行（ファイル変更を監視、`redis-test`コンテナを使用）
+- `all`: カバレッジレポートとE2Eテストの両方を実行（デフォルト）
+
+**注意**: 
+- テスト実行時は、適切なRedisコンテナ（`redis-test`または`redis-e2e`）が自動的に起動されます
+- テスト完了後、Redisコンテナは自動的に停止されます
+- ローカル環境で直接実行する場合は、事前にRedisを起動する必要があります
+
+**ローカル環境で直接実行する場合**:
+
+```bash
+# ユニットテスト
+cd apps/backend
+pnpm run test
+
+# E2Eテスト（事前にredis-e2eコンテナを起動する必要があります）
+REDIS_PORT=6381 pnpm run test:e2e
+
+# カバレッジレポート
+pnpm run test:cov
 ```
 
 #### Lintの実行
