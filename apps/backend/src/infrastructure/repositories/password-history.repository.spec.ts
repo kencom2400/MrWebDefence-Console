@@ -65,6 +65,10 @@ describe('PasswordHistoryRepository', () => {
     });
 
     it('正常系: 最新N個の履歴を取得できる', async () => {
+      jest.useFakeTimers();
+      const baseTime = new Date('2024-01-01T00:00:00Z').getTime();
+      jest.setSystemTime(baseTime);
+
       const userId = 'user-1';
       const passwordHash1 = 'hashed-password-1';
       const passwordHash2 = 'hashed-password-2';
@@ -72,15 +76,15 @@ describe('PasswordHistoryRepository', () => {
       const passwordHash4 = 'hashed-password-4';
       const passwordHash5 = 'hashed-password-5';
 
-      // 各保存の間に少し時間を置く（順序を保証するため）
+      // 各保存の間に時間を進める（順序を保証するため）
       await repository.savePasswordHistory(userId, passwordHash1);
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      jest.advanceTimersByTime(10);
       await repository.savePasswordHistory(userId, passwordHash2);
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      jest.advanceTimersByTime(10);
       await repository.savePasswordHistory(userId, passwordHash3);
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      jest.advanceTimersByTime(10);
       await repository.savePasswordHistory(userId, passwordHash4);
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      jest.advanceTimersByTime(10);
       await repository.savePasswordHistory(userId, passwordHash5);
 
       const history = await repository.getPasswordHistory(userId, 3);
@@ -91,6 +95,8 @@ describe('PasswordHistoryRepository', () => {
       expect(history[2]).toBe(passwordHash3);
       expect(history).not.toContain(passwordHash1);
       expect(history).not.toContain(passwordHash2);
+
+      jest.useRealTimers();
     });
 
     it('正常系: 履歴数が要求数より少ない場合、全履歴を返す', async () => {
@@ -129,6 +135,10 @@ describe('PasswordHistoryRepository', () => {
     });
 
     it('正常系: 指定した履歴数の範囲内でチェックする', async () => {
+      jest.useFakeTimers();
+      const baseTime = new Date('2024-01-01T00:00:00Z').getTime();
+      jest.setSystemTime(baseTime);
+
       const userId = 'user-1';
       const passwordHash1 = 'hashed-password-1';
       const passwordHash2 = 'hashed-password-2';
@@ -136,15 +146,15 @@ describe('PasswordHistoryRepository', () => {
       const passwordHash4 = 'hashed-password-4';
       const passwordHash5 = 'hashed-password-5';
 
-      // 各保存の間に少し時間を置く（順序を保証するため）
+      // 各保存の間に時間を進める（順序を保証するため）
       await repository.savePasswordHistory(userId, passwordHash1);
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      jest.advanceTimersByTime(10);
       await repository.savePasswordHistory(userId, passwordHash2);
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      jest.advanceTimersByTime(10);
       await repository.savePasswordHistory(userId, passwordHash3);
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      jest.advanceTimersByTime(10);
       await repository.savePasswordHistory(userId, passwordHash4);
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      jest.advanceTimersByTime(10);
       await repository.savePasswordHistory(userId, passwordHash5);
 
       // 最新3個のみチェック
@@ -153,11 +163,17 @@ describe('PasswordHistoryRepository', () => {
 
       expect(isInHistory1).toBe(false); // 古い履歴は範囲外
       expect(isInHistory5).toBe(true); // 最新の履歴は範囲内
+
+      jest.useRealTimers();
     });
   });
 
   describe('deleteOldHistory', () => {
     it('正常系: 古い履歴を削除して最新N個のみ保持する', async () => {
+      jest.useFakeTimers();
+      const baseTime = new Date('2024-01-01T00:00:00Z').getTime();
+      jest.setSystemTime(baseTime);
+
       const userId = 'user-1';
       const passwordHash1 = 'hashed-password-1';
       const passwordHash2 = 'hashed-password-2';
@@ -165,15 +181,15 @@ describe('PasswordHistoryRepository', () => {
       const passwordHash4 = 'hashed-password-4';
       const passwordHash5 = 'hashed-password-5';
 
-      // 各保存の間に少し時間を置く（順序を保証するため）
+      // 各保存の間に時間を進める（順序を保証するため）
       await repository.savePasswordHistory(userId, passwordHash1);
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      jest.advanceTimersByTime(10);
       await repository.savePasswordHistory(userId, passwordHash2);
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      jest.advanceTimersByTime(10);
       await repository.savePasswordHistory(userId, passwordHash3);
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      jest.advanceTimersByTime(10);
       await repository.savePasswordHistory(userId, passwordHash4);
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      jest.advanceTimersByTime(10);
       await repository.savePasswordHistory(userId, passwordHash5);
 
       await repository.deleteOldHistory(userId, 3);
@@ -185,6 +201,8 @@ describe('PasswordHistoryRepository', () => {
       expect(history[2]).toBe(passwordHash3);
       expect(history).not.toContain(passwordHash1);
       expect(history).not.toContain(passwordHash2);
+
+      jest.useRealTimers();
     });
 
     it('正常系: 存在しないユーザーの履歴削除はエラーにならない', async () => {
