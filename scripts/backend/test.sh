@@ -53,17 +53,13 @@ run_test_in_docker() {
   # --rm: 実行後にコンテナを削除
   # -e REDIS_HOST: 接続先のRedisホストを指定
   # CI環境変数があればそれを使用、なければデフォルト値を使用
-  local env_vars=(
-    -e REDIS_HOST="${redis_service}"
-    -e REDIS_PORT=6379
-    -e NODE_ENV="${NODE_ENV:-test}"
-    -e JWT_SECRET="${JWT_SECRET:-test-jwt-secret-for-ci}"
-    -e JWT_EXPIRES_IN="${JWT_EXPIRES_IN:-1800}"
-    -e BCRYPT_SALT_ROUNDS="${BCRYPT_SALT_ROUNDS:-10}"
-  )
-  
   $DOCKER_COMPOSE run --rm --no-deps \
-    "${env_vars[@]}" \
+    -e REDIS_HOST="${redis_service}" \
+    -e REDIS_PORT=6379 \
+    -e NODE_ENV="${NODE_ENV:-test}" \
+    -e JWT_SECRET="${JWT_SECRET:-test-jwt-secret-for-ci}" \
+    -e JWT_EXPIRES_IN="${JWT_EXPIRES_IN:-1800}" \
+    -e BCRYPT_SALT_ROUNDS="${BCRYPT_SALT_ROUNDS:-10}" \
     --volume="${PROJECT_ROOT}/apps/backend:/app/apps/backend:ro" \
     --volume="${PROJECT_ROOT}/package.json:/app/package.json:ro" \
     --volume="${PROJECT_ROOT}/pnpm-lock.yaml:/app/pnpm-lock.yaml:ro" \
