@@ -74,7 +74,9 @@ export class PasswordPolicy {
       throw new BadRequestException('Minimum length must be at least 1');
     }
     if (maxLength < minLength) {
-      throw new BadRequestException('Maximum length must be greater than or equal to minimum length');
+      throw new BadRequestException(
+        'Maximum length must be greater than or equal to minimum length',
+      );
     }
     if (maxLength > 1024) {
       throw new BadRequestException('Maximum length must be at most 1024');
@@ -155,4 +157,3 @@ export class PasswordPolicy {
     );
   }
 }
-

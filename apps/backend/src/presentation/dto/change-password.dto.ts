@@ -17,4 +17,3 @@ export class ChangePasswordDto {
   @MaxLength(128)
   public newPassword!: string;
 }
-

@@ -71,16 +71,25 @@ describe('ChangePasswordUseCase', () => {
         .mockResolvedValueOnce(false) // 履歴チェック（再利用されていない）
         .mockResolvedValueOnce(false); // 履歴チェック（他のハッシュとの比較）
       passwordPolicyService.createPasswordPolicy.mockReturnValue(mockPolicy);
-      passwordHistoryRepository.getPasswordHistory.mockResolvedValue(['$2b$10$oldHash1', '$2b$10$oldHash2']);
+      passwordHistoryRepository.getPasswordHistory.mockResolvedValue([
+        '$2b$10$oldHash1',
+        '$2b$10$oldHash2',
+      ]);
       passwordService.hash.mockResolvedValue('$2b$10$newHashedPassword');
       userRepository.save.mockResolvedValue(undefined);
 
       await useCase.execute('user-1', 'CurrentPassword123!', 'NewPassword456@');
 
       expect(userRepository.findById).toHaveBeenCalledWith('user-1');
-      expect(passwordService.compare).toHaveBeenCalledWith('CurrentPassword123!', mockUser.hashedPassword);
+      expect(passwordService.compare).toHaveBeenCalledWith(
+        'CurrentPassword123!',
+        mockUser.hashedPassword,
+      );
       expect(passwordPolicyService.createPasswordPolicy).toHaveBeenCalledTimes(1);
-      expect(passwordHistoryRepository.getPasswordHistory).toHaveBeenCalledWith('user-1', mockPolicy.historyCount);
+      expect(passwordHistoryRepository.getPasswordHistory).toHaveBeenCalledWith(
+        'user-1',
+        mockPolicy.historyCount,
+      );
       expect(passwordService.compare).toHaveBeenCalledWith('NewPassword456@', '$2b$10$oldHash1');
       expect(passwordService.compare).toHaveBeenCalledWith('NewPassword456@', '$2b$10$oldHash2');
       expect(passwordService.hash).toHaveBeenCalledWith('NewPassword456@');
@@ -122,9 +131,9 @@ describe('ChangePasswordUseCase', () => {
       passwordService.compare.mockResolvedValue(true);
       passwordPolicyService.createPasswordPolicy.mockReturnValue(mockPolicy);
 
-      await expect(
-        useCase.execute('user-1', 'CurrentPassword123!', 'short'),
-      ).rejects.toThrow(BadRequestException);
+      await expect(useCase.execute('user-1', 'CurrentPassword123!', 'short')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('異常系: 新しいパスワードが再利用されている場合、エラーが発生する', async () => {
@@ -139,10 +148,12 @@ describe('ChangePasswordUseCase', () => {
       await expect(
         useCase.execute('user-1', 'CurrentPassword123!', 'NewPassword456@'),
       ).rejects.toThrow(BadRequestException);
-      
-      expect(passwordHistoryRepository.getPasswordHistory).toHaveBeenCalledWith('user-1', mockPolicy.historyCount);
+
+      expect(passwordHistoryRepository.getPasswordHistory).toHaveBeenCalledWith(
+        'user-1',
+        mockPolicy.historyCount,
+      );
       expect(passwordService.compare).toHaveBeenCalledWith('NewPassword456@', '$2b$10$oldHash1');
     });
   });
 });
-

@@ -111,4 +111,3 @@ export class PasswordPolicyService {
     return Math.max(0, Math.min(100, score));
   }
 }
-

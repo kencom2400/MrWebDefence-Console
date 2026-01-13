@@ -31,4 +31,3 @@ export class PasswordPolicyDto {
   @Min(0)
   public historyCount!: number;
 }
-

@@ -42,4 +42,3 @@ export interface IPasswordHistoryRepository {
    */
   deleteOldHistory(userId: string, keepCount: number): Promise<void>;
 }
-

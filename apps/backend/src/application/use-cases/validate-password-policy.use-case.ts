@@ -9,7 +9,6 @@ import { Injectable, Inject } from '@nestjs/common';
 import { PasswordPolicyService } from '../../infrastructure/services/password-policy.service';
 import { PasswordService } from '../../infrastructure/services/password.service';
 import { IPasswordHistoryRepository } from '../../domain/repositories/password-history.repository.interface';
-import { PasswordPolicy } from '../../domain/value-objects/password-policy.value-object';
 
 /**
  * パスワード検証結果
@@ -53,7 +52,10 @@ export class ValidatePasswordPolicyUseCase {
     // ドメイン層はインフラ層に依存しないため、ユースケース層で比較ロジックを実装
     let isReused = false;
     if (validationResult.isValid && userId) {
-      const history = await this.passwordHistoryRepository.getPasswordHistory(userId, policy.historyCount);
+      const history = await this.passwordHistoryRepository.getPasswordHistory(
+        userId,
+        policy.historyCount,
+      );
       for (const hash of history) {
         const isMatch = await this.passwordService.compare(password, hash);
         if (isMatch) {
@@ -82,4 +84,3 @@ export class ValidatePasswordPolicyUseCase {
     };
   }
 }
-

@@ -13,4 +13,3 @@ export interface IIpAllowListRepository {
    */
   countByUserId(userId: string): Promise<number>;
 }
-

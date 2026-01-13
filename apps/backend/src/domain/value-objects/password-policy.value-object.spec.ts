@@ -3,7 +3,7 @@
  */
 
 import { BadRequestException } from '@nestjs/common';
-import { PasswordPolicy, ValidationResult } from './password-policy.value-object';
+import { PasswordPolicy } from './password-policy.value-object';
 
 describe('PasswordPolicy', () => {
   describe('create', () => {
@@ -220,4 +220,3 @@ describe('PasswordPolicy', () => {
     });
   });
 });
-

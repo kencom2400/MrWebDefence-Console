@@ -10,7 +10,6 @@ import { IUserRepository } from '../../domain/repositories/user.repository.inter
 import { IPasswordHistoryRepository } from '../../domain/repositories/password-history.repository.interface';
 import { PasswordService } from '../../infrastructure/services/password.service';
 import { PasswordPolicyService } from '../../infrastructure/services/password-policy.service';
-import { PasswordPolicy } from '../../domain/value-objects/password-policy.value-object';
 
 @Injectable()
 export class ChangePasswordUseCase {
@@ -70,7 +69,10 @@ export class ChangePasswordUseCase {
 
     // パスワード履歴をチェック（平文パスワードを使用してbcrypt.compareで比較）
     // ドメイン層はインフラ層に依存しないため、ユースケース層で比較ロジックを実装
-    const history = await this.passwordHistoryRepository.getPasswordHistory(userId, policy.historyCount);
+    const history = await this.passwordHistoryRepository.getPasswordHistory(
+      userId,
+      policy.historyCount,
+    );
     let isReused = false;
     for (const hash of history) {
       const isMatch = await this.passwordService.compare(newPassword, hash);
@@ -101,4 +103,3 @@ export class ChangePasswordUseCase {
     await this.userRepository.save(updatedUser);
   }
 }
-

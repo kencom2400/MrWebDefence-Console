@@ -2,7 +2,7 @@
  * ValidatePasswordPolicyUseCase のユニットテスト
  */
 
-import { ValidatePasswordPolicyUseCase, ValidatePasswordResult } from './validate-password-policy.use-case';
+import { ValidatePasswordPolicyUseCase } from './validate-password-policy.use-case';
 import { PasswordPolicyService } from '../../infrastructure/services/password-policy.service';
 import { PasswordService } from '../../infrastructure/services/password.service';
 import { IPasswordHistoryRepository } from '../../domain/repositories/password-history.repository.interface';
@@ -51,7 +51,10 @@ describe('ValidatePasswordPolicyUseCase', () => {
 
       expect(passwordPolicyService.createPasswordPolicy).toHaveBeenCalledTimes(1);
       expect(passwordPolicyService.calculateStrengthScore).toHaveBeenCalledWith('Password123!');
-      expect(passwordHistoryRepository.getPasswordHistory).toHaveBeenCalledWith('user-1', mockPolicy.historyCount);
+      expect(passwordHistoryRepository.getPasswordHistory).toHaveBeenCalledWith(
+        'user-1',
+        mockPolicy.historyCount,
+      );
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
       expect(result.strengthScore).toBe(85);
@@ -96,7 +99,10 @@ describe('ValidatePasswordPolicyUseCase', () => {
 
       const result = await useCase.execute('user-1', 'Password123!');
 
-      expect(passwordHistoryRepository.getPasswordHistory).toHaveBeenCalledWith('user-1', mockPolicy.historyCount);
+      expect(passwordHistoryRepository.getPasswordHistory).toHaveBeenCalledWith(
+        'user-1',
+        mockPolicy.historyCount,
+      );
       expect(passwordService.compare).toHaveBeenCalledWith('Password123!', '$2b$10$oldHash1');
       expect(result.isValid).toBe(false);
       expect(result.isReused).toBe(true);
@@ -128,4 +134,3 @@ describe('ValidatePasswordPolicyUseCase', () => {
     });
   });
 });
-

@@ -12,4 +12,3 @@ export class ValidatePasswordDto {
   @MaxLength(128)
   public password!: string;
 }
-

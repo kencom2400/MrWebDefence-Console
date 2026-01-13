@@ -22,4 +22,3 @@ export class IpAllowListRepository implements IIpAllowListRepository {
     return 0;
   }
 }
-

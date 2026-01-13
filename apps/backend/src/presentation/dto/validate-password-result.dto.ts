@@ -24,4 +24,3 @@ export class ValidatePasswordResultDto {
   @IsString()
   public message?: string;
 }
-
