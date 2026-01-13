@@ -15,8 +15,10 @@ describe('Dashboard (e2e)', () => {
 
   beforeAll(async () => {
     // Redis接続を待つ（最大10秒、1秒間隔でリトライ）
+    // CI環境ではREDIS_PORT=6379、ローカル環境ではREDIS_PORT=6381（docker-compose経由の場合）
+    // デフォルトは6379（CI環境に合わせる）
     const redisHost = process.env.REDIS_HOST || 'localhost';
-    const redisPort = parseInt(process.env.REDIS_PORT || '6381', 10);
+    const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
     const maxRetries = 10;
     let retries = 0;
     let redisReady = false;
