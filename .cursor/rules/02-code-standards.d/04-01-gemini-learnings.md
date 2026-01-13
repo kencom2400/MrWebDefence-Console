@@ -1667,3 +1667,38 @@ beforeEach(async () => {
 - リポジトリの整理
 - 不要なファイルの削除
 - ドキュメントの一貫性の維持
+
+#### テストでのフェイクタイマーの使用
+
+**問題**: テストで`setTimeout`に依存しており、テストの実行時間に依存するため不安定になる可能性がある。
+
+**解決策**: Jestのフェイクタイマー（`jest.useFakeTimers()`、`jest.setSystemTime()`、`jest.advanceTimersByTime()`）を使用して、時間を制御する。
+
+**例**:
+```typescript
+// ❌ 悪い例: setTimeoutに依存
+await repository.savePasswordHistory(userId, passwordHash1);
+await new Promise((resolve) => setTimeout(resolve, 10));
+await repository.savePasswordHistory(userId, passwordHash2);
+
+// ✅ 良い例: フェイクタイマーを使用
+jest.useFakeTimers();
+const baseTime = new Date('2024-01-01T00:00:00Z').getTime();
+jest.setSystemTime(baseTime);
+
+await repository.savePasswordHistory(userId, passwordHash1);
+jest.advanceTimersByTime(10);
+await repository.savePasswordHistory(userId, passwordHash2);
+
+jest.useRealTimers();
+```
+
+**理由**:
+- テストの安定性向上（実行時間に依存しない）
+- テストの実行速度向上（実際の時間を待たない）
+- テストの再現性向上（時間を制御できる）
+- テストの可読性向上（意図が明確）
+
+**注意点**:
+- テスト終了時に`jest.useRealTimers()`を呼び出して、フェイクタイマーを無効化する
+- 非同期処理とフェイクタイマーの組み合わせに注意する（`jest.runAllTimersAsync()`など）
