@@ -1447,3 +1447,390 @@ it('正常系: MFAセットアップ検証に成功する', async () => {
 - テスト間の独立性の確保
 - トークンの有効性の保証
 - 予期しないテスト失敗の防止
+
+### 13-12. 依存関係の逆転原則（DIP）の遵守（PR #43）
+
+**学習元**: PR #43 - MWD-32: パスワードポリシー機能実装（Geminiレビュー指摘）
+
+#### ドメイン層のインターフェースがインフラ層に依存しない
+
+**問題**: ドメイン層のインターフェース（`IPasswordHistoryRepository`）が、インフラ層のサービス（`PasswordService`）に依存しているため、依存関係の逆転原則（DIP）に違反している。
+
+**解決策**: ドメイン層のインターフェースからインフラ層への依存を削除し、比較ロジックをユースケース層に移動する。
+
+```typescript
+// Bad: ドメイン層のインターフェースがインフラ層に依存
+export interface IPasswordHistoryRepository {
+  checkPasswordInHistoryByPlainText(
+    userId: string,
+    password: string,
+    passwordService: { compare: (password: string, hash: string) => Promise<boolean> }, // インフラ層への依存
+    count: number,
+  ): Promise<boolean>;
+}
+
+// Good: ドメイン層のインターフェースはインフラ層に依存しない
+export interface IPasswordHistoryRepository {
+  getPasswordHistory(userId: string, count: number): Promise<string[]>;
+}
+
+// ユースケース層で比較ロジックを実装
+export class ChangePasswordUseCase {
+  // パスワード履歴をチェック（平文パスワードを使用してbcrypt.compareで比較）
+  // ドメイン層はインフラ層に依存しないため、ユースケース層で比較ロジックを実装
+  const history = await this.passwordHistoryRepository.getPasswordHistory(userId, policy.historyCount);
+  let isReused = false;
+  for (const hash of history) {
+    const isMatch = await this.passwordService.compare(newPassword, hash);
+    if (isMatch) {
+      isReused = true;
+      break;
+    }
+  }
+}
+```
+
+**理由**:
+- 依存関係の逆転原則（DIP）の遵守
+- ドメイン層の独立性の確保
+- アーキテクチャの一貫性の維持
+
+#### E2EテストのデバッグログとsetTimeoutの削除
+
+**問題**: E2Eテストに多くのデバッグログ（`console.log`）が含まれており、テストコードが読みにくくなっている。また、`setTimeout`に依存したテストは不安定になる可能性がある。
+
+**解決策**: デバッグログを削除し、`setTimeout`を削除または最小限にする。エラーハンドリングのログは必要最小限に留める。
+
+```typescript
+// Bad: 多くのデバッグログとsetTimeout
+beforeEach(async () => {
+  await testClient.flushdb();
+  await new Promise((resolve) => setTimeout(resolve, 100)); // 不安定
+  console.log(`[GET /api/v1/auth/password/policy] beforeEach: flushdb実行前`);
+  console.log(`[GET /api/v1/auth/password/policy] beforeEach: ログイン前のブラックリストキー数 = ${keys.length}`);
+  // ... 多くのデバッグログ
+});
+
+// Good: デバッグログを削除し、setTimeoutを削除
+beforeEach(async () => {
+  if (testClient) {
+    try {
+      await testClient.flushdb();
+    } catch (error) {
+      // Redis flushdb失敗時は続行
+    }
+  }
+  
+  const loginRes = await request(app.getHttpServer())
+    .post('/api/v1/auth/login')
+    .send({
+      email: 'user@example.com',
+      password: 'password123',
+    })
+    .expect(200);
+  
+  policyToken = loginRes.body.accessToken;
+  expect(policyToken).toBeDefined();
+  
+  // 生成したトークンが既にブラックリストに登録されている場合、削除
+  if (testClient && policyToken) {
+    const isBlacklisted = await testClient.get(`blacklist:${policyToken}`);
+    if (isBlacklisted) {
+      await testClient.del(`blacklist:${policyToken}`);
+    }
+  }
+});
+```
+
+**理由**:
+- テストコードの可読性向上
+- テストの安定性向上（`setTimeout`に依存しない）
+- 本番環境に近いテストコード
+
+#### 一時的なドキュメントファイルの削除
+
+**問題**: 開発中の一時的なドキュメントファイル（`docs/e2e-token-timeline.md`など）がリポジトリに残っている。
+
+**解決策**: 一時的なドキュメントファイルは、開発完了後に削除するか、正式なドキュメントとして整理する。
+
+**理由**:
+- リポジトリの整理
+- 不要なファイルの削除
+- ドキュメントの一貫性の維持
+
+### 13-12. 依存関係の逆転原則（DIP）の遵守（PR #43）
+
+**学習元**: PR #43 - MWD-32: パスワードポリシー機能実装（Geminiレビュー指摘）
+
+#### ドメイン層のインターフェースがインフラ層に依存しない
+
+**問題**: ドメイン層のインターフェース（`IPasswordHistoryRepository`）が、インフラ層のサービス（`PasswordService`）に依存しているため、依存関係の逆転原則（DIP）に違反している。
+
+**解決策**: ドメイン層のインターフェースからインフラ層への依存を削除し、比較ロジックをユースケース層に移動する。
+
+```typescript
+// Bad: ドメイン層のインターフェースがインフラ層に依存
+export interface IPasswordHistoryRepository {
+  checkPasswordInHistoryByPlainText(
+    userId: string,
+    password: string,
+    passwordService: { compare: (password: string, hash: string) => Promise<boolean> }, // インフラ層への依存
+    count: number,
+  ): Promise<boolean>;
+}
+
+// Good: ドメイン層のインターフェースはインフラ層に依存しない
+export interface IPasswordHistoryRepository {
+  getPasswordHistory(userId: string, count: number): Promise<string[]>;
+}
+
+// ユースケース層で比較ロジックを実装
+export class ChangePasswordUseCase {
+  // パスワード履歴をチェック（平文パスワードを使用してbcrypt.compareで比較）
+  // ドメイン層はインフラ層に依存しないため、ユースケース層で比較ロジックを実装
+  const history = await this.passwordHistoryRepository.getPasswordHistory(userId, policy.historyCount);
+  let isReused = false;
+  for (const hash of history) {
+    const isMatch = await this.passwordService.compare(newPassword, hash);
+    if (isMatch) {
+      isReused = true;
+      break;
+    }
+  }
+}
+```
+
+**理由**:
+- 依存関係の逆転原則（DIP）の遵守
+- ドメイン層の独立性の確保
+- アーキテクチャの一貫性の維持
+
+#### E2EテストのデバッグログとsetTimeoutの削除
+
+**問題**: E2Eテストに多くのデバッグログ（`console.log`）が含まれており、テストコードが読みにくくなっている。また、`setTimeout`に依存したテストは不安定になる可能性がある。
+
+**解決策**: デバッグログを削除し、`setTimeout`を削除または最小限にする。エラーハンドリングのログは必要最小限に留める。
+
+```typescript
+// Bad: 多くのデバッグログとsetTimeout
+beforeEach(async () => {
+  await testClient.flushdb();
+  await new Promise((resolve) => setTimeout(resolve, 100)); // 不安定
+  console.log(`[GET /api/v1/auth/password/policy] beforeEach: flushdb実行前`);
+  console.log(`[GET /api/v1/auth/password/policy] beforeEach: ログイン前のブラックリストキー数 = ${keys.length}`);
+  // ... 多くのデバッグログ
+});
+
+// Good: デバッグログを削除し、setTimeoutを削除
+beforeEach(async () => {
+  if (testClient) {
+    try {
+      await testClient.flushdb();
+    } catch (error) {
+      // Redis flushdb失敗時は続行
+    }
+  }
+  
+  const loginRes = await request(app.getHttpServer())
+    .post('/api/v1/auth/login')
+    .send({
+      email: 'user@example.com',
+      password: 'password123',
+    })
+    .expect(200);
+  
+  policyToken = loginRes.body.accessToken;
+  expect(policyToken).toBeDefined();
+  
+  // 生成したトークンが既にブラックリストに登録されている場合、削除
+  if (testClient && policyToken) {
+    const isBlacklisted = await testClient.get(`blacklist:${policyToken}`);
+    if (isBlacklisted) {
+      await testClient.del(`blacklist:${policyToken}`);
+    }
+  }
+});
+```
+
+**理由**:
+- テストコードの可読性向上
+- テストの安定性向上（`setTimeout`に依存しない）
+- 本番環境に近いテストコード
+
+#### 一時的なドキュメントファイルの削除
+
+**問題**: 開発中の一時的なドキュメントファイル（`docs/e2e-token-timeline.md`など）がリポジトリに残っている。
+
+**解決策**: 一時的なドキュメントファイルは、開発完了後に削除するか、正式なドキュメントとして整理する。
+
+**理由**:
+- リポジトリの整理
+- 不要なファイルの削除
+- ドキュメントの一貫性の維持
+
+#### テストでのフェイクタイマーの使用
+
+**問題**: テストで`setTimeout`に依存しており、テストの実行時間に依存するため不安定になる可能性がある。
+
+**解決策**: Jestのフェイクタイマー（`jest.useFakeTimers()`、`jest.setSystemTime()`、`jest.advanceTimersByTime()`）を使用して、時間を制御する。
+
+**例**:
+```typescript
+// ❌ 悪い例: setTimeoutに依存
+await repository.savePasswordHistory(userId, passwordHash1);
+await new Promise((resolve) => setTimeout(resolve, 10));
+await repository.savePasswordHistory(userId, passwordHash2);
+
+// ✅ 良い例: フェイクタイマーを使用
+jest.useFakeTimers();
+const baseTime = new Date('2024-01-01T00:00:00Z').getTime();
+jest.setSystemTime(baseTime);
+
+await repository.savePasswordHistory(userId, passwordHash1);
+jest.advanceTimersByTime(10);
+await repository.savePasswordHistory(userId, passwordHash2);
+
+jest.useRealTimers();
+```
+
+**理由**:
+- テストの安定性向上（実行時間に依存しない）
+- テストの実行速度向上（実際の時間を待たない）
+- テストの再現性向上（時間を制御できる）
+- テストの可読性向上（意図が明確）
+
+**注意点**:
+- テスト終了時に`jest.useRealTimers()`を呼び出して、フェイクタイマーを無効化する
+- 非同期処理とフェイクタイマーの組み合わせに注意する（`jest.runAllTimersAsync()`など）
+
+#### 重複コードの共通化（プライベートメソッドの抽出）
+
+**問題**: 複数のユースケースで同じロジック（パスワード履歴チェックなど）が重複していた。
+
+**解決策**: 重複しているロジックをプライベートメソッドとして抽出し、各ユースケース内で再利用する。
+
+**例**:
+```typescript
+// ❌ 悪い例: 重複コード
+// ChangePasswordUseCase内
+const history = await this.passwordHistoryRepository.getPasswordHistory(userId, policy.historyCount);
+let isReused = false;
+for (const hash of history) {
+  const isMatch = await this.passwordService.compare(newPassword, hash);
+  if (isMatch) {
+    isReused = true;
+    break;
+  }
+}
+
+// ValidatePasswordPolicyUseCase内（同じロジックが重複）
+const history = await this.passwordHistoryRepository.getPasswordHistory(userId, policy.historyCount);
+let isReused = false;
+for (const hash of history) {
+  const isMatch = await this.passwordService.compare(password, hash);
+  if (isMatch) {
+    isReused = true;
+    break;
+  }
+}
+
+// ✅ 良い例: プライベートメソッドとして抽出
+private async checkPasswordInHistory(
+  userId: string,
+  password: string,
+  historyCount: number,
+): Promise<boolean> {
+  const history = await this.passwordHistoryRepository.getPasswordHistory(
+    userId,
+    historyCount,
+  );
+  for (const hash of history) {
+    const isMatch = await this.passwordService.compare(password, hash);
+    if (isMatch) {
+      return true;
+    }
+  }
+  return false;
+}
+```
+
+**理由**:
+- コードの重複を削減（DRY原則）
+- 保守性の向上（変更が1箇所で済む）
+- 可読性の向上（意図が明確）
+- テストの容易性（ロジックが1箇所に集約）
+
+#### 定数の共有（Domain層からInfrastructure層へのエクスポート）
+
+**問題**: `PasswordPolicyService`（Infrastructure層）で、`PasswordPolicy` Value Object（Domain層）と同じ正規表現パターンが重複していた。
+
+**解決策**: Domain層の定数をエクスポートし、Infrastructure層で再利用する。
+
+**例**:
+```typescript
+// ✅ Domain層: password-policy.value-object.ts
+export const SYMBOL_PATTERN = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/;
+
+// ✅ Infrastructure層: password-policy.service.ts
+import { PasswordPolicy, SYMBOL_PATTERN } from '../../domain/value-objects/password-policy.value-object';
+
+// 使用
+if (SYMBOL_PATTERN.test(password)) diversityScore += 10;
+```
+
+**理由**:
+- コードの重複を削減
+- 一貫性の確保（同じパターンを使用）
+- 保守性の向上（変更が1箇所で済む）
+- Domain層の定数をInfrastructure層で使用することは問題ない（依存方向が正しい）
+
+#### リポジトリ内の重複ロジックの共通化
+
+**問題**: `PasswordHistoryRepository`の`getPasswordHistory`と`deleteOldHistory`の両方で、同じソートロジックが重複していた。
+
+**解決策**: ソートロジックをプライベートメソッドとして抽出し、両方のメソッドで再利用する。
+
+**例**:
+```typescript
+// ❌ 悪い例: 重複コード
+public async getPasswordHistory(userId: string, count: number): Promise<string[]> {
+  const history = this.historyStore.get(userId)!;
+  const sortedHistory = [...history].sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  );
+  return sortedHistory.slice(0, count).map((entry) => entry.passwordHash);
+}
+
+public async deleteOldHistory(userId: string, keepCount: number): Promise<void> {
+  const history = this.historyStore.get(userId)!;
+  const sortedHistory = [...history].sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  );
+  const keptHistory = sortedHistory.slice(0, keepCount);
+  this.historyStore.set(userId, keptHistory);
+}
+
+// ✅ 良い例: 共通メソッドとして抽出
+private getSortedHistory(history: PasswordHistoryEntry[]): PasswordHistoryEntry[] {
+  return [...history].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+}
+
+public async getPasswordHistory(userId: string, count: number): Promise<string[]> {
+  const history = this.historyStore.get(userId)!;
+  const sortedHistory = this.getSortedHistory(history);
+  return sortedHistory.slice(0, count).map((entry) => entry.passwordHash);
+}
+
+public async deleteOldHistory(userId: string, keepCount: number): Promise<void> {
+  const history = this.historyStore.get(userId)!;
+  const sortedHistory = this.getSortedHistory(history);
+  const keptHistory = sortedHistory.slice(0, keepCount);
+  this.historyStore.set(userId, keptHistory);
+}
+```
+
+**理由**:
+- コードの重複を削減
+- 保守性の向上（ソートロジックの変更が1箇所で済む）
+- パフォーマンスの最適化が容易（将来的にキャッシュなどを追加する場合）
+- 可読性の向上（意図が明確）

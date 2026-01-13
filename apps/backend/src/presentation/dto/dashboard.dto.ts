@@ -34,4 +34,3 @@ export class DashboardDto {
     this.loginAttemptCount = loginAttemptCount;
   }
 }
-

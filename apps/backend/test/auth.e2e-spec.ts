@@ -158,15 +158,15 @@ describe('AuthController (e2e)', () => {
       return request(app.getHttpServer()).get('/api/v1/auth/profile').expect(401);
     });
 
-    it('正常系: ログアウトする', () => {
-      return request(app.getHttpServer())
+    it('正常系: ログアウトして、その後同じトークンでプロフィールにアクセスできない', async () => {
+      // ログアウト
+      await request(app.getHttpServer())
         .post('/api/v1/auth/logout')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
-    });
 
-    it('異常系: ログアウト後に同じトークンでプロフィールにアクセスできない', () => {
-      return request(app.getHttpServer())
+      // ログアウト後に同じトークンでプロフィールにアクセスできないことを確認
+      await request(app.getHttpServer())
         .get('/api/v1/auth/profile')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(401)

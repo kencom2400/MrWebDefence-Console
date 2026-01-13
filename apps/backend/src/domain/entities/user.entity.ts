@@ -103,4 +103,25 @@ export class User {
       new Date(),
     );
   }
+
+  /**
+   * パスワードを更新する
+   * @param newHashedPassword 新しいハッシュ化されたパスワード
+   * @returns 新しいUserエンティティ（パスワード更新済み）
+   */
+  public updatePassword(newHashedPassword: string): User {
+    if (!newHashedPassword || newHashedPassword.trim().length === 0) {
+      throw new Error('Password hash cannot be empty');
+    }
+    return new User(
+      this.id,
+      this.email,
+      newHashedPassword,
+      this.role,
+      this.mfaEnabled,
+      this.mfaSecret,
+      this.createdAt,
+      new Date(),
+    );
+  }
 }
