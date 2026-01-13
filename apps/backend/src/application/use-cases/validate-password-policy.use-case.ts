@@ -69,7 +69,7 @@ export class ValidatePasswordPolicyUseCase {
     if (isReused) {
       return {
         isValid: false,
-        errors: [],
+        errors: ['Password has been used recently'],
         strengthScore,
         isReused: true,
         message: 'Password has been used recently',

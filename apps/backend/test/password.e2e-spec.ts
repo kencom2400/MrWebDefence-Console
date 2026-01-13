@@ -17,7 +17,6 @@ describe('Password E2E Tests', () => {
   let app: INestApplication;
   let moduleFixture: TestingModule;
   let testClient: Redis;
-  let userId: string;
 
   const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
   const redisHost = process.env.REDIS_HOST || 'localhost';
@@ -67,22 +66,6 @@ describe('Password E2E Tests', () => {
       }),
     );
     await app.init();
-
-    // userIdを取得（JWTペイロードから取得するため、一時的にログインしてトークンを取得）
-    const tempLoginResponse = await request(app.getHttpServer())
-      .post('/api/v1/auth/login')
-      .send({
-        email: 'user@example.com',
-        password: 'password123',
-      })
-      .expect(200);
-
-    const tempToken = tempLoginResponse.body.accessToken;
-    // JWTペイロードからuserIdを取得（簡易的な実装）
-    const payload = JSON.parse(
-      Buffer.from(tempToken.split('.')[1], 'base64').toString('utf-8'),
-    );
-    userId = payload.sub;
   });
 
   afterAll(async () => {

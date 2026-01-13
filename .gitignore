@@ -31,3 +31,65 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# このファイルにはJIRA_EMAILとJIRA_API_TOKENが含まれるため、Gitにコミットしない
+/scripts/jira/config.local.sh
+
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+build
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDEs
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# このファイルにはJIRA_EMAILとJIRA_API_TOKENが含まれるため、Gitにコミットしない
+/scripts/jira/config.local.sh
+
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+build
+
+# Environment variables
+.env
+.env.*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDEs
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

@@ -9,7 +9,7 @@ import { PasswordService } from '../../infrastructure/services/password.service'
 import { PasswordPolicyService } from '../../infrastructure/services/password-policy.service';
 import { User } from '../../domain/entities/user.entity';
 import { UserRole } from '../../domain/entities/user-role.enum';
-import { UnauthorizedException, BadRequestException } from '@nestjs/common';
+import { UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PasswordPolicy } from '../../domain/value-objects/password-policy.value-object';
 
 describe('ChangePasswordUseCase', () => {
@@ -113,7 +113,7 @@ describe('ChangePasswordUseCase', () => {
 
       await expect(
         useCase.execute('non-existent-user', 'CurrentPassword123!', 'NewPassword456@'),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('異常系: 現在のパスワードが間違っている場合、エラーが発生する', async () => {

@@ -17,6 +17,11 @@ export interface ValidationResult {
 }
 
 /**
+ * 記号の正規表現パターン
+ */
+const SYMBOL_PATTERN = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/;
+
+/**
  * PasswordPolicy Value Object
  *
  * パスワードポリシー設定をカプセル化し、バリデーションと不変性を保証
@@ -130,7 +135,7 @@ export class PasswordPolicy {
     if (this.requireNumbers && !/[0-9]/.test(password)) {
       errors.push('Password must contain at least one number');
     }
-    if (this.requireSymbols && !/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)) {
+    if (this.requireSymbols && !SYMBOL_PATTERN.test(password)) {
       errors.push('Password must contain at least one symbol');
     }
 

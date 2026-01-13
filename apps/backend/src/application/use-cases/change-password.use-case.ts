@@ -5,7 +5,13 @@
  * Application層に位置し、ビジネスロジックを実装
  */
 
-import { Injectable, Inject, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  UnauthorizedException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { IUserRepository } from '../../domain/repositories/user.repository.interface';
 import { IPasswordHistoryRepository } from '../../domain/repositories/password-history.repository.interface';
 import { PasswordService } from '../../infrastructure/services/password.service';
@@ -41,7 +47,7 @@ export class ChangePasswordUseCase {
     // ユーザーを取得
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new NotFoundException('User not found');
     }
 
     // 現在のパスワードを検証

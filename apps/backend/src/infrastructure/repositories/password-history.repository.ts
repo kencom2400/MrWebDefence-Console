@@ -38,9 +38,6 @@ export class PasswordHistoryRepository implements IPasswordHistoryRepository {
       passwordHash,
       createdAt: new Date(),
     });
-
-    // 作成日時でソート（最新が最後）
-    history.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   }
 
   /**
@@ -68,7 +65,9 @@ export class PasswordHistoryRepository implements IPasswordHistoryRepository {
    * @param passwordHash ハッシュ化されたパスワード
    * @param count チェックする履歴数
    * @returns 履歴に含まれている場合true、そうでない場合false
-   * @deprecated bcryptは毎回異なるハッシュを生成するため、このメソッドは使用しない。代わりにcheckPasswordInHistoryByPlainTextを使用する。
+   * @deprecated bcryptは毎回異なるハッシュを生成するため、このメソッドは使用しない。
+   * 代わりに、ユースケース層でgetPasswordHistoryを使用して履歴を取得し、
+   * PasswordService.compareを使用して比較するロジックを実装する。
    */
   public async checkPasswordInHistory(
     userId: string,
