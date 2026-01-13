@@ -52,9 +52,15 @@ run_test_in_docker() {
   # --no-deps: backendの依存サービス（redis-dev）を起動しない
   # --rm: 実行後にコンテナを削除
   # -e REDIS_HOST: 接続先のRedisホストを指定
+  # --no-volume: ボリュームマウントを無効化（node_modulesが上書きされるのを防ぐ）
+  # または、node_modulesを明示的に除外するためにvolumesオプションを使用
   $DOCKER_COMPOSE run --rm --no-deps \
     -e REDIS_HOST="${redis_service}" \
     -e REDIS_PORT=6379 \
+    --volume="${PROJECT_ROOT}/apps/backend:/app/apps/backend:ro" \
+    --volume="${PROJECT_ROOT}/package.json:/app/package.json:ro" \
+    --volume="${PROJECT_ROOT}/pnpm-lock.yaml:/app/pnpm-lock.yaml:ro" \
+    --volume="${PROJECT_ROOT}/pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro" \
     backend ${cmd}
 }
 
