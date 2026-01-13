@@ -9,14 +9,17 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { AuthController } from './controllers/auth.controller';
 import { MfaController } from './controllers/mfa.controller';
+import { DashboardController } from './controllers/dashboard.controller';
 import { LoginUseCase } from '../application/use-cases/login.use-case';
 import { LogoutUseCase } from '../application/use-cases/logout.use-case';
 import { SetupMfaUseCase } from '../application/use-cases/setup-mfa.use-case';
 import { VerifyMfaUseCase } from '../application/use-cases/verify-mfa.use-case';
 import { DisableMfaUseCase } from '../application/use-cases/disable-mfa.use-case';
 import { GenerateBackupCodesUseCase } from '../application/use-cases/generate-backup-codes.use-case';
+import { GetDashboardDataUseCase } from '../application/use-cases/get-dashboard-data.use-case';
 import { UserRepository } from '../infrastructure/repositories/user.repository';
 import { MfaRepository } from '../infrastructure/repositories/mfa.repository';
+import { IpAllowListRepository } from '../infrastructure/repositories/ip-allowlist.repository';
 import { RedisTokenBlacklistRepository } from '../infrastructure/repositories/redis-token-blacklist.repository';
 import { PasswordService } from '../infrastructure/services/password.service';
 import { JwtService } from '../infrastructure/services/jwt.service';
@@ -27,7 +30,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 
 @Module({
-  controllers: [AuthController, MfaController],
+  controllers: [AuthController, MfaController, DashboardController],
   providers: [
     LoginUseCase,
     LogoutUseCase,
@@ -72,6 +75,13 @@ import { RolesGuard } from './guards/roles.guard';
     {
       provide: 'IMfaRepository',
       useClass: MfaRepository,
+    },
+    // Dashboard Use Case
+    GetDashboardDataUseCase,
+    // IP AllowList Repository (Stub)
+    {
+      provide: 'IIpAllowListRepository',
+      useClass: IpAllowListRepository,
     },
     // Global Guards: 登録順序が重要 (JwtAuthGuard -> RolesGuard)
     {
