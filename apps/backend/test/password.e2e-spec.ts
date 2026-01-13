@@ -17,7 +17,6 @@ describe('Password E2E Tests', () => {
   let app: INestApplication;
   let moduleFixture: TestingModule;
   let testClient: Redis;
-  let accessToken: string;
   let userId: string;
 
   const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
@@ -72,8 +71,8 @@ describe('Password E2E Tests', () => {
     );
     await app.init();
 
-    // テスト用ユーザーでログインしてトークンを取得
-    const loginResponse = await request(app.getHttpServer())
+    // userIdを取得（JWTペイロードから取得するため、一時的にログインしてトークンを取得）
+    const tempLoginResponse = await request(app.getHttpServer())
       .post('/api/v1/auth/login')
       .send({
         email: 'user@example.com',
@@ -81,12 +80,15 @@ describe('Password E2E Tests', () => {
       })
       .expect(200);
 
-    accessToken = loginResponse.body.accessToken;
+    const tempToken = tempLoginResponse.body.accessToken;
     // JWTペイロードからuserIdを取得（簡易的な実装）
     const payload = JSON.parse(
-      Buffer.from(accessToken.split('.')[1], 'base64').toString('utf-8'),
+      Buffer.from(tempToken.split('.')[1], 'base64').toString('utf-8'),
     );
     userId = payload.sub;
+    
+    // 一時トークンは使用しない（各テストで新しいトークンを取得する）
+    // accessTokenは各テストで取得する
   });
 
   afterAll(async () => {
@@ -98,9 +100,20 @@ describe('Password E2E Tests', () => {
 
   describe('GET /api/v1/auth/password/policy', () => {
     it('正常系: パスワードポリシー設定を取得できる', async () => {
+      // テスト用トークンを取得
+      const loginRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'user@example.com',
+          password: 'password123',
+        })
+        .expect(200);
+
+      const testToken = loginRes.body.accessToken;
+
       const response = await request(app.getHttpServer())
         .get('/api/v1/auth/password/policy')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${testToken}`)
         .expect(200);
 
       expect(response.body).toHaveProperty('minLength');
@@ -125,10 +138,36 @@ describe('Password E2E Tests', () => {
   });
 
   describe('POST /api/v1/auth/password/validate', () => {
+    let validateToken: string;
+
+    beforeEach(async () => {
+      // 各テスト前にRedisの状態をクリア
+      if (testClient) {
+        try {
+          await testClient.flushdb();
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        } catch (error) {
+          console.warn(`⚠️  Redis flushdb失敗（続行）: ${error}`);
+        }
+      }
+
+      // ログインしてトークンを取得
+      const loginRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'user@example.com',
+          password: 'password123',
+        })
+        .expect(200);
+
+      validateToken = loginRes.body.accessToken;
+      expect(validateToken).toBeDefined();
+    });
+
     it('正常系: 有効なパスワードを検証できる', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/password/validate')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${validateToken}`)
         .send({
           password: 'ValidPassword123!',
         })
@@ -149,7 +188,7 @@ describe('Password E2E Tests', () => {
       // DTOバリデーションを通過するが、ポリシー違反のパスワード（記号なし）
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/password/validate')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${validateToken}`)
         .send({
           password: 'nouppercase123',
         })
@@ -172,11 +211,15 @@ describe('Password E2E Tests', () => {
   });
 
   describe('POST /api/v1/auth/password/change', () => {
+    let testToken: string;
+
     beforeEach(async () => {
       // 各テスト前にRedisの状態をクリア
       if (testClient) {
         try {
           await testClient.flushdb();
+          // Redisの操作が完了するまで少し待機
+          await new Promise((resolve) => setTimeout(resolve, 50));
         } catch (error) {
           console.warn(`⚠️  Redis flushdb失敗（続行）: ${error}`);
         }
@@ -210,10 +253,8 @@ describe('Password E2E Tests', () => {
         // 代わりに、古い履歴を削除するメソッドを使用（keepCount=0で全削除）
         await passwordHistoryRepository.deleteOldHistory(testUser.id, 0);
       }
-    });
 
-    it('正常系: パスワード変更に成功する', async () => {
-      // テスト用トークンを取得
+      // ログインしてトークンを取得（各テストで確実に有効なトークンを使用）
       const loginRes = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
@@ -222,16 +263,47 @@ describe('Password E2E Tests', () => {
         })
         .expect(200);
 
-      const testToken = loginRes.body.accessToken;
+      testToken = loginRes.body.accessToken;
+      expect(testToken).toBeDefined();
 
+      // トークンがブラックリストに登録されていないことを確認（デバッグ用）
+      if (testClient) {
+        const isBlacklisted = await testClient.get(`blacklist:${testToken}`);
+        if (isBlacklisted) {
+          console.warn(`⚠️  トークンがブラックリストに登録されています: ${testToken.substring(0, 20)}...`);
+        }
+      }
+    });
+
+    it('正常系: パスワード変更に成功する', async () => {
+      // 使用するトークンを確認
+      console.log('Using testToken from beforeEach:', testToken ? testToken.substring(0, 20) + '...' : 'undefined');
+      
+      // トークンがブラックリストに登録されているか確認
+      if (testClient && testToken) {
+        const isBlacklisted = await testClient.get(`blacklist:${testToken}`);
+        console.log('Token blacklisted before request:', !!isBlacklisted);
+      }
+      
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/password/change')
         .set('Authorization', `Bearer ${testToken}`)
         .send({
           currentPassword: 'password123',
           newPassword: 'NewPassword456@',
-        })
-        .expect(200);
+        });
+
+      if (response.status !== 200) {
+        console.error('Password change failed:', response.status, response.body);
+        console.error('Token used:', testToken ? testToken.substring(0, 20) + '...' : 'undefined');
+        
+        // リクエスト後のブラックリスト状態を確認
+        if (testClient && testToken) {
+          const isBlacklistedAfter = await testClient.get(`blacklist:${testToken}`);
+          console.error('Token blacklisted after request:', !!isBlacklistedAfter);
+        }
+      }
+      expect(response.status).toBe(200);
 
       expect(response.body).toHaveProperty('message');
       expect(response.body.message).toBe('Password changed successfully');
@@ -249,17 +321,6 @@ describe('Password E2E Tests', () => {
     });
 
     it('異常系: 現在のパスワードが間違っている場合、401エラー', async () => {
-      // テスト用トークンを取得
-      const loginRes = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({
-          email: 'user@example.com',
-          password: 'password123',
-        })
-        .expect(200);
-
-      const testToken = loginRes.body.accessToken;
-
       await request(app.getHttpServer())
         .post('/api/v1/auth/password/change')
         .set('Authorization', `Bearer ${testToken}`)
@@ -271,17 +332,6 @@ describe('Password E2E Tests', () => {
     });
 
     it('異常系: 新しいパスワードがポリシーに違反する場合、400エラー', async () => {
-      // テスト用トークンを取得
-      const loginRes = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({
-          email: 'user@example.com',
-          password: 'password123',
-        })
-        .expect(200);
-
-      const testToken = loginRes.body.accessToken;
-
       // ポリシー違反のパスワードで変更を試みる（記号なし）
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/password/change')
@@ -306,28 +356,17 @@ describe('Password E2E Tests', () => {
     });
 
     it('異常系: 新しいパスワードが再利用されている場合、400エラー', async () => {
-      // テスト用トークンを取得
-      const loginRes0 = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({
-          email: 'user@example.com',
-          password: 'password123',
-        })
-        .expect(200);
-
-      const testToken0 = loginRes0.body.accessToken;
-
       // まずパスワードを変更
       await request(app.getHttpServer())
         .post('/api/v1/auth/password/change')
-        .set('Authorization', `Bearer ${testToken0}`)
+        .set('Authorization', `Bearer ${testToken}`)
         .send({
           currentPassword: 'password123',
           newPassword: 'NewPassword456@',
         })
         .expect(200);
 
-      // 再度ログインしてトークンを取得
+      // 再度ログインしてトークンを取得（パスワード変更後はトークンが無効化されるため）
       const loginResponse1 = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
