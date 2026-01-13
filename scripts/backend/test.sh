@@ -52,9 +52,18 @@ run_test_in_docker() {
   # --no-deps: backendの依存サービス（redis-dev）を起動しない
   # --rm: 実行後にコンテナを削除
   # -e REDIS_HOST: 接続先のRedisホストを指定
+  # CI環境変数があればそれを使用、なければデフォルト値を使用
   $DOCKER_COMPOSE run --rm --no-deps \
     -e REDIS_HOST="${redis_service}" \
     -e REDIS_PORT=6379 \
+    -e NODE_ENV="${NODE_ENV:-test}" \
+    -e JWT_SECRET="${JWT_SECRET:-test-jwt-secret-for-ci}" \
+    -e JWT_EXPIRES_IN="${JWT_EXPIRES_IN:-1800}" \
+    -e BCRYPT_SALT_ROUNDS="${BCRYPT_SALT_ROUNDS:-10}" \
+    --volume="${PROJECT_ROOT}/apps/backend:/app/apps/backend:ro" \
+    --volume="${PROJECT_ROOT}/package.json:/app/package.json:ro" \
+    --volume="${PROJECT_ROOT}/pnpm-lock.yaml:/app/pnpm-lock.yaml:ro" \
+    --volume="${PROJECT_ROOT}/pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro" \
     backend ${cmd}
 }
 
@@ -90,7 +99,14 @@ case "${TEST_TYPE}" in
   *)
     echo "❌ エラー: 不明なテストタイプ '${TEST_TYPE}'"
     echo ""
-    echo "使用方法: $0 [test|watch|cov|e2e|all]"
+    echo "使用方法: $0 [unit|test|watch|cov|coverage|e2e|all]"
+    echo ""
+    echo "テストタイプ:"
+    echo "  unit, test  - ユニットテストのみ実行"
+    echo "  watch      - ウォッチモードでテスト実行"
+    echo "  cov, coverage - カバレッジレポート生成（ユニットテスト含む）"
+    echo "  e2e        - E2Eテストのみ実行"
+    echo "  all        - カバレッジレポートとE2Eテストの両方を実行"
     exit 1
     ;;
 esac

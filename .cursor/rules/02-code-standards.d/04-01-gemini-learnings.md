@@ -1279,3 +1279,171 @@ export class IpAllowListRepository implements IIpAllowListRepository {
 - 初期実装のスコープの明確化
 - 実装者の混乱を防ぐ
 - スタブ実装であることの明示
+
+---
+
+### PR #42 レビューからの学習
+
+#### テストコードでの型安全性の向上
+
+**問題**: テストコードで`as any`を使用すると型安全性が損なわれる。Jestのモックオブジェクトを作成する際に、適切な型付けを行うべき。
+
+**解決策**: `as jest.Mocked<T>`を使用して型安全性を保つ。
+
+```typescript
+// Bad: 型安全性が損なわれる
+mockUserRepository = {
+  findByEmail: jest.fn(),
+  findById: jest.fn(),
+  save: jest.fn(),
+} as any;
+
+// Good: 適切な型付け
+mockUserRepository = {
+  findByEmail: jest.fn(),
+  findById: jest.fn(),
+  save: jest.fn(),
+} as jest.Mocked<IUserRepository>;
+```
+
+**理由**:
+- 型安全性の向上
+- IDEの補完機能が正しく動作する
+- コンパイル時のエラー検出が可能
+
+#### 実行時間に依存するテストの安定性
+
+**問題**: 実行時間に依存するテストは、実行環境（特にCI環境）によって失敗する可能性があり、不安定（flaky）になりがち。マージンが小さすぎると、環境の変動で失敗する可能性がある。
+
+**解決策**: 実行時間のテストでは、十分なマージンを設定する。
+
+```typescript
+// Bad: マージンが小さすぎる（CI環境で失敗する可能性）
+expect(duration).toBeLessThan(20);
+
+// Good: 十分なマージンを設定
+expect(duration).toBeLessThan(50);
+```
+
+**理由**:
+- CI環境などでの実行時間の変動に対応
+- テストの安定性向上
+- フレーキーテストの防止
+
+#### 不要なインポートの削除
+
+**問題**: 使用されていないインポートが残っていると、コードの可読性が低下し、依存関係が不明確になる。
+
+**解決策**: 使用されていないインポートは削除する。
+
+```typescript
+// Bad: 使用されていないインポート
+import { UserRole } from '../../domain/entities/user-role.enum';
+
+export class DashboardDto {
+  public readonly role: string; // UserRoleではなくstringを使用
+  // ...
+}
+
+// Good: 不要なインポートを削除
+export class DashboardDto {
+  public readonly role: string;
+  // ...
+}
+```
+
+**理由**:
+- コードの可読性向上
+- 依存関係の明確化
+- バンドルサイズの削減（ビルドツールによる最適化が効く場合）
+
+### 13-19. E2Eテスト間でのRedis状態管理（PR #42）
+
+**学習元**: PR #42 - Dashboard実装とテストスクリプト改善（E2Eテストの修正）
+
+#### E2Eテスト間でのRedis状態の分離
+
+**問題**: 複数のE2Eテストスイートが同じRedisインスタンスを使用する場合、テスト間で状態（特にトークンブラックリスト）が共有され、予期しない動作を引き起こす可能性がある。例えば、`auth.e2e-spec.ts`のログアウトテストでブラックリストに登録されたトークンが、`mfa.e2e-spec.ts`のテストに影響を与える。
+
+**解決策**: 各テストスイートの`beforeAll`でRedisの状態をクリア（`flushdb`）して、テスト間の状態を分離する。
+
+```typescript
+// Bad: テスト間でRedisの状態が共有される
+beforeAll(async () => {
+  // Redis接続を待つ
+  const testClient = new Redis({
+    host: redisHost,
+    port: redisPort,
+    connectTimeout: 1000,
+    lazyConnect: true,
+  });
+  await testClient.connect();
+  await testClient.ping();
+  await testClient.quit();
+  // ブラックリストが残っている可能性がある
+});
+
+// Good: テスト開始時にRedisの状態をクリア
+beforeAll(async () => {
+  // Redis接続を待つ
+  const testClient = new Redis({
+    host: redisHost,
+    port: redisPort,
+    connectTimeout: 1000,
+    lazyConnect: true,
+  });
+  await testClient.connect();
+  await testClient.ping();
+  // テスト間でRedisの状態が共有されないように、ブラックリストをクリア
+  await testClient.flushdb();
+  await testClient.quit();
+});
+```
+
+**理由**:
+- テスト間の独立性の確保
+- 予期しないテスト失敗の防止
+- テストの再現性向上
+- CI環境での安定性向上
+
+#### E2Eテストでのトークン管理
+
+**問題**: E2Eテストで、前のテストで使用したトークンがブラックリストに登録されている可能性があるため、同じトークンを再利用すると401エラーが発生する。
+
+**解決策**: 各テストで必要なトークンをその場で取得し、テスト間でのトークンの共有を避ける。また、テスト開始時にRedisの状態をクリアすることで、ブラックリストの影響を排除する。
+
+```typescript
+// Bad: 前のテストで取得したトークンを再利用
+it('正常系: MFAセットアップ検証に成功する', async () => {
+  // 前のテストで取得したトークンを使用（ブラックリストに登録されている可能性がある）
+  const setupResponse = await request(app.getHttpServer())
+    .post('/api/v1/auth/mfa/setup')
+    .set('Authorization', `Bearer ${accessToken}`) // 前のテストのトークン
+    .expect(200);
+});
+
+// Good: 各テストで新しいトークンを取得
+it('正常系: MFAセットアップ検証に成功する', async () => {
+  // 新しいトークンを取得
+  const loginResponse = await request(app.getHttpServer())
+    .post('/api/v1/auth/login')
+    .send({
+      email: 'user@example.com',
+      password: 'password123',
+    })
+    .expect(200);
+
+  const freshToken = loginResponse.body.accessToken;
+
+  // 新しいトークンを使用
+  const setupResponse = await request(app.getHttpServer())
+    .post('/api/v1/auth/mfa/setup')
+    .set('Authorization', `Bearer ${freshToken}`)
+    .expect(200);
+});
+```
+
+**理由**:
+- テスト間の独立性の確保
+- トークンの有効性の保証
+- 予期しないテスト失敗の防止
