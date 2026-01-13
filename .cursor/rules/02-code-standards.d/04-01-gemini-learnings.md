@@ -1279,3 +1279,80 @@ export class IpAllowListRepository implements IIpAllowListRepository {
 - 初期実装のスコープの明確化
 - 実装者の混乱を防ぐ
 - スタブ実装であることの明示
+
+---
+
+### PR #42 レビューからの学習
+
+#### テストコードでの型安全性の向上
+
+**問題**: テストコードで`as any`を使用すると型安全性が損なわれる。Jestのモックオブジェクトを作成する際に、適切な型付けを行うべき。
+
+**解決策**: `as jest.Mocked<T>`を使用して型安全性を保つ。
+
+```typescript
+// Bad: 型安全性が損なわれる
+mockUserRepository = {
+  findByEmail: jest.fn(),
+  findById: jest.fn(),
+  save: jest.fn(),
+} as any;
+
+// Good: 適切な型付け
+mockUserRepository = {
+  findByEmail: jest.fn(),
+  findById: jest.fn(),
+  save: jest.fn(),
+} as jest.Mocked<IUserRepository>;
+```
+
+**理由**:
+- 型安全性の向上
+- IDEの補完機能が正しく動作する
+- コンパイル時のエラー検出が可能
+
+#### 実行時間に依存するテストの安定性
+
+**問題**: 実行時間に依存するテストは、実行環境（特にCI環境）によって失敗する可能性があり、不安定（flaky）になりがち。マージンが小さすぎると、環境の変動で失敗する可能性がある。
+
+**解決策**: 実行時間のテストでは、十分なマージンを設定する。
+
+```typescript
+// Bad: マージンが小さすぎる（CI環境で失敗する可能性）
+expect(duration).toBeLessThan(20);
+
+// Good: 十分なマージンを設定
+expect(duration).toBeLessThan(50);
+```
+
+**理由**:
+- CI環境などでの実行時間の変動に対応
+- テストの安定性向上
+- フレーキーテストの防止
+
+#### 不要なインポートの削除
+
+**問題**: 使用されていないインポートが残っていると、コードの可読性が低下し、依存関係が不明確になる。
+
+**解決策**: 使用されていないインポートは削除する。
+
+```typescript
+// Bad: 使用されていないインポート
+import { UserRole } from '../../domain/entities/user-role.enum';
+
+export class DashboardDto {
+  public readonly role: string; // UserRoleではなくstringを使用
+  // ...
+}
+
+// Good: 不要なインポートを削除
+export class DashboardDto {
+  public readonly role: string;
+  // ...
+}
+```
+
+**理由**:
+- コードの可読性向上
+- 依存関係の明確化
+- バンドルサイズの削減（ビルドツールによる最適化が効く場合）

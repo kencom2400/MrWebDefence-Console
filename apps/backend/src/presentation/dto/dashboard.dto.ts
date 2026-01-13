@@ -4,8 +4,6 @@
  * ダッシュボード関連のDTO定義
  */
 
-import { UserRole } from '../../domain/entities/user-role.enum';
-
 export class DashboardDto {
   public readonly userId: string;
   public readonly email: string;
