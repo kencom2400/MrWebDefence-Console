@@ -122,20 +122,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
-    services:
-      redis:
-        image: redis:alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Install Volta
         uses: volta-cli/action@v4
@@ -150,21 +142,21 @@ jobs:
         run: |
           node --version
           pnpm --version
+          docker --version
+          docker-compose --version || docker compose version
 
       - name: Install dependencies
         run: pnpm install
 
-      - name: Rebuild native modules
-        working-directory: apps/backend
-        run: npm rebuild bcrypt
+      - name: Build Docker image
+        run: docker-compose build backend || docker compose build backend
 
-      - name: Run E2E tests
-        working-directory: apps/backend
+      - name: Run E2E tests via Docker Compose
         env:
           NODE_ENV: test
           JWT_SECRET: test-jwt-secret-for-ci
           JWT_EXPIRES_IN: 1800
           BCRYPT_SALT_ROUNDS: 10
-          REDIS_HOST: localhost
-          REDIS_PORT: 6379
-        run: pnpm run test:e2e
+        run: |
+          chmod +x scripts/backend/test.sh
+          ./scripts/backend/test.sh e2e
