@@ -113,6 +113,27 @@ describe('MFA E2E Tests', () => {
 
   describe('MFA Setup Flow', () => {
     beforeAll(async () => {
+      // テストスイート開始時にRedisのブラックリストをクリア
+      // これにより、前のテストスイートでブラックリストに登録されたトークンが影響しないようにする
+      const redisHost = process.env.REDIS_HOST || 'localhost';
+      const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const Redis = require('ioredis');
+        const testClient = new Redis({
+          host: redisHost,
+          port: redisPort,
+          connectTimeout: 1000,
+          lazyConnect: true,
+        });
+        await testClient.connect();
+        await testClient.flushdb();
+        await testClient.quit();
+      } catch (error) {
+        // Redis接続エラーは無視（テスト環境によってはRedisが利用できない場合がある）
+        console.warn('Failed to clear Redis blacklist:', error);
+      }
+
       // このテストスイートの前に、ユーザーのMFA状態を確認し、必要に応じて無効化する
       const initialLoginResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
@@ -215,6 +236,28 @@ describe('MFA E2E Tests', () => {
       // このテストは前のテストに依存するが、トークンが無効になっている可能性があるため、
       // 常に新しいトークンを取得してMFAセットアップを実行する
 
+      // テスト開始時にRedisのブラックリストをクリア（前のテストでブラックリストに登録されたトークンをクリア）
+      const redisHost = process.env.REDIS_HOST || 'localhost';
+      const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const Redis = require('ioredis');
+        const testClient = new Redis({
+          host: redisHost,
+          port: redisPort,
+          connectTimeout: 1000,
+          lazyConnect: true,
+        });
+        await testClient.connect();
+        await testClient.flushdb();
+        await testClient.quit();
+        // Redisの状態が確実にクリアされるまで少し待機
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } catch (error) {
+        // Redis接続エラーは無視（テスト環境によってはRedisが利用できない場合がある）
+        console.warn('Failed to clear Redis blacklist:', error);
+      }
+
       // まず、現在のMFA状態を確認
       const loginResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
@@ -238,22 +281,8 @@ describe('MFA E2E Tests', () => {
       // 新しいトークンでMFAセットアップを実行
       const setupResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/mfa/setup')
-        .set('Authorization', `Bearer ${freshToken}`);
-
-      // 401エラーの場合は、トークンがブラックリストに登録されている可能性がある
-      // この場合は、エラーメッセージを出力してテストを失敗させる
-      if (setupResponse.status === 401) {
-        throw new Error(
-          `MFA setup failed with status 401. This suggests the token was blacklisted. Response: ${JSON.stringify(setupResponse.body)}. Token was obtained from login: ${JSON.stringify({
-            status: loginResponse.status,
-            hasAccessToken: !!loginResponse.body.accessToken,
-            requiresMfa: loginResponse.body.requiresMfa,
-            tokenPreview: freshToken ? freshToken.substring(0, 20) + '...' : 'none',
-          })}`,
-        );
-      }
-
-      expect(setupResponse.status).toBe(200);
+        .set('Authorization', `Bearer ${freshToken}`)
+        .expect(200);
 
       expect(setupResponse.body.secret).toBeDefined();
       const currentSecret = setupResponse.body.secret;
@@ -342,6 +371,26 @@ describe('MFA E2E Tests', () => {
     let loginToken: string;
 
     beforeAll(async () => {
+      // テストスイート開始時にRedisのブラックリストをクリア
+      const redisHost = process.env.REDIS_HOST || 'localhost';
+      const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const Redis = require('ioredis');
+        const testClient = new Redis({
+          host: redisHost,
+          port: redisPort,
+          connectTimeout: 1000,
+          lazyConnect: true,
+        });
+        await testClient.connect();
+        await testClient.flushdb();
+        await testClient.quit();
+      } catch (error) {
+        // Redis接続エラーは無視（テスト環境によってはRedisが利用できない場合がある）
+        console.warn('Failed to clear Redis blacklist:', error);
+      }
+
       // MFAセットアップ検証が完了していることを確認
       // もし完了していない場合は、セットアップを実行
       // 注意: このテストは、MFA Setup Flowのテストの後に実行されることを前提としている
@@ -514,6 +563,26 @@ describe('MFA E2E Tests', () => {
     let mfaAccessToken: string;
 
     beforeAll(async () => {
+      // テストスイート開始時にRedisのブラックリストをクリア
+      const redisHost = process.env.REDIS_HOST || 'localhost';
+      const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const Redis = require('ioredis');
+        const testClient = new Redis({
+          host: redisHost,
+          port: redisPort,
+          connectTimeout: 1000,
+          lazyConnect: true,
+        });
+        await testClient.connect();
+        await testClient.flushdb();
+        await testClient.quit();
+      } catch (error) {
+        // Redis接続エラーは無視（テスト環境によってはRedisが利用できない場合がある）
+        console.warn('Failed to clear Redis blacklist:', error);
+      }
+
       // MFA有効化後は、通常のログインではトークンが取得できない（中間状態が返される）
       // MFA検証後にトークンを取得する必要がある
       // mfaSecretが存在しない場合は、MFAセットアップを実行
@@ -739,6 +808,26 @@ describe('MFA E2E Tests', () => {
     let disableAccessToken: string;
 
     beforeAll(async () => {
+      // テストスイート開始時にRedisのブラックリストをクリア
+      const redisHost = process.env.REDIS_HOST || 'localhost';
+      const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const Redis = require('ioredis');
+        const testClient = new Redis({
+          host: redisHost,
+          port: redisPort,
+          connectTimeout: 1000,
+          lazyConnect: true,
+        });
+        await testClient.connect();
+        await testClient.flushdb();
+        await testClient.quit();
+      } catch (error) {
+        // Redis接続エラーは無視（テスト環境によってはRedisが利用できない場合がある）
+        console.warn('Failed to clear Redis blacklist:', error);
+      }
+
       // MFA有効化後は、通常のログインではトークンが取得できない（中間状態が返される）
       // MFA検証後にトークンを取得する必要がある
       // mfaSecretが設定されている場合は、MFA検証を経てトークンを取得
