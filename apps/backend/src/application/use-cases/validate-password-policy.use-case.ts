@@ -50,15 +50,17 @@ export class ValidatePasswordPolicyUseCase {
     const strengthScore = this.passwordPolicyService.calculateStrengthScore(password);
 
     // 検証が成功した場合のみ、パスワード履歴をチェック
+    // ドメイン層はインフラ層に依存しないため、ユースケース層で比較ロジックを実装
     let isReused = false;
     if (validationResult.isValid && userId) {
-      // パスワード履歴をチェック（平文パスワードを使用してbcrypt.compareで比較）
-      isReused = await this.passwordHistoryRepository.checkPasswordInHistoryByPlainText(
-        userId,
-        password,
-        this.passwordService,
-        policy.historyCount,
-      );
+      const history = await this.passwordHistoryRepository.getPasswordHistory(userId, policy.historyCount);
+      for (const hash of history) {
+        const isMatch = await this.passwordService.compare(password, hash);
+        if (isMatch) {
+          isReused = true;
+          break;
+        }
+      }
     }
 
     // 結果を返却

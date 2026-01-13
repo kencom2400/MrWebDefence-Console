@@ -29,7 +29,6 @@ describe('ValidatePasswordPolicyUseCase', () => {
       savePasswordHistory: jest.fn(),
       getPasswordHistory: jest.fn(),
       checkPasswordInHistory: jest.fn(),
-      checkPasswordInHistoryByPlainText: jest.fn(),
       deleteOldHistory: jest.fn(),
     } as any;
 
@@ -45,11 +44,14 @@ describe('ValidatePasswordPolicyUseCase', () => {
       const mockPolicy = PasswordPolicy.create();
       passwordPolicyService.createPasswordPolicy.mockReturnValue(mockPolicy);
       passwordPolicyService.calculateStrengthScore.mockReturnValue(85);
+      passwordHistoryRepository.getPasswordHistory.mockResolvedValue([]);
+      passwordService.compare.mockResolvedValue(false);
 
       const result = await useCase.execute('user-1', 'Password123!');
 
       expect(passwordPolicyService.createPasswordPolicy).toHaveBeenCalledTimes(1);
       expect(passwordPolicyService.calculateStrengthScore).toHaveBeenCalledWith('Password123!');
+      expect(passwordHistoryRepository.getPasswordHistory).toHaveBeenCalledWith('user-1', mockPolicy.historyCount);
       expect(result.isValid).toBe(true);
       expect(result.errors).toHaveLength(0);
       expect(result.strengthScore).toBe(85);
@@ -67,6 +69,8 @@ describe('ValidatePasswordPolicyUseCase', () => {
       expect(result.errors.length).toBeGreaterThan(0);
       expect(result.strengthScore).toBe(45);
       expect(result.isReused).toBe(false);
+      // 検証失敗時は履歴チェックをスキップするため、getPasswordHistoryは呼ばれない
+      expect(passwordHistoryRepository.getPasswordHistory).not.toHaveBeenCalled();
     });
 
     it('正常系: 検証失敗時も強度スコアを計算する', async () => {
@@ -79,22 +83,21 @@ describe('ValidatePasswordPolicyUseCase', () => {
       expect(result.isValid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(0);
       expect(result.strengthScore).toBe(30);
+      // 検証失敗時は履歴チェックをスキップするため、getPasswordHistoryは呼ばれない
+      expect(passwordHistoryRepository.getPasswordHistory).not.toHaveBeenCalled();
     });
 
     it('正常系: 再利用されたパスワードを検出できる', async () => {
       const mockPolicy = PasswordPolicy.create();
       passwordPolicyService.createPasswordPolicy.mockReturnValue(mockPolicy);
       passwordPolicyService.calculateStrengthScore.mockReturnValue(85);
-      passwordHistoryRepository.checkPasswordInHistoryByPlainText.mockResolvedValue(true);
+      passwordHistoryRepository.getPasswordHistory.mockResolvedValue(['$2b$10$oldHash1']);
+      passwordService.compare.mockResolvedValue(true);
 
       const result = await useCase.execute('user-1', 'Password123!');
 
-      expect(passwordHistoryRepository.checkPasswordInHistoryByPlainText).toHaveBeenCalledWith(
-        'user-1',
-        'Password123!',
-        passwordService,
-        mockPolicy.historyCount,
-      );
+      expect(passwordHistoryRepository.getPasswordHistory).toHaveBeenCalledWith('user-1', mockPolicy.historyCount);
+      expect(passwordService.compare).toHaveBeenCalledWith('Password123!', '$2b$10$oldHash1');
       expect(result.isValid).toBe(false);
       expect(result.isReused).toBe(true);
       expect(result.message).toBe('Password has been used recently');
@@ -107,7 +110,7 @@ describe('ValidatePasswordPolicyUseCase', () => {
 
       const result = await useCase.execute(null, 'Password123!');
 
-      expect(passwordHistoryRepository.checkPasswordInHistoryByPlainText).not.toHaveBeenCalled();
+      expect(passwordHistoryRepository.getPasswordHistory).not.toHaveBeenCalled();
       expect(result.isValid).toBe(true);
       expect(result.isReused).toBe(false);
     });
@@ -119,7 +122,7 @@ describe('ValidatePasswordPolicyUseCase', () => {
 
       const result = await useCase.execute('user-1', 'short');
 
-      expect(passwordHistoryRepository.checkPasswordInHistoryByPlainText).not.toHaveBeenCalled();
+      expect(passwordHistoryRepository.getPasswordHistory).not.toHaveBeenCalled();
       expect(result.isValid).toBe(false);
       expect(result.isReused).toBe(false);
     });

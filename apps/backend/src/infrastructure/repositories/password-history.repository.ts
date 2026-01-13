@@ -77,32 +77,6 @@ export class PasswordHistoryRepository implements IPasswordHistoryRepository {
     return history.includes(passwordHash);
   }
 
-  /**
-   * パスワードが履歴に含まれているかチェックする（平文パスワードを使用）
-   * @param userId ユーザーID
-   * @param password 平文パスワード
-   * @param passwordService PasswordService（bcrypt.compareを使用するため）
-   * @param count チェックする履歴数
-   * @returns 履歴に含まれている場合true、そうでない場合false
-   */
-  public async checkPasswordInHistoryByPlainText(
-    userId: string,
-    password: string,
-    passwordService: { compare: (password: string, hash: string) => Promise<boolean> },
-    count: number,
-  ): Promise<boolean> {
-    const history = await this.getPasswordHistory(userId, count);
-    
-    // 履歴内の各ハッシュとbcrypt.compareを使用して比較
-    for (const hash of history) {
-      const isMatch = await passwordService.compare(password, hash);
-      if (isMatch) {
-        return true;
-      }
-    }
-    
-    return false;
-  }
 
   /**
    * 古いパスワード履歴を削除する（最新N個を保持）

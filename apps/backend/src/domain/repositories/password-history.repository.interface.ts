@@ -28,24 +28,11 @@ export interface IPasswordHistoryRepository {
    * @param passwordHash ハッシュ化されたパスワード
    * @param count チェックする履歴数
    * @returns 履歴に含まれている場合true、そうでない場合false
-   * @deprecated bcryptは毎回異なるハッシュを生成するため、このメソッドは使用しない。代わりにcheckPasswordInHistoryByPlainTextを使用する。
+   * @deprecated bcryptは毎回異なるハッシュを生成するため、このメソッドは使用しない。
+   * 代わりに、ユースケース層でgetPasswordHistoryを使用して履歴を取得し、
+   * PasswordService.compareを使用して比較するロジックを実装する。
    */
   checkPasswordInHistory(userId: string, passwordHash: string, count: number): Promise<boolean>;
-
-  /**
-   * パスワードが履歴に含まれているかチェックする（平文パスワードを使用）
-   * @param userId ユーザーID
-   * @param password 平文パスワード
-   * @param passwordService PasswordService（bcrypt.compareを使用するため）
-   * @param count チェックする履歴数
-   * @returns 履歴に含まれている場合true、そうでない場合false
-   */
-  checkPasswordInHistoryByPlainText(
-    userId: string,
-    password: string,
-    passwordService: { compare: (password: string, hash: string) => Promise<boolean> },
-    count: number,
-  ): Promise<boolean>;
 
   /**
    * 古いパスワード履歴を削除する（最新N個を保持）

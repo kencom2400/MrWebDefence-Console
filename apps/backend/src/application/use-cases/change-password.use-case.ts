@@ -69,12 +69,16 @@ export class ChangePasswordUseCase {
     }
 
     // パスワード履歴をチェック（平文パスワードを使用してbcrypt.compareで比較）
-    const isReused = await this.passwordHistoryRepository.checkPasswordInHistoryByPlainText(
-      userId,
-      newPassword,
-      this.passwordService,
-      policy.historyCount,
-    );
+    // ドメイン層はインフラ層に依存しないため、ユースケース層で比較ロジックを実装
+    const history = await this.passwordHistoryRepository.getPasswordHistory(userId, policy.historyCount);
+    let isReused = false;
+    for (const hash of history) {
+      const isMatch = await this.passwordService.compare(newPassword, hash);
+      if (isMatch) {
+        isReused = true;
+        break;
+      }
+    }
     if (isReused) {
       throw new BadRequestException({
         message: 'Password has been used recently. Please choose a different password.',

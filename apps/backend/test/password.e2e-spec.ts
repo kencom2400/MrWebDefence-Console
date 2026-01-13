@@ -11,7 +11,6 @@ import { AppModule } from '../src/app.module';
 import Redis from 'ioredis';
 import { UserRepository } from '../src/infrastructure/repositories/user.repository';
 import { PasswordHistoryRepository } from '../src/infrastructure/repositories/password-history.repository';
-import { PasswordService } from '../src/infrastructure/services/password.service';
 import { User } from '../src/domain/entities/user.entity';
 
 describe('Password E2E Tests', () => {
@@ -35,15 +34,12 @@ describe('Password E2E Tests', () => {
         });
 
         await testClient.ping();
-        console.log(`✅ Redis接続成功: ${redisHost}:${redisPort}`);
         break;
       } catch (error) {
         retries--;
         if (retries === 0) {
-          console.warn(`⚠️  Redis接続失敗（続行）: ${error}`);
           testClient = null as any;
         } else {
-          console.log(`🔄 Redis接続リトライ中... (残り${retries}回)`);
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
@@ -54,7 +50,7 @@ describe('Password E2E Tests', () => {
       try {
         await testClient.flushdb();
       } catch (error) {
-        console.warn(`⚠️  Redis flushdb失敗（続行）: ${error}`);
+        // Redis flushdb失敗時は続行
       }
     }
 
@@ -87,9 +83,6 @@ describe('Password E2E Tests', () => {
       Buffer.from(tempToken.split('.')[1], 'base64').toString('utf-8'),
     );
     userId = payload.sub;
-    
-    // 一時トークンは使用しない（各テストで新しいトークンを取得する）
-    // accessTokenは各テストで取得する
   });
 
   afterAll(async () => {
@@ -106,41 +99,12 @@ describe('Password E2E Tests', () => {
       // 各テスト前にRedisの状態をクリア
       if (testClient) {
         try {
-          console.log(`[GET /api/v1/auth/password/policy] beforeEach: flushdb実行前`);
-          // flushdb前のブラックリストの状態を確認
-          const keysBefore = await testClient.keys('blacklist:*');
-          console.log(`[GET /api/v1/auth/password/policy] beforeEach: flushdb前のブラックリストキー数 = ${keysBefore.length}`);
-          
           await testClient.flushdb();
-          console.log(`[GET /api/v1/auth/password/policy] beforeEach: flushdb実行後`);
-          
-          // flushdbの完了を待つ（複数回確認）
-          let retries = 5;
-          while (retries > 0) {
-            await new Promise((resolve) => setTimeout(resolve, 100));
-            const keys = await testClient.keys('blacklist:*');
-            console.log(`[GET /api/v1/auth/password/policy] beforeEach: flushdb後のブラックリストキー数 = ${keys.length} (リトライ: ${6 - retries})`);
-            if (keys.length === 0) {
-              break;
-            }
-            retries--;
-          }
-          
-          // 最終確認
-          const keysAfter = await testClient.keys('blacklist:*');
-          if (keysAfter.length > 0) {
-            console.warn(`⚠️  [GET /api/v1/auth/password/policy] beforeEach: flushdb後もブラックリストにキーが残っています: ${keysAfter.slice(0, 3).join(', ')}`);
-          }
         } catch (error) {
-          console.warn(`⚠️  Redis flushdb失敗（続行）: ${error}`);
+          // Redis flushdb失敗時は続行
         }
       }
 
-      // ログインしてトークンを取得（同じ秒内にログインすると同じトークンが生成される可能性があるため、少し待機）
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      
-      console.log(`[GET /api/v1/auth/password/policy] beforeEach: ログイン前のブラックリストキー数 = ${testClient ? (await testClient.keys('blacklist:*')).length : 'N/A'}`);
-      
       const loginRes = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
@@ -151,48 +115,17 @@ describe('Password E2E Tests', () => {
 
       policyToken = loginRes.body.accessToken;
       expect(policyToken).toBeDefined();
-      
-      console.log(`[GET /api/v1/auth/password/policy] beforeEach: ログイン後のブラックリストキー数 = ${testClient ? (await testClient.keys('blacklist:*')).length : 'N/A'}`);
-      if (testClient) {
-        const keysAfterLogin = await testClient.keys('blacklist:*');
-        if (keysAfterLogin.length > 0) {
-          console.warn(`⚠️  [GET /api/v1/auth/password/policy] beforeEach: ログイン後にブラックリストにキーが追加されました: ${keysAfterLogin.slice(0, 3).join(', ')}`);
-          // ログイン後に追加されたキーが、今回生成したトークンと同じか確認
-          const currentTokenKey = `blacklist:${policyToken}`;
-          if (keysAfterLogin.includes(currentTokenKey)) {
-            console.warn(`⚠️  [GET /api/v1/auth/password/policy] beforeEach: 生成したトークンが既にブラックリストに登録されています！`);
-            // ブラックリストから削除
-            await testClient.del(currentTokenKey);
-            console.log(`[GET /api/v1/auth/password/policy] beforeEach: ブラックリストから削除しました`);
-          }
-        }
-      }
 
-      // デバッグ: 保管されているトークンの情報
-      console.log(`[GET /api/v1/auth/password/policy] beforeEach: 保管されているトークン = ${policyToken ? policyToken.substring(0, 20) + '...' : 'undefined'}`);
-      console.log(`[GET /api/v1/auth/password/policy] beforeEach: トークンの完全な値 = ${policyToken || 'undefined'}`);
+      // 生成したトークンが既にブラックリストに登録されている場合、削除
       if (testClient && policyToken) {
         const isBlacklisted = await testClient.get(`blacklist:${policyToken}`);
-        console.log(`[GET /api/v1/auth/password/policy] beforeEach: ブラックリスト状態 = ${!!isBlacklisted}`);
         if (isBlacklisted) {
-          console.warn(`⚠️  [GET /api/v1/auth/password/policy] beforeEach: トークンがブラックリストに登録されています！`);
-          // ブラックリストのキーを確認
-          const blacklistKey = `blacklist:${policyToken}`;
-          const blacklistValue = await testClient.get(blacklistKey);
-          console.warn(`⚠️  [GET /api/v1/auth/password/policy] beforeEach: ブラックリストキー = ${blacklistKey}, 値 = ${blacklistValue}`);
+          await testClient.del(`blacklist:${policyToken}`);
         }
       }
     });
 
     it('正常系: パスワードポリシー設定を取得できる', async () => {
-      // デバッグ: 使用しているトークンの情報
-      console.log(`[GET /api/v1/auth/password/policy] 使用しているトークン = ${policyToken ? policyToken.substring(0, 20) + '...' : 'undefined'}`);
-      console.log(`[GET /api/v1/auth/password/policy] 保管されているトークン = ${policyToken ? policyToken.substring(0, 20) + '...' : 'undefined'}`);
-      if (testClient && policyToken) {
-        const isBlacklisted = await testClient.get(`blacklist:${policyToken}`);
-        console.log(`[GET /api/v1/auth/password/policy] リクエスト前のブラックリスト状態 = ${!!isBlacklisted}`);
-      }
-
       const response = await request(app.getHttpServer())
         .get('/api/v1/auth/password/policy')
         .set('Authorization', `Bearer ${policyToken}`)
@@ -227,15 +160,11 @@ describe('Password E2E Tests', () => {
       if (testClient) {
         try {
           await testClient.flushdb();
-          await new Promise((resolve) => setTimeout(resolve, 50));
         } catch (error) {
-          console.warn(`⚠️  Redis flushdb失敗（続行）: ${error}`);
+          // Redis flushdb失敗時は続行
         }
       }
 
-      // ログインしてトークンを取得（同じ秒内にログインすると同じトークンが生成される可能性があるため、少し待機）
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      
       const loginRes = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
@@ -247,29 +176,16 @@ describe('Password E2E Tests', () => {
       validateToken = loginRes.body.accessToken;
       expect(validateToken).toBeDefined();
 
-      // デバッグ: 保管されているトークンの情報
-      console.log(`[POST /api/v1/auth/password/validate] beforeEach: 保管されているトークン = ${validateToken ? validateToken.substring(0, 20) + '...' : 'undefined'}`);
+      // 生成したトークンが既にブラックリストに登録されている場合、削除
       if (testClient && validateToken) {
         const isBlacklisted = await testClient.get(`blacklist:${validateToken}`);
-        console.log(`[POST /api/v1/auth/password/validate] beforeEach: ブラックリスト状態 = ${!!isBlacklisted}`);
         if (isBlacklisted) {
-          console.warn(`⚠️  [POST /api/v1/auth/password/validate] beforeEach: 生成したトークンが既にブラックリストに登録されています！`);
-          // ブラックリストから削除
           await testClient.del(`blacklist:${validateToken}`);
-          console.log(`[POST /api/v1/auth/password/validate] beforeEach: ブラックリストから削除しました`);
         }
       }
     });
 
     it('正常系: 有効なパスワードを検証できる', async () => {
-      // デバッグ: 使用しているトークンの情報
-      console.log(`[POST /api/v1/auth/password/validate] 使用しているトークン = ${validateToken ? validateToken.substring(0, 20) + '...' : 'undefined'}`);
-      console.log(`[POST /api/v1/auth/password/validate] 保管されているトークン = ${validateToken ? validateToken.substring(0, 20) + '...' : 'undefined'}`);
-      if (testClient && validateToken) {
-        const isBlacklisted = await testClient.get(`blacklist:${validateToken}`);
-        console.log(`[POST /api/v1/auth/password/validate] リクエスト前のブラックリスト状態 = ${!!isBlacklisted}`);
-      }
-
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/password/validate')
         .set('Authorization', `Bearer ${validateToken}`)
@@ -290,30 +206,14 @@ describe('Password E2E Tests', () => {
     });
 
     it('正常系: 無効なパスワードを検証できる', async () => {
-      // デバッグ: 使用しているトークンの情報
-      console.log(`[POST /api/v1/auth/password/validate] 使用しているトークン = ${validateToken ? validateToken.substring(0, 20) + '...' : 'undefined'}`);
-      console.log(`[POST /api/v1/auth/password/validate] 保管されているトークン = ${validateToken ? validateToken.substring(0, 20) + '...' : 'undefined'}`);
-      if (testClient && validateToken) {
-        const isBlacklisted = await testClient.get(`blacklist:${validateToken}`);
-        console.log(`[POST /api/v1/auth/password/validate] リクエスト前のブラックリスト状態 = ${!!isBlacklisted}`);
-      }
-
       // DTOバリデーションを通過するが、ポリシー違反のパスワード（記号なし）
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/password/validate')
         .set('Authorization', `Bearer ${validateToken}`)
         .send({
           password: 'nouppercase123',
-        });
-
-      if (response.status !== 200) {
-        console.error(`[POST /api/v1/auth/password/validate] リクエスト失敗: ${response.status}`, response.body);
-        if (testClient && validateToken) {
-          const isBlacklistedAfter = await testClient.get(`blacklist:${validateToken}`);
-          console.error(`[POST /api/v1/auth/password/validate] リクエスト後のブラックリスト状態 = ${!!isBlacklistedAfter}`);
-        }
-      }
-      expect(response.status).toBe(200);
+        })
+        .expect(200);
 
       expect(response.body.isValid).toBe(false);
       expect(response.body.errors.length).toBeGreaterThan(0);
@@ -339,10 +239,8 @@ describe('Password E2E Tests', () => {
       if (testClient) {
         try {
           await testClient.flushdb();
-          // Redisの操作が完了するまで少し待機
-          await new Promise((resolve) => setTimeout(resolve, 50));
         } catch (error) {
-          console.warn(`⚠️  Redis flushdb失敗（続行）: ${error}`);
+          // Redis flushdb失敗時は続行
         }
       }
 
@@ -370,14 +268,9 @@ describe('Password E2E Tests', () => {
         await userRepository.save(resetUser);
 
         // パスワード履歴をクリア
-        // PasswordHistoryRepositoryはインメモリなので、直接削除する方法がない
-        // 代わりに、古い履歴を削除するメソッドを使用（keepCount=0で全削除）
         await passwordHistoryRepository.deleteOldHistory(testUser.id, 0);
       }
 
-      // ログインしてトークンを取得（同じ秒内にログインすると同じトークンが生成される可能性があるため、少し待機）
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      
       const loginRes = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
@@ -389,46 +282,24 @@ describe('Password E2E Tests', () => {
       testToken = loginRes.body.accessToken;
       expect(testToken).toBeDefined();
 
-      // デバッグ: 保管されているトークンの情報
-      console.log(`[POST /api/v1/auth/password/change] beforeEach: 保管されているトークン = ${testToken ? testToken.substring(0, 20) + '...' : 'undefined'}`);
+      // 生成したトークンが既にブラックリストに登録されている場合、削除
       if (testClient && testToken) {
         const isBlacklisted = await testClient.get(`blacklist:${testToken}`);
-        console.log(`[POST /api/v1/auth/password/change] beforeEach: ブラックリスト状態 = ${!!isBlacklisted}`);
         if (isBlacklisted) {
-          console.warn(`⚠️  [POST /api/v1/auth/password/change] beforeEach: 生成したトークンが既にブラックリストに登録されています！`);
-          // ブラックリストから削除
           await testClient.del(`blacklist:${testToken}`);
-          console.log(`[POST /api/v1/auth/password/change] beforeEach: ブラックリストから削除しました`);
         }
       }
     });
 
     it('正常系: パスワード変更に成功する', async () => {
-      // デバッグ: 使用しているトークンの情報
-      console.log(`[POST /api/v1/auth/password/change] 使用しているトークン = ${testToken ? testToken.substring(0, 20) + '...' : 'undefined'}`);
-      console.log(`[POST /api/v1/auth/password/change] 保管されているトークン = ${testToken ? testToken.substring(0, 20) + '...' : 'undefined'}`);
-      if (testClient && testToken) {
-        const isBlacklisted = await testClient.get(`blacklist:${testToken}`);
-        console.log(`[POST /api/v1/auth/password/change] リクエスト前のブラックリスト状態 = ${!!isBlacklisted}`);
-      }
-
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/password/change')
         .set('Authorization', `Bearer ${testToken}`)
         .send({
           currentPassword: 'password123',
           newPassword: 'NewPassword456@',
-        });
-
-      if (response.status !== 200) {
-        console.error(`[POST /api/v1/auth/password/change] リクエスト失敗: ${response.status}`, response.body);
-        console.error(`[POST /api/v1/auth/password/change] 使用したトークン = ${testToken ? testToken.substring(0, 20) + '...' : 'undefined'}`);
-        if (testClient && testToken) {
-          const isBlacklistedAfter = await testClient.get(`blacklist:${testToken}`);
-          console.error(`[POST /api/v1/auth/password/change] リクエスト後のブラックリスト状態 = ${!!isBlacklistedAfter}`);
-        }
-      }
-      expect(response.status).toBe(200);
+        })
+        .expect(200);
 
       expect(response.body).toHaveProperty('message');
       expect(response.body.message).toBe('Password changed successfully');
@@ -446,10 +317,6 @@ describe('Password E2E Tests', () => {
     });
 
     it('異常系: 現在のパスワードが間違っている場合、401エラー', async () => {
-      // デバッグ: 使用しているトークンの情報
-      console.log(`[POST /api/v1/auth/password/change] 使用しているトークン = ${testToken ? testToken.substring(0, 20) + '...' : 'undefined'}`);
-      console.log(`[POST /api/v1/auth/password/change] 保管されているトークン = ${testToken ? testToken.substring(0, 20) + '...' : 'undefined'}`);
-
       await request(app.getHttpServer())
         .post('/api/v1/auth/password/change')
         .set('Authorization', `Bearer ${testToken}`)
@@ -461,10 +328,6 @@ describe('Password E2E Tests', () => {
     });
 
     it('異常系: 新しいパスワードがポリシーに違反する場合、400エラー', async () => {
-      // デバッグ: 使用しているトークンの情報
-      console.log(`[POST /api/v1/auth/password/change] 使用しているトークン = ${testToken ? testToken.substring(0, 20) + '...' : 'undefined'}`);
-      console.log(`[POST /api/v1/auth/password/change] 保管されているトークン = ${testToken ? testToken.substring(0, 20) + '...' : 'undefined'}`);
-
       // ポリシー違反のパスワードで変更を試みる（記号なし）
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/password/change')
@@ -489,10 +352,6 @@ describe('Password E2E Tests', () => {
     });
 
     it('異常系: 新しいパスワードが再利用されている場合、400エラー', async () => {
-      // デバッグ: 使用しているトークンの情報
-      console.log(`[POST /api/v1/auth/password/change] 使用しているトークン（再利用テスト開始時） = ${testToken ? testToken.substring(0, 20) + '...' : 'undefined'}`);
-      console.log(`[POST /api/v1/auth/password/change] 保管されているトークン（再利用テスト開始時） = ${testToken ? testToken.substring(0, 20) + '...' : 'undefined'}`);
-
       // まずパスワードを変更
       await request(app.getHttpServer())
         .post('/api/v1/auth/password/change')
@@ -513,7 +372,6 @@ describe('Password E2E Tests', () => {
         .expect(200);
 
       const newAccessToken1 = loginResponse1.body.accessToken;
-      console.log(`[POST /api/v1/auth/password/change] 再利用テスト: 1回目のパスワード変更後のトークン = ${newAccessToken1 ? newAccessToken1.substring(0, 20) + '...' : 'undefined'}`);
 
       // さらに別のパスワードに変更
       await request(app.getHttpServer())
@@ -535,45 +393,16 @@ describe('Password E2E Tests', () => {
         .expect(200);
 
       const newAccessToken2 = loginResponse2.body.accessToken;
-      console.log(`[POST /api/v1/auth/password/change] 再利用テスト: 2回目のパスワード変更後のトークン = ${newAccessToken2 ? newAccessToken2.substring(0, 20) + '...' : 'undefined'}`);
 
       // 以前のパスワード（NewPassword456@）に戻そうとするとエラー
-      console.log(`[POST /api/v1/auth/password/change] 再利用テスト: 再利用チェック用のトークン = ${newAccessToken2 ? newAccessToken2.substring(0, 20) + '...' : 'undefined'}`);
-      
-      // パスワード履歴の状態を確認（デバッグ用）
-      const passwordHistoryRepository = moduleFixture.get<PasswordHistoryRepository>(
-        'IPasswordHistoryRepository',
-      );
-      const userRepository = moduleFixture.get<UserRepository>('IUserRepository');
-      const testUser = await userRepository.findByEmail('user@example.com');
-      if (testUser) {
-        const history = await passwordHistoryRepository.getPasswordHistory(testUser.id, 5);
-        console.log(`[POST /api/v1/auth/password/change] 再利用テスト: パスワード履歴数 = ${history.length}`);
-        console.log(`[POST /api/v1/auth/password/change] 再利用テスト: パスワード履歴 = ${history.map(h => h.substring(0, 20) + '...').join(', ')}`);
-        
-        // NewPassword456@のハッシュを計算して、履歴に含まれているか確認
-        const passwordService = moduleFixture.get<PasswordService>('PasswordService');
-        const newPassword456Hash = await passwordService.hash('NewPassword456@');
-        const isInHistory = await passwordHistoryRepository.checkPasswordInHistory(
-          testUser.id,
-          newPassword456Hash,
-          5,
-        );
-        console.log(`[POST /api/v1/auth/password/change] 再利用テスト: NewPassword456@が履歴に含まれているか = ${isInHistory}`);
-      }
-      
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/password/change')
         .set('Authorization', `Bearer ${newAccessToken2}`)
         .send({
           currentPassword: 'AnotherPassword789!',
           newPassword: 'NewPassword456@',
-        });
-
-      if (response.status !== 400) {
-        console.error(`[POST /api/v1/auth/password/change] 再利用テスト: 期待される400エラーが発生しませんでした。ステータス = ${response.status}`, response.body);
-      }
-      expect(response.status).toBe(400);
+        })
+        .expect(400);
 
       expect(response.body).toHaveProperty('errorCode');
       expect(response.body.errorCode).toBe('PASSWORD_REUSED');
@@ -590,4 +419,3 @@ describe('Password E2E Tests', () => {
     });
   });
 });
-

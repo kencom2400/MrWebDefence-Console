@@ -1447,3 +1447,113 @@ it('正常系: MFAセットアップ検証に成功する', async () => {
 - テスト間の独立性の確保
 - トークンの有効性の保証
 - 予期しないテスト失敗の防止
+
+### 13-12. 依存関係の逆転原則（DIP）の遵守（PR #43）
+
+**学習元**: PR #43 - MWD-32: パスワードポリシー機能実装（Geminiレビュー指摘）
+
+#### ドメイン層のインターフェースがインフラ層に依存しない
+
+**問題**: ドメイン層のインターフェース（`IPasswordHistoryRepository`）が、インフラ層のサービス（`PasswordService`）に依存しているため、依存関係の逆転原則（DIP）に違反している。
+
+**解決策**: ドメイン層のインターフェースからインフラ層への依存を削除し、比較ロジックをユースケース層に移動する。
+
+```typescript
+// Bad: ドメイン層のインターフェースがインフラ層に依存
+export interface IPasswordHistoryRepository {
+  checkPasswordInHistoryByPlainText(
+    userId: string,
+    password: string,
+    passwordService: { compare: (password: string, hash: string) => Promise<boolean> }, // インフラ層への依存
+    count: number,
+  ): Promise<boolean>;
+}
+
+// Good: ドメイン層のインターフェースはインフラ層に依存しない
+export interface IPasswordHistoryRepository {
+  getPasswordHistory(userId: string, count: number): Promise<string[]>;
+}
+
+// ユースケース層で比較ロジックを実装
+export class ChangePasswordUseCase {
+  // パスワード履歴をチェック（平文パスワードを使用してbcrypt.compareで比較）
+  // ドメイン層はインフラ層に依存しないため、ユースケース層で比較ロジックを実装
+  const history = await this.passwordHistoryRepository.getPasswordHistory(userId, policy.historyCount);
+  let isReused = false;
+  for (const hash of history) {
+    const isMatch = await this.passwordService.compare(newPassword, hash);
+    if (isMatch) {
+      isReused = true;
+      break;
+    }
+  }
+}
+```
+
+**理由**:
+- 依存関係の逆転原則（DIP）の遵守
+- ドメイン層の独立性の確保
+- アーキテクチャの一貫性の維持
+
+#### E2EテストのデバッグログとsetTimeoutの削除
+
+**問題**: E2Eテストに多くのデバッグログ（`console.log`）が含まれており、テストコードが読みにくくなっている。また、`setTimeout`に依存したテストは不安定になる可能性がある。
+
+**解決策**: デバッグログを削除し、`setTimeout`を削除または最小限にする。エラーハンドリングのログは必要最小限に留める。
+
+```typescript
+// Bad: 多くのデバッグログとsetTimeout
+beforeEach(async () => {
+  await testClient.flushdb();
+  await new Promise((resolve) => setTimeout(resolve, 100)); // 不安定
+  console.log(`[GET /api/v1/auth/password/policy] beforeEach: flushdb実行前`);
+  console.log(`[GET /api/v1/auth/password/policy] beforeEach: ログイン前のブラックリストキー数 = ${keys.length}`);
+  // ... 多くのデバッグログ
+});
+
+// Good: デバッグログを削除し、setTimeoutを削除
+beforeEach(async () => {
+  if (testClient) {
+    try {
+      await testClient.flushdb();
+    } catch (error) {
+      // Redis flushdb失敗時は続行
+    }
+  }
+  
+  const loginRes = await request(app.getHttpServer())
+    .post('/api/v1/auth/login')
+    .send({
+      email: 'user@example.com',
+      password: 'password123',
+    })
+    .expect(200);
+  
+  policyToken = loginRes.body.accessToken;
+  expect(policyToken).toBeDefined();
+  
+  // 生成したトークンが既にブラックリストに登録されている場合、削除
+  if (testClient && policyToken) {
+    const isBlacklisted = await testClient.get(`blacklist:${policyToken}`);
+    if (isBlacklisted) {
+      await testClient.del(`blacklist:${policyToken}`);
+    }
+  }
+});
+```
+
+**理由**:
+- テストコードの可読性向上
+- テストの安定性向上（`setTimeout`に依存しない）
+- 本番環境に近いテストコード
+
+#### 一時的なドキュメントファイルの削除
+
+**問題**: 開発中の一時的なドキュメントファイル（`docs/e2e-token-timeline.md`など）がリポジトリに残っている。
+
+**解決策**: 一時的なドキュメントファイルは、開発完了後に削除するか、正式なドキュメントとして整理する。
+
+**理由**:
+- リポジトリの整理
+- 不要なファイルの削除
+- ドキュメントの一貫性の維持
