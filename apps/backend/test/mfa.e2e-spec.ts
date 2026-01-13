@@ -211,136 +211,74 @@ describe('MFA E2E Tests', () => {
 
     it('正常系: MFAセットアップ検証に成功する', async () => {
       // このテストは前のテストに依存するが、トークンが無効になっている可能性があるため、
-      // 必要に応じて再ログインとMFAセットアップを実行する
+      // 常に新しいトークンを取得してMFAセットアップを実行する
 
       // まず、現在のMFA状態を確認
-      let currentToken = accessToken;
-      let currentSecret = mfaSecret;
+      const loginResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'user@example.com',
+          password: 'password123',
+        });
 
-      // トークンまたはシークレットが無い場合は、セットアップからやり直す
-      if (!currentToken || !currentSecret) {
-        const initialLoginResponse = await request(app.getHttpServer())
-          .post('/api/v1/auth/login')
-          .send({
-            email: 'user@example.com',
-            password: 'password123',
-          });
-
-        // MFA有効化されている場合は、テストをスキップ
-        if (initialLoginResponse.body.requiresMfa) {
-          console.warn('MFA is already enabled. Skipping this test.');
-          return;
-        }
-
-        expect(initialLoginResponse.status).toBe(200);
-        expect(initialLoginResponse.body.accessToken).toBeDefined();
-        currentToken = initialLoginResponse.body.accessToken;
-
-        const initialSetupResponse = await request(app.getHttpServer())
-          .post('/api/v1/auth/mfa/setup')
-          .set('Authorization', `Bearer ${currentToken}`)
-          .expect(200);
-        currentSecret = initialSetupResponse.body.secret;
+      // MFA有効化されている場合は、テストをスキップ
+      if (loginResponse.body.requiresMfa) {
+        console.warn('MFA is already enabled. Skipping this test.');
+        return;
       }
+
+      expect(loginResponse.status).toBe(200);
+      expect(loginResponse.body.accessToken).toBeDefined();
+
+      // 新しいトークンを取得（前のテストのトークンが無効になっている可能性があるため）
+      const freshToken = loginResponse.body.accessToken;
+
+      // 新しいトークンでMFAセットアップを実行
+      const setupResponse = await request(app.getHttpServer())
+        .post('/api/v1/auth/mfa/setup')
+        .set('Authorization', `Bearer ${freshToken}`);
+
+      // 401エラーの場合は、トークンがブラックリストに登録されている可能性がある
+      // この場合は、エラーメッセージを出力してテストを失敗させる
+      if (setupResponse.status === 401) {
+        throw new Error(
+          `MFA setup failed with status 401. This suggests the token was blacklisted. Response: ${JSON.stringify(setupResponse.body)}. Token was obtained from login: ${JSON.stringify({
+            status: loginResponse.status,
+            hasAccessToken: !!loginResponse.body.accessToken,
+            requiresMfa: loginResponse.body.requiresMfa,
+            tokenPreview: freshToken ? freshToken.substring(0, 20) + '...' : 'none',
+          })}`,
+        );
+      }
+
+      expect(setupResponse.status).toBe(200);
+
+      expect(setupResponse.body.secret).toBeDefined();
+      const currentSecret = setupResponse.body.secret;
 
       // TOTPコードを生成
       const totpCode = authenticator.generate(currentSecret);
 
-      // MFAセットアップ検証を試行
-      let verifyResponse = await request(app.getHttpServer())
+      // MFAセットアップ検証を実行
+      const verifyResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/mfa/verify-setup')
-        .set('Authorization', `Bearer ${currentToken}`)
+        .set('Authorization', `Bearer ${freshToken}`)
         .send({
           secret: currentSecret,
           code: totpCode,
-        });
+        })
+        .expect(200);
 
-      // 401エラーの場合は、トークンが無効になっている可能性がある
-      // その場合は、新しいトークンを取得してMFAセットアップを再度実行
-      if (verifyResponse.status === 401) {
-        // ログインして新しいトークンを取得
-        const tokenCheckResponse = await request(app.getHttpServer())
-          .post('/api/v1/auth/login')
-          .send({
-            email: 'user@example.com',
-            password: 'password123',
-          });
-
-        // MFAが有効化されている場合は、テストをスキップ
-        if (tokenCheckResponse.body.requiresMfa) {
-          console.warn('MFA is already enabled. Skipping this test.');
-          return;
-        }
-
-        // MFAが無効な場合は、新しいトークンを取得してMFAセットアップを再度実行
-        if (tokenCheckResponse.status !== 200 || !tokenCheckResponse.body.accessToken) {
-          throw new Error(
-            `Login failed with status ${tokenCheckResponse.status}. Response: ${JSON.stringify(tokenCheckResponse.body)}`,
-          );
-        }
-
-        const freshToken = tokenCheckResponse.body.accessToken;
-
-        // 新しいトークンでMFAセットアップを再度実行
-        // トークンが有効であることを確認するため、少し待機してから実行
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        const newSetupResponse = await request(app.getHttpServer())
-          .post('/api/v1/auth/mfa/setup')
-          .set('Authorization', `Bearer ${freshToken}`);
-
-        // MFAセットアップが失敗した場合は、エラーをスロー
-        if (newSetupResponse.status !== 200) {
-          // より詳細なエラーメッセージを出力
-          const errorMessage = `MFA setup failed with status ${newSetupResponse.status}. Response: ${JSON.stringify(newSetupResponse.body)}. Token was obtained from login: ${JSON.stringify({
-            status: tokenCheckResponse.status,
-            hasAccessToken: !!tokenCheckResponse.body.accessToken,
-            requiresMfa: tokenCheckResponse.body.requiresMfa,
-          })}`;
-          throw new Error(errorMessage);
-        }
-
-        // 新しいシークレットを使用
-        currentSecret = newSetupResponse.body.secret;
-        // 新しいTOTPコードを生成
-        const newTotpCode = authenticator.generate(currentSecret);
-
-        // 新しいトークンとシークレットでMFAセットアップ検証を実行
-        verifyResponse = await request(app.getHttpServer())
-          .post('/api/v1/auth/mfa/verify-setup')
-          .set('Authorization', `Bearer ${freshToken}`)
-          .send({
-            secret: currentSecret,
-            code: newTotpCode,
-          });
-
-        // 検証が失敗した場合は、エラーをスロー
-        if (verifyResponse.status !== 200) {
-          throw new Error(
-            `MFA verify-setup failed with status ${verifyResponse.status}. Response: ${JSON.stringify(verifyResponse.body)}`,
-          );
-        }
-
-        // 状態を更新
-        accessToken = freshToken;
-        mfaSecret = currentSecret;
-      } else if (verifyResponse.status !== 200) {
-        // 401以外のエラーの場合
-        throw new Error(
-          `MFA verify-setup failed with status ${verifyResponse.status}. Response: ${JSON.stringify(verifyResponse.body)}`,
-        );
-      }
-
-      // 正常な場合は、レスポンスを検証
-      expect(verifyResponse.status).toBe(200);
+      // レスポンスを検証
       expect(verifyResponse.body.message).toBe('MFA has been enabled successfully');
       expect(verifyResponse.body.backupCodes).toBeDefined();
       expect(verifyResponse.body.backupCodes).toHaveLength(10);
       expect(verifyResponse.body.warning).toBeDefined();
 
-      // 状態を更新
-      backupCodes = verifyResponse.body.backupCodes;
+      // 状態を更新（後続のテストで使用するため）
+      accessToken = freshToken;
       mfaSecret = currentSecret;
+      backupCodes = verifyResponse.body.backupCodes;
     });
 
     it('異常系: 既にMFAが有効な場合はエラーを返す', async () => {
