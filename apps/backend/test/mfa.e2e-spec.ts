@@ -77,6 +77,8 @@ describe('MFA E2E Tests', () => {
         });
         await testClient.connect();
         await testClient.ping();
+        // テスト間でRedisの状態が共有されないように、ブラックリストをクリア
+        await testClient.flushdb();
         await testClient.quit();
         redisReady = true;
       } catch (error) {
