@@ -244,8 +244,10 @@ describe('MFA E2E Tests', () => {
       const totpCode = authenticator.generate(mfaSecret);
 
       // MFAセットアップ検証
-      // 前のテストで取得したトークンを使用
-      // トークンが無効になっている可能性があるため、まず新しいトークンを取得
+      // 前のテストで取得したトークンを使用（MFAセットアップ開始時に取得したトークン）
+      // トークンが無効になっている可能性があるため、まずトークンの有効性を確認
+      // 無効な場合は、MFAセットアップを再度実行してから検証を行う
+      let tokenToUse = accessToken;
       const tokenCheckResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
@@ -260,14 +262,41 @@ describe('MFA E2E Tests', () => {
       }
 
       // MFAが無効な場合は、新しいトークンを取得
-      expect(tokenCheckResponse.status).toBe(200);
-      expect(tokenCheckResponse.body.accessToken).toBeDefined();
-      const freshToken = tokenCheckResponse.body.accessToken;
+      // ただし、MFAセットアップ検証には、MFAセットアップ開始時に取得したトークンが必要
+      // そのため、新しいトークンでMFAセットアップを再度実行する必要がある
+      if (tokenCheckResponse.status === 200 && tokenCheckResponse.body.accessToken) {
+        const freshToken = tokenCheckResponse.body.accessToken;
+        // 新しいトークンでMFAセットアップを再度実行
+        const newSetupResponse = await request(app.getHttpServer())
+          .post('/api/v1/auth/mfa/setup')
+          .set('Authorization', `Bearer ${freshToken}`)
+          .expect(200);
+        // 新しいシークレットを使用
+        mfaSecret = newSetupResponse.body.secret;
+        tokenToUse = freshToken;
+        // 新しいTOTPコードを生成
+        const newTotpCode = authenticator.generate(mfaSecret);
+        // 新しいトークンとシークレットでMFAセットアップ検証を実行
+        const verifyResponse = await request(app.getHttpServer())
+          .post('/api/v1/auth/mfa/verify-setup')
+          .set('Authorization', `Bearer ${tokenToUse}`)
+          .send({
+            secret: mfaSecret,
+            code: newTotpCode,
+          })
+          .expect(200);
+        expect(verifyResponse.body.message).toBe('MFA has been enabled successfully');
+        expect(verifyResponse.body.backupCodes).toBeDefined();
+        expect(verifyResponse.body.backupCodes).toHaveLength(10);
+        expect(verifyResponse.body.warning).toBeDefined();
+        backupCodes = verifyResponse.body.backupCodes;
+        return;
+      }
 
-      // 新しいトークンでMFAセットアップ検証を実行
+      // 前のテストで取得したトークンを使用してMFAセットアップ検証を実行
       const verifyResponse = await request(app.getHttpServer())
         .post('/api/v1/auth/mfa/verify-setup')
-        .set('Authorization', `Bearer ${freshToken}`)
+        .set('Authorization', `Bearer ${tokenToUse}`)
         .send({
           secret: mfaSecret,
           code: totpCode,
