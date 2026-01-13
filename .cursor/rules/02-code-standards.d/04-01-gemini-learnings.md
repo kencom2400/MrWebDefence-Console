@@ -1702,3 +1702,135 @@ jest.useRealTimers();
 **注意点**:
 - テスト終了時に`jest.useRealTimers()`を呼び出して、フェイクタイマーを無効化する
 - 非同期処理とフェイクタイマーの組み合わせに注意する（`jest.runAllTimersAsync()`など）
+
+#### 重複コードの共通化（プライベートメソッドの抽出）
+
+**問題**: 複数のユースケースで同じロジック（パスワード履歴チェックなど）が重複していた。
+
+**解決策**: 重複しているロジックをプライベートメソッドとして抽出し、各ユースケース内で再利用する。
+
+**例**:
+```typescript
+// ❌ 悪い例: 重複コード
+// ChangePasswordUseCase内
+const history = await this.passwordHistoryRepository.getPasswordHistory(userId, policy.historyCount);
+let isReused = false;
+for (const hash of history) {
+  const isMatch = await this.passwordService.compare(newPassword, hash);
+  if (isMatch) {
+    isReused = true;
+    break;
+  }
+}
+
+// ValidatePasswordPolicyUseCase内（同じロジックが重複）
+const history = await this.passwordHistoryRepository.getPasswordHistory(userId, policy.historyCount);
+let isReused = false;
+for (const hash of history) {
+  const isMatch = await this.passwordService.compare(password, hash);
+  if (isMatch) {
+    isReused = true;
+    break;
+  }
+}
+
+// ✅ 良い例: プライベートメソッドとして抽出
+private async checkPasswordInHistory(
+  userId: string,
+  password: string,
+  historyCount: number,
+): Promise<boolean> {
+  const history = await this.passwordHistoryRepository.getPasswordHistory(
+    userId,
+    historyCount,
+  );
+  for (const hash of history) {
+    const isMatch = await this.passwordService.compare(password, hash);
+    if (isMatch) {
+      return true;
+    }
+  }
+  return false;
+}
+```
+
+**理由**:
+- コードの重複を削減（DRY原則）
+- 保守性の向上（変更が1箇所で済む）
+- 可読性の向上（意図が明確）
+- テストの容易性（ロジックが1箇所に集約）
+
+#### 定数の共有（Domain層からInfrastructure層へのエクスポート）
+
+**問題**: `PasswordPolicyService`（Infrastructure層）で、`PasswordPolicy` Value Object（Domain層）と同じ正規表現パターンが重複していた。
+
+**解決策**: Domain層の定数をエクスポートし、Infrastructure層で再利用する。
+
+**例**:
+```typescript
+// ✅ Domain層: password-policy.value-object.ts
+export const SYMBOL_PATTERN = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/;
+
+// ✅ Infrastructure層: password-policy.service.ts
+import { PasswordPolicy, SYMBOL_PATTERN } from '../../domain/value-objects/password-policy.value-object';
+
+// 使用
+if (SYMBOL_PATTERN.test(password)) diversityScore += 10;
+```
+
+**理由**:
+- コードの重複を削減
+- 一貫性の確保（同じパターンを使用）
+- 保守性の向上（変更が1箇所で済む）
+- Domain層の定数をInfrastructure層で使用することは問題ない（依存方向が正しい）
+
+#### リポジトリ内の重複ロジックの共通化
+
+**問題**: `PasswordHistoryRepository`の`getPasswordHistory`と`deleteOldHistory`の両方で、同じソートロジックが重複していた。
+
+**解決策**: ソートロジックをプライベートメソッドとして抽出し、両方のメソッドで再利用する。
+
+**例**:
+```typescript
+// ❌ 悪い例: 重複コード
+public async getPasswordHistory(userId: string, count: number): Promise<string[]> {
+  const history = this.historyStore.get(userId)!;
+  const sortedHistory = [...history].sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  );
+  return sortedHistory.slice(0, count).map((entry) => entry.passwordHash);
+}
+
+public async deleteOldHistory(userId: string, keepCount: number): Promise<void> {
+  const history = this.historyStore.get(userId)!;
+  const sortedHistory = [...history].sort(
+    (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
+  );
+  const keptHistory = sortedHistory.slice(0, keepCount);
+  this.historyStore.set(userId, keptHistory);
+}
+
+// ✅ 良い例: 共通メソッドとして抽出
+private getSortedHistory(history: PasswordHistoryEntry[]): PasswordHistoryEntry[] {
+  return [...history].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+}
+
+public async getPasswordHistory(userId: string, count: number): Promise<string[]> {
+  const history = this.historyStore.get(userId)!;
+  const sortedHistory = this.getSortedHistory(history);
+  return sortedHistory.slice(0, count).map((entry) => entry.passwordHash);
+}
+
+public async deleteOldHistory(userId: string, keepCount: number): Promise<void> {
+  const history = this.historyStore.get(userId)!;
+  const sortedHistory = this.getSortedHistory(history);
+  const keptHistory = sortedHistory.slice(0, keepCount);
+  this.historyStore.set(userId, keptHistory);
+}
+```
+
+**理由**:
+- コードの重複を削減
+- 保守性の向上（ソートロジックの変更が1箇所で済む）
+- パフォーマンスの最適化が容易（将来的にキャッシュなどを追加する場合）
+- 可読性の向上（意図が明確）

@@ -7,7 +7,10 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import { PasswordPolicy } from '../../domain/value-objects/password-policy.value-object';
+import {
+  PasswordPolicy,
+  SYMBOL_PATTERN,
+} from '../../domain/value-objects/password-policy.value-object';
 
 @Injectable()
 export class PasswordPolicyService {
@@ -58,7 +61,7 @@ export class PasswordPolicyService {
     if (/[a-z]/.test(password)) diversityScore += 10;
     if (/[A-Z]/.test(password)) diversityScore += 10;
     if (/[0-9]/.test(password)) diversityScore += 10;
-    if (/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)) diversityScore += 10;
+    if (SYMBOL_PATTERN.test(password)) diversityScore += 10;
     score += diversityScore;
 
     // 複雑さによるボーナス（最大20点）
@@ -68,7 +71,7 @@ export class PasswordPolicyService {
         /[a-z]/.test(password) &&
         /[A-Z]/.test(password) &&
         /[0-9]/.test(password) &&
-        /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password);
+        SYMBOL_PATTERN.test(password);
       if (hasAllTypes) {
         score += 20;
       } else if (password.length >= 16) {
@@ -77,7 +80,7 @@ export class PasswordPolicyService {
         if (/[a-z]/.test(password)) typeCount++;
         if (/[A-Z]/.test(password)) typeCount++;
         if (/[0-9]/.test(password)) typeCount++;
-        if (/[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)) typeCount++;
+        if (SYMBOL_PATTERN.test(password)) typeCount++;
         if (typeCount >= 3) {
           score += 10;
         }

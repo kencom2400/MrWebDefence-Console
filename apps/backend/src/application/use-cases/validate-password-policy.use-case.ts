@@ -52,17 +52,7 @@ export class ValidatePasswordPolicyUseCase {
     // ドメイン層はインフラ層に依存しないため、ユースケース層で比較ロジックを実装
     let isReused = false;
     if (validationResult.isValid && userId) {
-      const history = await this.passwordHistoryRepository.getPasswordHistory(
-        userId,
-        policy.historyCount,
-      );
-      for (const hash of history) {
-        const isMatch = await this.passwordService.compare(password, hash);
-        if (isMatch) {
-          isReused = true;
-          break;
-        }
-      }
+      isReused = await this.checkPasswordInHistory(userId, password, policy.historyCount);
     }
 
     // 結果を返却
@@ -82,5 +72,27 @@ export class ValidatePasswordPolicyUseCase {
       strengthScore,
       isReused: false,
     };
+  }
+
+  /**
+   * パスワードが履歴に含まれているかチェックする
+   * @param userId ユーザーID
+   * @param password 平文パスワード
+   * @param historyCount チェックする履歴数
+   * @returns 履歴に含まれている場合true、そうでない場合false
+   */
+  private async checkPasswordInHistory(
+    userId: string,
+    password: string,
+    historyCount: number,
+  ): Promise<boolean> {
+    const history = await this.passwordHistoryRepository.getPasswordHistory(userId, historyCount);
+    for (const hash of history) {
+      const isMatch = await this.passwordService.compare(password, hash);
+      if (isMatch) {
+        return true;
+      }
+    }
+    return false;
   }
 }

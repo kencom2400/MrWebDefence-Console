@@ -52,10 +52,7 @@ export class PasswordHistoryRepository implements IPasswordHistoryRepository {
     }
 
     const history = this.historyStore.get(userId)!;
-    // 最新N個を取得（作成日時の降順）
-    const sortedHistory = [...history].sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-    );
+    const sortedHistory = this.getSortedHistory(history);
     return sortedHistory.slice(0, count).map((entry) => entry.passwordHash);
   }
 
@@ -90,12 +87,18 @@ export class PasswordHistoryRepository implements IPasswordHistoryRepository {
     }
 
     const history = this.historyStore.get(userId)!;
-    // 作成日時の降順でソート
-    const sortedHistory = [...history].sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-    );
+    const sortedHistory = this.getSortedHistory(history);
     // 最新N個のみ保持
     const keptHistory = sortedHistory.slice(0, keepCount);
     this.historyStore.set(userId, keptHistory);
+  }
+
+  /**
+   * パスワード履歴をソートする（作成日時の降順）
+   * @param history パスワード履歴エントリの配列
+   * @returns ソート済みのパスワード履歴エントリの配列（最新が先頭）
+   */
+  private getSortedHistory(history: PasswordHistoryEntry[]): PasswordHistoryEntry[] {
+    return [...history].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 }

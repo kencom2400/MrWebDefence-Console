@@ -18,8 +18,9 @@ export interface ValidationResult {
 
 /**
  * 記号の正規表現パターン
+ * Infrastructure層のPasswordPolicyServiceでも使用するため、エクスポート
  */
-const SYMBOL_PATTERN = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/;
+export const SYMBOL_PATTERN = /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/;
 
 /**
  * PasswordPolicy Value Object
