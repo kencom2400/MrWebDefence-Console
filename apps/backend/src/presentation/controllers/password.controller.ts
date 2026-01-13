@@ -17,7 +17,6 @@ import {
   BadRequestException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Request as ExpressRequest } from 'express';
 import { ChangePasswordUseCase } from '../../application/use-cases/change-password.use-case';
 import { ValidatePasswordPolicyUseCase } from '../../application/use-cases/validate-password-policy.use-case';
@@ -34,8 +33,6 @@ interface RequestWithUser extends ExpressRequest {
   user: JwtPayload;
 }
 
-@ApiTags('Password')
-@ApiBearerAuth()
 @Controller('api/v1/auth/password')
 @Roles(UserRole.SERVICE_MEMBER, UserRole.SERVICE_ADMIN) // 全ての認証済みユーザーがアクセス可能
 export class PasswordController {
@@ -54,12 +51,6 @@ export class PasswordController {
    */
   @Post('change')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'パスワードが正常に変更されました。',
-  })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'パスワードポリシー違反または再利用' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '現在のパスワードが間違っている' })
   public async changePassword(
     @Request() req: RequestWithUser,
     @Body() dto: ChangePasswordDto,
@@ -86,12 +77,6 @@ export class PasswordController {
    */
   @Post('validate')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'パスワード検証結果',
-    type: ValidatePasswordResultDto,
-  })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '認証失敗' })
   public async validatePassword(
     @Request() req: RequestWithUser,
     @Body() dto: ValidatePasswordDto,
@@ -115,12 +100,6 @@ export class PasswordController {
    */
   @Get('policy')
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'パスワードポリシー設定',
-    type: PasswordPolicyDto,
-  })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '認証失敗' })
   public async getPasswordPolicy(): Promise<PasswordPolicyDto> {
     return await this.getPasswordPolicyUseCase.execute();
   }
