@@ -52,12 +52,11 @@ export class ValidatePasswordPolicyUseCase {
     // 検証が成功した場合のみ、パスワード履歴をチェック
     let isReused = false;
     if (validationResult.isValid && userId) {
-      // パスワードをハッシュ化
-      const hashedPassword = await this.passwordService.hash(password);
-      // パスワード履歴をチェック
-      isReused = await this.passwordHistoryRepository.checkPasswordInHistory(
+      // パスワード履歴をチェック（平文パスワードを使用してbcrypt.compareで比較）
+      isReused = await this.passwordHistoryRepository.checkPasswordInHistoryByPlainText(
         userId,
-        hashedPassword,
+        password,
+        this.passwordService,
         policy.historyCount,
       );
     }

@@ -68,13 +68,11 @@ export class ChangePasswordUseCase {
       });
     }
 
-    // 新しいパスワードをハッシュ化
-    const newPasswordHash = await this.passwordService.hash(newPassword);
-
-    // パスワード履歴をチェック
-    const isReused = await this.passwordHistoryRepository.checkPasswordInHistory(
+    // パスワード履歴をチェック（平文パスワードを使用してbcrypt.compareで比較）
+    const isReused = await this.passwordHistoryRepository.checkPasswordInHistoryByPlainText(
       userId,
-      newPasswordHash,
+      newPassword,
+      this.passwordService,
       policy.historyCount,
     );
     if (isReused) {
@@ -84,6 +82,9 @@ export class ChangePasswordUseCase {
         errorCode: 'PASSWORD_REUSED',
       });
     }
+
+    // 新しいパスワードをハッシュ化
+    const newPasswordHash = await this.passwordService.hash(newPassword);
 
     // パスワード履歴に保存
     await this.passwordHistoryRepository.savePasswordHistory(userId, newPasswordHash);

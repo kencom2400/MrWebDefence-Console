@@ -11,6 +11,7 @@ import { AppModule } from '../src/app.module';
 import Redis from 'ioredis';
 import { UserRepository } from '../src/infrastructure/repositories/user.repository';
 import { PasswordHistoryRepository } from '../src/infrastructure/repositories/password-history.repository';
+import { PasswordService } from '../src/infrastructure/services/password.service';
 import { User } from '../src/domain/entities/user.entity';
 
 describe('Password E2E Tests', () => {
@@ -105,14 +106,41 @@ describe('Password E2E Tests', () => {
       // 各テスト前にRedisの状態をクリア
       if (testClient) {
         try {
+          console.log(`[GET /api/v1/auth/password/policy] beforeEach: flushdb実行前`);
+          // flushdb前のブラックリストの状態を確認
+          const keysBefore = await testClient.keys('blacklist:*');
+          console.log(`[GET /api/v1/auth/password/policy] beforeEach: flushdb前のブラックリストキー数 = ${keysBefore.length}`);
+          
           await testClient.flushdb();
-          await new Promise((resolve) => setTimeout(resolve, 50));
+          console.log(`[GET /api/v1/auth/password/policy] beforeEach: flushdb実行後`);
+          
+          // flushdbの完了を待つ（複数回確認）
+          let retries = 5;
+          while (retries > 0) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            const keys = await testClient.keys('blacklist:*');
+            console.log(`[GET /api/v1/auth/password/policy] beforeEach: flushdb後のブラックリストキー数 = ${keys.length} (リトライ: ${6 - retries})`);
+            if (keys.length === 0) {
+              break;
+            }
+            retries--;
+          }
+          
+          // 最終確認
+          const keysAfter = await testClient.keys('blacklist:*');
+          if (keysAfter.length > 0) {
+            console.warn(`⚠️  [GET /api/v1/auth/password/policy] beforeEach: flushdb後もブラックリストにキーが残っています: ${keysAfter.slice(0, 3).join(', ')}`);
+          }
         } catch (error) {
           console.warn(`⚠️  Redis flushdb失敗（続行）: ${error}`);
         }
       }
 
-      // ログインしてトークンを取得
+      // ログインしてトークンを取得（同じ秒内にログインすると同じトークンが生成される可能性があるため、少し待機）
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      
+      console.log(`[GET /api/v1/auth/password/policy] beforeEach: ログイン前のブラックリストキー数 = ${testClient ? (await testClient.keys('blacklist:*')).length : 'N/A'}`);
+      
       const loginRes = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
@@ -123,12 +151,36 @@ describe('Password E2E Tests', () => {
 
       policyToken = loginRes.body.accessToken;
       expect(policyToken).toBeDefined();
+      
+      console.log(`[GET /api/v1/auth/password/policy] beforeEach: ログイン後のブラックリストキー数 = ${testClient ? (await testClient.keys('blacklist:*')).length : 'N/A'}`);
+      if (testClient) {
+        const keysAfterLogin = await testClient.keys('blacklist:*');
+        if (keysAfterLogin.length > 0) {
+          console.warn(`⚠️  [GET /api/v1/auth/password/policy] beforeEach: ログイン後にブラックリストにキーが追加されました: ${keysAfterLogin.slice(0, 3).join(', ')}`);
+          // ログイン後に追加されたキーが、今回生成したトークンと同じか確認
+          const currentTokenKey = `blacklist:${policyToken}`;
+          if (keysAfterLogin.includes(currentTokenKey)) {
+            console.warn(`⚠️  [GET /api/v1/auth/password/policy] beforeEach: 生成したトークンが既にブラックリストに登録されています！`);
+            // ブラックリストから削除
+            await testClient.del(currentTokenKey);
+            console.log(`[GET /api/v1/auth/password/policy] beforeEach: ブラックリストから削除しました`);
+          }
+        }
+      }
 
       // デバッグ: 保管されているトークンの情報
       console.log(`[GET /api/v1/auth/password/policy] beforeEach: 保管されているトークン = ${policyToken ? policyToken.substring(0, 20) + '...' : 'undefined'}`);
+      console.log(`[GET /api/v1/auth/password/policy] beforeEach: トークンの完全な値 = ${policyToken || 'undefined'}`);
       if (testClient && policyToken) {
         const isBlacklisted = await testClient.get(`blacklist:${policyToken}`);
         console.log(`[GET /api/v1/auth/password/policy] beforeEach: ブラックリスト状態 = ${!!isBlacklisted}`);
+        if (isBlacklisted) {
+          console.warn(`⚠️  [GET /api/v1/auth/password/policy] beforeEach: トークンがブラックリストに登録されています！`);
+          // ブラックリストのキーを確認
+          const blacklistKey = `blacklist:${policyToken}`;
+          const blacklistValue = await testClient.get(blacklistKey);
+          console.warn(`⚠️  [GET /api/v1/auth/password/policy] beforeEach: ブラックリストキー = ${blacklistKey}, 値 = ${blacklistValue}`);
+        }
       }
     });
 
@@ -181,7 +233,9 @@ describe('Password E2E Tests', () => {
         }
       }
 
-      // ログインしてトークンを取得
+      // ログインしてトークンを取得（同じ秒内にログインすると同じトークンが生成される可能性があるため、少し待機）
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      
       const loginRes = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
@@ -198,6 +252,12 @@ describe('Password E2E Tests', () => {
       if (testClient && validateToken) {
         const isBlacklisted = await testClient.get(`blacklist:${validateToken}`);
         console.log(`[POST /api/v1/auth/password/validate] beforeEach: ブラックリスト状態 = ${!!isBlacklisted}`);
+        if (isBlacklisted) {
+          console.warn(`⚠️  [POST /api/v1/auth/password/validate] beforeEach: 生成したトークンが既にブラックリストに登録されています！`);
+          // ブラックリストから削除
+          await testClient.del(`blacklist:${validateToken}`);
+          console.log(`[POST /api/v1/auth/password/validate] beforeEach: ブラックリストから削除しました`);
+        }
       }
     });
 
@@ -315,7 +375,9 @@ describe('Password E2E Tests', () => {
         await passwordHistoryRepository.deleteOldHistory(testUser.id, 0);
       }
 
-      // ログインしてトークンを取得（各テストで確実に有効なトークンを使用）
+      // ログインしてトークンを取得（同じ秒内にログインすると同じトークンが生成される可能性があるため、少し待機）
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      
       const loginRes = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
@@ -333,7 +395,10 @@ describe('Password E2E Tests', () => {
         const isBlacklisted = await testClient.get(`blacklist:${testToken}`);
         console.log(`[POST /api/v1/auth/password/change] beforeEach: ブラックリスト状態 = ${!!isBlacklisted}`);
         if (isBlacklisted) {
-          console.warn(`⚠️  [POST /api/v1/auth/password/change] beforeEach: トークンがブラックリストに登録されています`);
+          console.warn(`⚠️  [POST /api/v1/auth/password/change] beforeEach: 生成したトークンが既にブラックリストに登録されています！`);
+          // ブラックリストから削除
+          await testClient.del(`blacklist:${testToken}`);
+          console.log(`[POST /api/v1/auth/password/change] beforeEach: ブラックリストから削除しました`);
         }
       }
     });
@@ -474,6 +539,29 @@ describe('Password E2E Tests', () => {
 
       // 以前のパスワード（NewPassword456@）に戻そうとするとエラー
       console.log(`[POST /api/v1/auth/password/change] 再利用テスト: 再利用チェック用のトークン = ${newAccessToken2 ? newAccessToken2.substring(0, 20) + '...' : 'undefined'}`);
+      
+      // パスワード履歴の状態を確認（デバッグ用）
+      const passwordHistoryRepository = moduleFixture.get<PasswordHistoryRepository>(
+        'IPasswordHistoryRepository',
+      );
+      const userRepository = moduleFixture.get<UserRepository>('IUserRepository');
+      const testUser = await userRepository.findByEmail('user@example.com');
+      if (testUser) {
+        const history = await passwordHistoryRepository.getPasswordHistory(testUser.id, 5);
+        console.log(`[POST /api/v1/auth/password/change] 再利用テスト: パスワード履歴数 = ${history.length}`);
+        console.log(`[POST /api/v1/auth/password/change] 再利用テスト: パスワード履歴 = ${history.map(h => h.substring(0, 20) + '...').join(', ')}`);
+        
+        // NewPassword456@のハッシュを計算して、履歴に含まれているか確認
+        const passwordService = moduleFixture.get<PasswordService>('PasswordService');
+        const newPassword456Hash = await passwordService.hash('NewPassword456@');
+        const isInHistory = await passwordHistoryRepository.checkPasswordInHistory(
+          testUser.id,
+          newPassword456Hash,
+          5,
+        );
+        console.log(`[POST /api/v1/auth/password/change] 再利用テスト: NewPassword456@が履歴に含まれているか = ${isInHistory}`);
+      }
+      
       const response = await request(app.getHttpServer())
         .post('/api/v1/auth/password/change')
         .set('Authorization', `Bearer ${newAccessToken2}`)
