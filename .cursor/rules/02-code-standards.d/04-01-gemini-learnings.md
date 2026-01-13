@@ -974,3 +974,308 @@ sequenceDiagram
 **理由**:
 - データフロー記述の完全性
 - 実装者の理解を助ける
+
+### 13-18. ダッシュボード設計における責務の明確化と依存性逆転の原則（PR #41）
+
+**学習元**: PR #41 - ダッシュボード機能の詳細設計（Geminiレビュー指摘）
+
+#### データ集計ロジックの責務分担
+
+**問題**: データ集計ロジックの所在が、ユースケースとリポジトリの間で曖昧になっている。`DashboardRepository`が集計ロジックを持つのか、`GetDashboardDataUseCase`が持つのかが不明確。
+
+**解決策**: データ集計ロジックはApplication層のUse Caseが担当する。Repositoryはデータの取得のみを担当し、集計は行わない。
+
+```typescript
+// Bad: Repositoryが集計ロジックを持つ
+@Injectable()
+export class DashboardRepository implements IDashboardRepository {
+  public async getDashboardData(userId: string): Promise<DashboardData> {
+    // 集計ロジックがRepositoryにある（責務が曖昧）
+    const user = await this.userRepository.findById(userId);
+    const mfaSecret = await this.mfaRepository.getSecret(userId);
+    // ...
+    return DashboardData.create(...);
+  }
+}
+
+// Good: Use Caseが集計ロジックを持つ
+@Injectable()
+export class GetDashboardDataUseCase {
+  constructor(
+    @Inject('IUserRepository')
+    private readonly userRepository: IUserRepository,
+    @Inject('IMfaRepository')
+    private readonly mfaRepository: IMfaRepository,
+    @Inject('IIpAllowListRepository')
+    private readonly ipAllowListRepository: IIpAllowListRepository,
+  ) {}
+
+  public async execute(userId: string): Promise<DashboardData> {
+    // 並列実行で高速化
+    const [user, mfaSecret, ipAllowListCount] = await Promise.all([
+      this.userRepository.findById(userId),
+      this.mfaRepository.getSecret(userId),
+      this.ipAllowListRepository.countByUserId(userId),
+    ]);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // 集計ロジックはUse Case内で実行
+    return this.aggregateData(user, mfaSecret, ipAllowListCount);
+  }
+
+  private aggregateData(
+    user: User,
+    mfaSecret: string | null,
+    ipAllowListCount: number,
+  ): DashboardData {
+    return DashboardData.create(
+      user.id,
+      user.email,
+      user.role,
+      user.mfaEnabled,
+      ipAllowListCount,
+      user.createdAt,
+      null, // lastLoginAt（将来実装）
+      null, // loginAttemptCount（将来実装）
+    );
+  }
+}
+```
+
+**理由**:
+- 責務の明確化（Repositoryはデータ取得、Use Caseはビジネスロジック）
+- Onion Architectureの原則に沿った設計
+
+#### 依存性逆転の原則（DIP）の遵守
+
+**問題**: クラス図において、アプリケーション層がインフラストラクチャ層の具象クラス（`DashboardRepository`）に依存しており、依存性逆転の原則に反している。
+
+**解決策**: Application層はDomain層のインターフェース（`IUserRepository`、`IMfaRepository`、`IIpAllowListRepository`）に依存する。具象クラスには依存しない。
+
+```typescript
+// Bad: 具象クラスに依存
+@Injectable()
+export class GetDashboardDataUseCase {
+  constructor(
+    private readonly dashboardRepository: DashboardRepository, // 具象クラス
+  ) {}
+}
+
+// Good: インターフェースに依存
+@Injectable()
+export class GetDashboardDataUseCase {
+  constructor(
+    @Inject('IUserRepository')
+    private readonly userRepository: IUserRepository, // インターフェース
+    @Inject('IMfaRepository')
+    private readonly mfaRepository: IMfaRepository, // インターフェース
+    @Inject('IIpAllowListRepository')
+    private readonly ipAllowListRepository: IIpAllowListRepository, // インターフェース
+  ) {}
+}
+```
+
+**理由**:
+- 依存性逆転の原則（DIP）の遵守
+- テスタビリティの向上
+- 実装の交換可能性
+
+#### ドキュメント間の一貫性確保
+
+**問題**: シーケンス図とクラス図で、`DashboardRepository`の扱いが異なっており、設計の意図が不明確になっている。
+
+**解決策**: すべての設計ドキュメントで一貫した設計を反映する。`DashboardRepository`は将来の統計情報永続化のために予約されているが、初期実装では使用しないことを明記する。
+
+```markdown
+**注意**: 初期実装では、`GetDashboardDataUseCase`が既存のRepository（`IUserRepository`、`IMfaRepository`、`IIpAllowListRepository`）を直接使用してデータを集計します。`DashboardRepository`は将来の統計情報永続化のために予約されていますが、初期実装では使用しません。
+```
+
+**理由**:
+- 設計ドキュメント間の一貫性
+- 実装者の混乱を防ぐ
+- 将来の拡張性を明確化
+
+#### レイヤー構成図における依存関係の明確化
+
+**問題**: README.mdのレイヤー構成図において、初期実装で使用しない`IDashboardRepository`や`DashboardRepository`が含まれており、依存関係が不明確。
+
+**解決策**: レイヤー構成図には、初期実装で実際に使用するコンポーネントのみを含める。将来実装のコンポーネントは別途説明する。
+
+```markdown
+### レイヤ構成
+
+```
+┌─────────────────────────────────────┐
+│  Presentation Layer                 │
+│  - DashboardController (New)       │
+│  - DTOs (DashboardDto, etc.)       │
+└──────────────┬──────────────────────┘
+               │ 依存
+┌──────────────▼──────────────────────┐
+│  Application Layer                  │
+│  - GetDashboardDataUseCase (New)   │
+└──────────────┬──────────────────────┘
+               │ 依存
+┌──────────────▼──────────────────────┐
+│  Domain Layer                       │
+│  - DashboardData Value Object (New)│
+│  - IUserRepository (Existing)      │
+│  - IMfaRepository (Existing)        │
+│  - IIpAllowListRepository (Future)  │
+└──────────────┬──────────────────────┘
+               │ 依存
+┌──────────────▼──────────────────────┐
+│  Infrastructure Layer               │
+│  - UserRepository (Existing)       │
+│  - MfaRepository (Existing)        │
+│  - IpAllowListRepository (Future)  │
+└─────────────────────────────────────┘
+```
+
+**注意**: 初期実装では、`GetDashboardDataUseCase`が既存のRepositoryインターフェースを直接使用します。`IDashboardRepository`と`DashboardRepository`は将来の統計情報永続化のために予約されていますが、初期実装では使用しません。
+```
+
+**理由**:
+- レイヤー構成図の明確化
+- 初期実装のスコープの明確化
+- 実装者の混乱を防ぐ
+
+#### 将来実装フィールドの明確化
+
+**問題**: `lastLoginAt`や`loginAttemptCount`などのフィールドが、Value ObjectやDTOに含まれているが、初期実装のスコープに含まれるかどうかの記述が揺れている。
+
+**解決策**: 初期実装で含まれるフィールドと将来実装で追加されるフィールドを明確に分けて記述する。初期実装では、将来実装のフィールドは`null`を返すことを明記する。
+
+```markdown
+#### 初期実装で含まれるフィールド
+
+- `userId`: ユーザーID
+- `email`: メールアドレス
+- `role`: ユーザーロール
+- `mfaEnabled`: MFA有効化状態
+- `ipAllowListCount`: IP AllowList数（初期実装では0を返す）
+- `accountCreatedAt`: アカウント作成日時
+
+#### 将来実装で追加されるフィールド
+
+- `lastLoginAt`: 最終ログイン日時（初期実装では`null`を返す）
+- `loginAttemptCount`: ログイン試行回数（初期実装では`null`を返す）
+```
+
+**理由**:
+- 初期実装のスコープの明確化
+- 実装者の混乱を防ぐ
+- 将来の拡張性を明確化
+
+### 13-19. ダッシュボード設計におけるデータ取得の最適化とスタブ実装の明確化（PR #41）
+
+**学習元**: PR #41 - ダッシュボード機能の詳細設計（Geminiレビュー指摘）
+
+#### MFA状態取得の最適化
+
+**問題**: MFA有効状態の取得ロジックについて、`IMfaRepository.getSecret(userId)`を呼び出す現在の設計は冗長である可能性がある。`User`エンティティに既に`mfaEnabled`プロパティが存在するため、別途Repositoryを呼び出す必要はない。
+
+**解決策**: MFA状態は`User`エンティティの`mfaEnabled`プロパティから直接取得する。`IMfaRepository`を呼び出す必要はない。
+
+```typescript
+// Bad: 冗長なRepository呼び出し
+@Injectable()
+export class GetDashboardDataUseCase {
+  constructor(
+    @Inject('IUserRepository')
+    private readonly userRepository: IUserRepository,
+    @Inject('IMfaRepository')
+    private readonly mfaRepository: IMfaRepository, // 不要
+  ) {}
+
+  public async execute(userId: string): Promise<DashboardData> {
+    const [user, mfaSecret] = await Promise.all([
+      this.userRepository.findById(userId),
+      this.mfaRepository.getSecret(userId), // 冗長
+    ]);
+    
+    // mfaSecretがnullでないかチェックしてmfaEnabledを判定
+    const mfaEnabled = mfaSecret !== null;
+    // ...
+  }
+}
+
+// Good: Userエンティティのプロパティを直接使用
+@Injectable()
+export class GetDashboardDataUseCase {
+  constructor(
+    @Inject('IUserRepository')
+    private readonly userRepository: IUserRepository,
+    @Inject('IIpAllowListRepository')
+    private readonly ipAllowListRepository: IIpAllowListRepository,
+  ) {}
+
+  public async execute(userId: string): Promise<DashboardData> {
+    const [user, ipAllowListCount] = await Promise.all([
+      this.userRepository.findById(userId),
+      this.ipAllowListRepository.countByUserId(userId),
+    ]);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // UserエンティティのmfaEnabledプロパティを直接使用
+    return this.aggregateData(user, ipAllowListCount);
+  }
+
+  private aggregateData(user: User, ipAllowListCount: number): DashboardData {
+    return DashboardData.create(
+      user.id,
+      user.email,
+      user.role,
+      user.mfaEnabled, // Userエンティティから直接取得
+      ipAllowListCount,
+      user.createdAt,
+      null, // lastLoginAt（将来実装）
+      null, // loginAttemptCount（将来実装）
+    );
+  }
+}
+```
+
+**理由**:
+- 冗長なRepository呼び出しの排除
+- パフォーマンスの向上（並列実行のオーバーヘッド削減）
+- 設計の簡素化
+
+#### スタブ実装の明確化
+
+**問題**: `IIpAllowListRepository`の初期実装における扱いについて、`(Future)`という表記が混乱を招く可能性がある。初期実装で使用する場合は、スタブ実装であることを明確にする必要がある。
+
+**解決策**: 初期実装で使用するが、実際の機能が未実装の場合は、スタブ実装として明確に記述する。
+
+```typescript
+// Good: スタブ実装として明確に記述
+@Injectable()
+export class IpAllowListRepository implements IIpAllowListRepository {
+  /**
+   * IP AllowList数を取得する（スタブ実装）
+   * 初期実装では常に0を返す
+   * TODO: IP AllowList機能実装後に実際のカウントを返す
+   */
+  public async countByUserId(userId: string): Promise<number> {
+    // スタブ実装: 初期実装では常に0を返す
+    return 0;
+  }
+}
+```
+
+設計ドキュメントでは以下のように記述：
+
+```markdown
+- **IpAllowListRepository (Stub)**: IP AllowList数の取得（初期実装ではスタブ実装で0を返す）
+```
+
+**理由**:
+- 初期実装のスコープの明確化
+- 実装者の混乱を防ぐ
+- スタブ実装であることの明示
