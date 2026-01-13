@@ -1169,3 +1169,113 @@ export class GetDashboardDataUseCase {
 - 初期実装のスコープの明確化
 - 実装者の混乱を防ぐ
 - 将来の拡張性を明確化
+
+### 13-19. ダッシュボード設計におけるデータ取得の最適化とスタブ実装の明確化（PR #41）
+
+**学習元**: PR #41 - ダッシュボード機能の詳細設計（Geminiレビュー指摘）
+
+#### MFA状態取得の最適化
+
+**問題**: MFA有効状態の取得ロジックについて、`IMfaRepository.getSecret(userId)`を呼び出す現在の設計は冗長である可能性がある。`User`エンティティに既に`mfaEnabled`プロパティが存在するため、別途Repositoryを呼び出す必要はない。
+
+**解決策**: MFA状態は`User`エンティティの`mfaEnabled`プロパティから直接取得する。`IMfaRepository`を呼び出す必要はない。
+
+```typescript
+// Bad: 冗長なRepository呼び出し
+@Injectable()
+export class GetDashboardDataUseCase {
+  constructor(
+    @Inject('IUserRepository')
+    private readonly userRepository: IUserRepository,
+    @Inject('IMfaRepository')
+    private readonly mfaRepository: IMfaRepository, // 不要
+  ) {}
+
+  public async execute(userId: string): Promise<DashboardData> {
+    const [user, mfaSecret] = await Promise.all([
+      this.userRepository.findById(userId),
+      this.mfaRepository.getSecret(userId), // 冗長
+    ]);
+    
+    // mfaSecretがnullでないかチェックしてmfaEnabledを判定
+    const mfaEnabled = mfaSecret !== null;
+    // ...
+  }
+}
+
+// Good: Userエンティティのプロパティを直接使用
+@Injectable()
+export class GetDashboardDataUseCase {
+  constructor(
+    @Inject('IUserRepository')
+    private readonly userRepository: IUserRepository,
+    @Inject('IIpAllowListRepository')
+    private readonly ipAllowListRepository: IIpAllowListRepository,
+  ) {}
+
+  public async execute(userId: string): Promise<DashboardData> {
+    const [user, ipAllowListCount] = await Promise.all([
+      this.userRepository.findById(userId),
+      this.ipAllowListRepository.countByUserId(userId),
+    ]);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // UserエンティティのmfaEnabledプロパティを直接使用
+    return this.aggregateData(user, ipAllowListCount);
+  }
+
+  private aggregateData(user: User, ipAllowListCount: number): DashboardData {
+    return DashboardData.create(
+      user.id,
+      user.email,
+      user.role,
+      user.mfaEnabled, // Userエンティティから直接取得
+      ipAllowListCount,
+      user.createdAt,
+      null, // lastLoginAt（将来実装）
+      null, // loginAttemptCount（将来実装）
+    );
+  }
+}
+```
+
+**理由**:
+- 冗長なRepository呼び出しの排除
+- パフォーマンスの向上（並列実行のオーバーヘッド削減）
+- 設計の簡素化
+
+#### スタブ実装の明確化
+
+**問題**: `IIpAllowListRepository`の初期実装における扱いについて、`(Future)`という表記が混乱を招く可能性がある。初期実装で使用する場合は、スタブ実装であることを明確にする必要がある。
+
+**解決策**: 初期実装で使用するが、実際の機能が未実装の場合は、スタブ実装として明確に記述する。
+
+```typescript
+// Good: スタブ実装として明確に記述
+@Injectable()
+export class IpAllowListRepository implements IIpAllowListRepository {
+  /**
+   * IP AllowList数を取得する（スタブ実装）
+   * 初期実装では常に0を返す
+   * TODO: IP AllowList機能実装後に実際のカウントを返す
+   */
+  public async countByUserId(userId: string): Promise<number> {
+    // スタブ実装: 初期実装では常に0を返す
+    return 0;
+  }
+}
+```
+
+設計ドキュメントでは以下のように記述：
+
+```markdown
+- **IpAllowListRepository (Stub)**: IP AllowList数の取得（初期実装ではスタブ実装で0を返す）
+```
+
+**理由**:
+- 初期実装のスコープの明確化
+- 実装者の混乱を防ぐ
+- スタブ実装であることの明示

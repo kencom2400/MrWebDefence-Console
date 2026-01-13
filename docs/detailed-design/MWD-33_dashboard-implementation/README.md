@@ -46,15 +46,13 @@
 │  Domain Layer                       │
 │  - DashboardData Value Object (New)│
 │  - IUserRepository (Existing)      │
-│  - IMfaRepository (Existing)       │
-│  - IIpAllowListRepository (Future) │
+│  - IIpAllowListRepository (Stub)    │
 └──────────────┬──────────────────────┘
                │ 依存
 ┌──────────────▼──────────────────────┐
 │  Infrastructure Layer               │
 │  - UserRepository (Existing)       │
-│  - MfaRepository (Existing)        │
-│  - IpAllowListRepository (Future)  │
+│  - IpAllowListRepository (Stub)    │
 └─────────────────────────────────────┘
 ```
 
@@ -79,19 +77,17 @@
 ### 2. Application Layer
 
 - **GetDashboardDataUseCase**: ダッシュボードデータ取得処理
-  - ユーザー情報の取得（UserRepository経由）
-  - MFA状態の取得（MfaRepository経由）
-  - IP AllowList数の取得（IpAllowListRepository経由、将来実装）
+  - ユーザー情報の取得（UserRepository経由、`User.mfaEnabled`プロパティからMFA状態を取得）
+  - IP AllowList数の取得（IpAllowListRepository経由、初期実装ではスタブ実装で0を返す）
   - 統計情報の集計
   - DashboardData Value Objectの生成
 
 ### 3. Infrastructure Layer
 
-- **UserRepository (Existing)**: ユーザー情報の取得
-- **MfaRepository (Existing)**: MFA状態の取得
-- **IpAllowListRepository (Future)**: IP AllowList数の取得（将来実装）
+- **UserRepository (Existing)**: ユーザー情報の取得（`User.mfaEnabled`プロパティを含む）
+- **IpAllowListRepository (Stub)**: IP AllowList数の取得（初期実装ではスタブ実装で0を返す）
 
-**注意**: 初期実装では、`GetDashboardDataUseCase`が既存のRepository（`IUserRepository`、`IMfaRepository`、`IIpAllowListRepository`）を直接使用してデータを集計します。`DashboardRepository`は将来の統計情報永続化のために予約されていますが、初期実装では使用しません。
+**注意**: 初期実装では、`GetDashboardDataUseCase`が既存のRepository（`IUserRepository`、`IIpAllowListRepository`）を直接使用してデータを集計します。MFA状態は`User`エンティティの`mfaEnabled`プロパティから直接取得するため、`IMfaRepository`を呼び出す必要はありません。`IIpAllowListRepository`は初期実装ではスタブ実装（常に0を返す）として実装します。
 
 ### 4. Presentation Layer
 
@@ -106,12 +102,11 @@
 1. クライアントが `GET /api/v1/dashboard` を呼び出し
 2. `DashboardController` がリクエストを受信
 3. `GetDashboardDataUseCase` が実行される
-4. ユーザー情報を取得（UserRepository経由）
-5. MFA状態を取得（MfaRepository経由）
-6. IP AllowList数を取得（IpAllowListRepository経由、将来実装）
-7. 統計情報を集計
-8. DashboardData Value Objectを生成
-9. レスポンスを返却
+4. ユーザー情報を取得（UserRepository経由、`User.mfaEnabled`プロパティからMFA状態を取得）
+5. IP AllowList数を取得（IpAllowListRepository経由、初期実装ではスタブ実装で0を返す）
+6. 統計情報を集計
+7. DashboardData Value Objectを生成
+8. レスポンスを返却
 
 ## セキュリティ考慮事項
 

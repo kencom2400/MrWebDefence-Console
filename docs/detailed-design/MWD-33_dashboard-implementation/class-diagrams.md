@@ -34,11 +34,12 @@ classDiagram
 
     class GetDashboardDataUseCase {
         -IUserRepository userRepository
-        -IMfaRepository mfaRepository
         -IIpAllowListRepository ipAllowListRepository
         +execute(userId): Promise~DashboardData~
-        -aggregateData(user, mfaSecret, ipAllowListCount): DashboardData
+        -aggregateData(user, ipAllowListCount): DashboardData
     }
+    
+    note for GetDashboardDataUseCase "MFA状態はUser.mfaEnabledから直接取得\nIIpAllowListRepositoryは初期実装ではスタブ（0を返す）"
 
     class DashboardController {
         +getDashboard()
@@ -60,11 +61,6 @@ classDiagram
         +findById(id): Promise~User | null~
     }
 
-    class IMfaRepository {
-        <<Interface>>
-        +getSecret(userId): Promise~string | null~
-    }
-
     class IIpAllowListRepository {
         <<Interface>>
         +countByUserId(userId): Promise~number~
@@ -72,7 +68,6 @@ classDiagram
 
     User --> DashboardData : used to create
     GetDashboardDataUseCase --> IUserRepository
-    GetDashboardDataUseCase --> IMfaRepository
     GetDashboardDataUseCase --> IIpAllowListRepository
     GetDashboardDataUseCase --> DashboardData : creates
     DashboardController --> GetDashboardDataUseCase
@@ -97,10 +92,6 @@ classDiagram
         <<Interface>>
     }
 
-    class IMfaRepository {
-        <<Interface>>
-    }
-
     class IIpAllowListRepository {
         <<Interface>>
     }
@@ -108,7 +99,6 @@ classDiagram
     AppModule --> DashboardController
     DashboardController --> GetDashboardDataUseCase
     GetDashboardDataUseCase --> IUserRepository
-    GetDashboardDataUseCase --> IMfaRepository
     GetDashboardDataUseCase --> IIpAllowListRepository
 ```
 
