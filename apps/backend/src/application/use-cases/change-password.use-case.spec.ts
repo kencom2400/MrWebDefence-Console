@@ -41,6 +41,7 @@ describe('ChangePasswordUseCase', () => {
       savePasswordHistory: jest.fn(),
       getPasswordHistory: jest.fn(),
       checkPasswordInHistory: jest.fn(),
+      checkPasswordInHistoryByPlainText: jest.fn(),
       deleteOldHistory: jest.fn(),
     } as any;
 
@@ -68,8 +69,8 @@ describe('ChangePasswordUseCase', () => {
       userRepository.findById.mockResolvedValue(mockUser);
       passwordService.compare.mockResolvedValue(true);
       passwordPolicyService.createPasswordPolicy.mockReturnValue(mockPolicy);
+      passwordHistoryRepository.checkPasswordInHistoryByPlainText.mockResolvedValue(false);
       passwordService.hash.mockResolvedValue('$2b$10$newHashedPassword');
-      passwordHistoryRepository.checkPasswordInHistory.mockResolvedValue(false);
       userRepository.save.mockResolvedValue(undefined);
 
       await useCase.execute('user-1', 'CurrentPassword123!', 'NewPassword456@');
@@ -77,12 +78,13 @@ describe('ChangePasswordUseCase', () => {
       expect(userRepository.findById).toHaveBeenCalledWith('user-1');
       expect(passwordService.compare).toHaveBeenCalledWith('CurrentPassword123!', mockUser.hashedPassword);
       expect(passwordPolicyService.createPasswordPolicy).toHaveBeenCalledTimes(1);
-      expect(passwordService.hash).toHaveBeenCalledWith('NewPassword456@');
-      expect(passwordHistoryRepository.checkPasswordInHistory).toHaveBeenCalledWith(
+      expect(passwordHistoryRepository.checkPasswordInHistoryByPlainText).toHaveBeenCalledWith(
         'user-1',
-        '$2b$10$newHashedPassword',
+        'NewPassword456@',
+        passwordService,
         mockPolicy.historyCount,
       );
+      expect(passwordService.hash).toHaveBeenCalledWith('NewPassword456@');
       expect(passwordHistoryRepository.savePasswordHistory).toHaveBeenCalledWith(
         'user-1',
         '$2b$10$newHashedPassword',
@@ -131,12 +133,18 @@ describe('ChangePasswordUseCase', () => {
       userRepository.findById.mockResolvedValue(mockUser);
       passwordService.compare.mockResolvedValue(true);
       passwordPolicyService.createPasswordPolicy.mockReturnValue(mockPolicy);
-      passwordService.hash.mockResolvedValue('$2b$10$newHashedPassword');
-      passwordHistoryRepository.checkPasswordInHistory.mockResolvedValue(true);
+      passwordHistoryRepository.checkPasswordInHistoryByPlainText.mockResolvedValue(true);
 
       await expect(
         useCase.execute('user-1', 'CurrentPassword123!', 'NewPassword456@'),
       ).rejects.toThrow(BadRequestException);
+      
+      expect(passwordHistoryRepository.checkPasswordInHistoryByPlainText).toHaveBeenCalledWith(
+        'user-1',
+        'NewPassword456@',
+        passwordService,
+        mockPolicy.historyCount,
+      );
     });
   });
 });

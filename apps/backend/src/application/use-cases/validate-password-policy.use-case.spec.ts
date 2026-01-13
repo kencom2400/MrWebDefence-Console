@@ -29,6 +29,7 @@ describe('ValidatePasswordPolicyUseCase', () => {
       savePasswordHistory: jest.fn(),
       getPasswordHistory: jest.fn(),
       checkPasswordInHistory: jest.fn(),
+      checkPasswordInHistoryByPlainText: jest.fn(),
       deleteOldHistory: jest.fn(),
     } as any;
 
@@ -84,15 +85,14 @@ describe('ValidatePasswordPolicyUseCase', () => {
       const mockPolicy = PasswordPolicy.create();
       passwordPolicyService.createPasswordPolicy.mockReturnValue(mockPolicy);
       passwordPolicyService.calculateStrengthScore.mockReturnValue(85);
-      passwordService.hash.mockResolvedValue('hashed-password');
-      passwordHistoryRepository.checkPasswordInHistory.mockResolvedValue(true);
+      passwordHistoryRepository.checkPasswordInHistoryByPlainText.mockResolvedValue(true);
 
       const result = await useCase.execute('user-1', 'Password123!');
 
-      expect(passwordService.hash).toHaveBeenCalledWith('Password123!');
-      expect(passwordHistoryRepository.checkPasswordInHistory).toHaveBeenCalledWith(
+      expect(passwordHistoryRepository.checkPasswordInHistoryByPlainText).toHaveBeenCalledWith(
         'user-1',
-        'hashed-password',
+        'Password123!',
+        passwordService,
         mockPolicy.historyCount,
       );
       expect(result.isValid).toBe(false);
@@ -107,8 +107,7 @@ describe('ValidatePasswordPolicyUseCase', () => {
 
       const result = await useCase.execute(null, 'Password123!');
 
-      expect(passwordService.hash).not.toHaveBeenCalled();
-      expect(passwordHistoryRepository.checkPasswordInHistory).not.toHaveBeenCalled();
+      expect(passwordHistoryRepository.checkPasswordInHistoryByPlainText).not.toHaveBeenCalled();
       expect(result.isValid).toBe(true);
       expect(result.isReused).toBe(false);
     });
@@ -120,8 +119,7 @@ describe('ValidatePasswordPolicyUseCase', () => {
 
       const result = await useCase.execute('user-1', 'short');
 
-      expect(passwordService.hash).not.toHaveBeenCalled();
-      expect(passwordHistoryRepository.checkPasswordInHistory).not.toHaveBeenCalled();
+      expect(passwordHistoryRepository.checkPasswordInHistoryByPlainText).not.toHaveBeenCalled();
       expect(result.isValid).toBe(false);
       expect(result.isReused).toBe(false);
     });
