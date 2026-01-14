@@ -44,10 +44,11 @@ Related to #YYY
 - ✅ **Unit Test**: 全テストパス (XX tests)
 - ✅ **E2E Test**: 全テストパス (XX tests)
 
-### 実行コマンド
+### 実行コマンド（コンテナ使用）
 
 ```bash
-./scripts/test/lint.sh
+./scripts/backend/lint.sh
+./scripts/backend/build.sh
 ./scripts/backend/test.sh unit
 ./scripts/backend/test.sh e2e
 ```
