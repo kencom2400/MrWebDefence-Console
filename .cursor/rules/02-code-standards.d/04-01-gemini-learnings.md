@@ -2878,3 +2878,54 @@ sequenceDiagram
 - 静的メソッドであることが明確になる
 
 **参照**: PR #48 - FQDN管理機能の詳細設計書作成（Geminiレビュー指摘 第3弾）
+
+### 22-14. ドメインエンティティにおけるValue Objectの使用 🟡 Medium
+
+**問題**: ドメインエンティティのプロパティの型がenum（プリミティブ型）になっている場合、ドメインの振る舞いをカプセル化できず、ドメイン駆動設計の原則に反する。
+
+**解決策**:
+- ドメインエンティティのプロパティの型はValue Objectを使用する
+- 既存の実装パターン（例: `Customer`エンティティの`status`プロパティは`CustomerStatus`値オブジェクト）に倣う
+- クラス図とメソッドシグネチャで一貫性を保つ
+
+**実装例**:
+```mermaid
+classDiagram
+    class Fqdn {
+        +string id
+        +string fqdn
+        +string? description
+        +FqdnStatus status  # Value Object
+        +Date createdAt
+        +Date updatedAt
+        +reconstruct(id: string, fqdn: string, description?: string, status: FqdnStatus, createdAt: Date, updatedAt: Date): Fqdn
+    }
+```
+
+**理由**:
+- ドメインの振る舞いをカプセル化できる
+- ドメイン駆動設計の原則に従う
+- 既存の実装パターンとの一貫性が保たれる
+
+### 22-15. シーケンス図における変数名の一貫性 🟡 Medium
+
+**問題**: シーケンス図で定義されていない変数名が使われている場合、実装時に混乱を招く。
+
+**解決策**:
+- シーケンス図で使用する変数名は、メソッドの引数名や既に定義されている変数名と一致させる
+- 一貫性を保ち、混乱を避ける
+
+**実装例**:
+```mermaid
+# ❌ 悪い例: 定義されていない変数名
+UpdateFqdnUseCase->>FqdnRepository: findByFqdn(newFqdn)
+
+# ✅ 良い例: メソッドの引数名と一致
+UpdateFqdnUseCase->>FqdnRepository: findByFqdn(fqdn)
+```
+
+**理由**:
+- 実装時の混乱を避ける
+- 設計の一貫性が保たれる
+
+**参照**: PR #48 - FQDN管理機能の詳細設計書作成（Geminiレビュー指摘 第4弾）
