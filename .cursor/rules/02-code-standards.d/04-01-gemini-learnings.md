@@ -2493,3 +2493,145 @@ public async execute(id: string, email?: string): Promise<User> {
 - 意図が明確になる
 - 不要なリポジトリへのアクセスを避けることができる
 - パフォーマンスが向上する可能性がある
+
+---
+
+## 22. 詳細設計書の品質向上（PR #48）
+
+**学習元**: PR #48 - FQDN管理機能の詳細設計書作成（Geminiレビュー指摘）
+
+### 22-1. バリデーションルールの矛盾解消 🟡 High
+
+**問題**: バリデーションルールの記述と無効な例が矛盾している場合、実装時に混乱を招く。
+
+**解決策**:
+- バリデーションルールの記述と無効な例を整合させる
+- ルールを具体的で明確な表現にする（例: 「少なくとも1つのラベルが必要」→「少なくとも2つのラベルが必要、少なくとも1つのピリオドを含む必要がある」）
+
+**実装例**:
+```markdown
+# ❌ 悪い例: 矛盾がある
+5. **形式**: `label1.label2.label3` の形式（少なくとも1つのラベルが必要）
+
+**無効な例**:
+- `example` (TLDがない)
+
+# ✅ 良い例: 明確で矛盾がない
+5. **形式**: `label1.label2.label3` の形式（少なくとも2つのラベルが必要、少なくとも1つのピリオドを含む必要がある）
+
+**無効な例**:
+- `example` (TLDがない、ピリオドを含まない)
+```
+
+**理由**:
+- 実装時の混乱を避ける
+- 設計の意図が明確になる
+
+### 22-2. クラス図における型定義の完全性 🟡 Medium
+
+**問題**: クラス図で使用されている型（`FqdnListQuery`、`FqdnListResult`など）が定義されていない場合、設計の完全性が損なわれる。
+
+**解決策**:
+- クラス図で使用されているすべての型を定義する
+- Value Objectとして明示的に追加する
+- プロパティと説明を記載する
+
+**実装例**:
+```mermaid
+classDiagram
+    class FqdnListQuery {
+        <<ValueObject>>
+        +string? fqdn
+        +FqdnStatus? status
+        +number? page
+        +number? limit
+    }
+    
+    class FqdnListResult {
+        <<ValueObject>>
+        +Fqdn[] fqdns
+        +number total
+        +number page
+        +number limit
+    }
+```
+
+**理由**:
+- ApplicationレイヤーとDomainレイヤーでどのようなデータがやり取りされるかが明確になる
+- 設計の完全性が向上する
+
+### 22-3. 命名規則の一貫性 🟡 Medium
+
+**問題**: メソッド名やクラス名が実際の動作と一致しない場合（例: `Toggle`という名前だが実際は特定の値に設定する）、混乱を招く。
+
+**解決策**:
+- メソッド名やクラス名は実際の動作を正確に反映する
+- `Toggle`（反転）ではなく、`Update`（更新）を使用する
+- コントローラーのメソッド名も同様に一貫性を保つ
+
+**実装例**:
+```typescript
+// ❌ 悪い例: 名前と動作が不一致
+class ToggleFqdnStatusUseCase {
+  execute(id: string, status: FqdnStatus): Promise<Fqdn> {
+    // リクエストで指定された特定の値に設定する（トグルではない）
+  }
+}
+
+// ✅ 良い例: 名前と動作が一致
+class UpdateFqdnStatusUseCase {
+  execute(id: string, status: FqdnStatus): Promise<Fqdn> {
+    // リクエストで指定された特定の値に更新する
+  }
+}
+```
+
+**理由**:
+- 処理フローの理解が容易になる
+- コードの可読性が向上する
+
+### 22-4. クラス図における型の明記 🟡 Medium
+
+**問題**: クラス図でメソッドの引数に型が指定されていない場合、設計の明確さが損なわれる。
+
+**解決策**:
+- クラス図のメソッド定義に型を明記する
+- 実装コードと一致させる
+
+**実装例**:
+```mermaid
+classDiagram
+    class Fqdn {
+        +create(fqdn: string, description?: string)
+        +reconstruct(id: string, fqdn: string, description?: string, status: FqdnStatus, createdAt: Date, updatedAt: Date)
+        +update(fqdn?: string, description?: string)
+    }
+```
+
+**理由**:
+- コードの可読性が向上する
+- 設計の明確さが向上する
+
+### 22-5. バリデーションルールの明確化 🟡 Medium
+
+**問題**: バリデーションルールの記述が曖昧な場合（例: 「大文字は使用不可、小文字に変換される」）、2つの解釈が可能になる。
+
+**解決策**:
+- バリデーションルールを具体的に記述する
+- 大文字を含む入力の扱いを明確にする（受け入れるか、エラーとするか）
+- 正規化処理がある場合は明記する
+
+**実装例**:
+```markdown
+# ❌ 悪い例: 曖昧な記述
+- `EXAMPLE.COM` (大文字は使用不可、小文字に変換される)
+
+# ✅ 良い例: 明確な記述
+- `EXAMPLE.COM` (大文字を含むFQDNは受け入れ、内部で小文字に正規化して扱う)
+```
+
+**理由**:
+- 実装時の混乱を避ける
+- 設計の意図が明確になる
+
+**参照**: PR #48 - FQDN管理機能の詳細設計書作成（Geminiレビュー指摘）
