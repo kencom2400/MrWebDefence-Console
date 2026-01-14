@@ -204,7 +204,7 @@ FQDN管理に関するHTTPエンドポイントを提供するコントローラ
 - **UpdateFqdnUseCase**: FQDN更新処理
 - **DeleteFqdnUseCase**: FQDN削除処理
 - **GetFqdnListUseCase**: FQDN一覧取得・検索処理（検索クエリパラメータ対応）
-- **GetFqdnByIdUseCase**: FQDN詳細取得処理
+- **GetFqdnByIdUseCase**: FQDN詳細取得処理（見つからない場合はNotFoundExceptionをスロー）
 - **UpdateFqdnStatusUseCase**: FQDNステータス更新処理
 
 ### Domain Layer
