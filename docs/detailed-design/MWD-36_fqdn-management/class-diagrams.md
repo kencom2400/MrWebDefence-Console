@@ -90,7 +90,7 @@ classDiagram
     
     class GetFqdnByIdUseCase {
         -IFqdnRepository fqdnRepository
-        +execute(id: string): Promise~Fqdn | null~
+        +execute(id: string): Promise~Fqdn~
     }
     
     class UpdateFqdnStatusUseCase {
