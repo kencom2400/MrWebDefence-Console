@@ -12,14 +12,18 @@
 
 ```
 
-**必須4ステップ**:
+**必須4ステップ（コンテナ使用）**:
 
 ```bash
-1. ./scripts/test/lint.sh         # 構文・スタイル
-2. pnpm build                      # ビルド確認 ⭐ 重要
-3. ./scripts/test/test.sh all     # ユニットテスト
-4. ./scripts/test/test-e2e.sh frontend # E2Eテスト
+1. ./scripts/backend/lint.sh      # 構文・スタイル（コンテナ使用）
+2. ./scripts/backend/build.sh     # ビルド確認（コンテナ使用）⭐ 重要
+3. ./scripts/backend/test.sh all  # ユニットテスト（コンテナ使用）
+4. ./scripts/backend/test.sh e2e  # E2Eテスト（コンテナ使用）
 ```
+
+**⚠️ 重要: コンテナを使用したスクリプトの実行が必須**
+
+pushする前に、必ずコンテナを使用したスクリプトを実行すること。これにより、CI環境と同一の環境でテストを実行でき、環境差による問題を早期に発見できる。
 
 **実行時間**: 約4-6分
 

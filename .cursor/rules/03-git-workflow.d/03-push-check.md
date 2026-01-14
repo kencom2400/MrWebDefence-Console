@@ -6,10 +6,13 @@
 ║                                                               ║
 ║  pushする前に必ず以下を順番に実行すること：                   ║
 ║                                                               ║
-║  1. ./scripts/test/lint.sh         （構文・スタイル）         ║
-║  2. pnpm build                      （ビルド確認）⭐ NEW     ║
-║  3. ./scripts/test/test.sh all     （ユニットテスト）         ║
-║  4. ./scripts/test/test-e2e.sh frontend （E2Eテスト）         ║
+║  1. ./scripts/backend/lint.sh       （構文・スタイル）         ║
+║  2. ./scripts/backend/build.sh     （ビルド確認）⭐ NEW     ║
+║  3. ./scripts/backend/test.sh all  （ユニットテスト）         ║
+║  4. ./scripts/backend/test.sh e2e  （E2Eテスト）             ║
+║                                                               ║
+║  ⚠️ 重要: すべてのスクリプトはコンテナを使用して実行すること ║
+║  （CI環境と同一の環境でテストを実行するため）                ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
@@ -79,11 +82,11 @@ test.skip('取引データがない場合はメッセージを表示する', asy
 **正しいワークフロー**:
 
 ```bash
-# 1. すべてのチェックを実行
-./scripts/test/lint.sh
-pnpm build
-./scripts/test/test.sh all
-./scripts/test/test-e2e.sh frontend
+# 1. すべてのチェックを実行（コンテナ使用）
+./scripts/backend/lint.sh
+./scripts/backend/build.sh
+./scripts/backend/test.sh all
+./scripts/backend/test.sh e2e
 
 # 2. すべてPASSしたことを確認
 # ✅ Lint: PASS
@@ -142,6 +145,26 @@ git push origin <ブランチ名>
 - **特にビルドエラーはすべてのCI jobをブロックするため、最優先で確認**
 - フィードバックループが短縮され、開発効率が向上する
 
+### 🐳 コンテナを使用したスクリプトの実行が必須
+
+**pushする前に、必ずコンテナを使用したスクリプトを実行すること**。これにより、CI環境と同一の環境でテストを実行でき、環境差による問題を早期に発見できる。
+
+**使用するスクリプト**:
+- ✅ `./scripts/backend/lint.sh` - Docker Composeを使用してLintを実行
+- ✅ `./scripts/backend/build.sh` - Docker Composeを使用してビルドを実行
+- ✅ `./scripts/backend/test.sh all` - Docker Composeを使用してユニットテストを実行
+- ✅ `./scripts/backend/test.sh e2e` - Docker Composeを使用してE2Eテストを実行
+
+**禁止事項**:
+- ❌ ローカルで直接実行: `pnpm build`, `pnpm test`, `pnpm lint` など（push前チェックでは使用禁止）
+- ❌ コンテナを使用しないスクリプトの実行
+
+**理由**:
+- CI環境と同一の環境でテストを実行することで、環境差による問題を早期に発見できる
+- ローカル環境の依存関係や設定の違いによる問題を回避できる
+- CIでの失敗を事前に防ぐことができる
+- Docker Composeを使用することで、CI環境と同一のNode.jsバージョン、依存関係、環境変数で実行できる
+
 ### 📋 テスト実行の判断基準
 
 #### ✅ テスト・E2Eテストが**必須**な場合
@@ -180,20 +203,30 @@ git diff --name-only | grep -v '\.md$' | wc -l
 **実行手順：**
 
 ```bash
-# 1. Lintチェック（必須）
-./scripts/test/lint.sh
+# 1. Lintチェック（必須・コンテナ使用）
+./scripts/backend/lint.sh
 
-# 2. ビルドチェック（必須・最重要）⭐ NEW
-pnpm build
-# または
-npx turbo build
+# 2. ビルドチェック（必須・最重要・コンテナ使用）⭐ NEW
+./scripts/backend/build.sh
 
-# 3. ユニットテスト（必須）
-./scripts/test/test.sh all
+# 3. ユニットテスト（必須・コンテナ使用）
+./scripts/backend/test.sh all
 
-# 4. E2Eテスト（必須）
-./scripts/test/test-e2e.sh frontend
+# 4. E2Eテスト（必須・コンテナ使用）
+./scripts/backend/test.sh e2e
 ```
+
+**⚠️ 重要: コンテナを使用したスクリプトの実行が必須**
+
+pushする前に、必ずコンテナを使用したスクリプトを実行すること。これにより、CI環境と同一の環境でテストを実行でき、環境差による問題を早期に発見できる。
+
+- ✅ **コンテナを使用したスクリプト**: `./scripts/backend/*.sh`（Docker Composeを使用）
+- ❌ **ローカルで直接実行**: `pnpm build`, `pnpm test` など（push前チェックでは使用禁止）
+
+**理由**:
+- CI環境と同一の環境でテストを実行することで、環境差による問題を早期に発見できる
+- ローカル環境の依存関係や設定の違いによる問題を回避できる
+- CIでの失敗を事前に防ぐことができる
 
 **実行時間の目安：**
 
@@ -286,14 +319,14 @@ npx turbo build
 **push前の必須確認フロー**:
 
 ```bash
-# 1. すべてのチェックを実行
-./scripts/test/lint.sh
-pnpm build
-./scripts/test/test.sh all
-./scripts/test/test-e2e.sh frontend
+# 1. すべてのチェックを実行（コンテナ使用）
+./scripts/backend/lint.sh
+./scripts/backend/build.sh
+./scripts/backend/test.sh all
+./scripts/backend/test.sh e2e
 
 # 2. テスト結果を確認（failedが0であることを確認）
-./scripts/test/test-e2e.sh frontend | grep -E "(failed|passed|skipped)"
+./scripts/backend/test.sh e2e | grep -E "(failed|passed|skipped)"
 
 # 3. 結果の判定
 # ✅ failedが表示されていない → push OK
