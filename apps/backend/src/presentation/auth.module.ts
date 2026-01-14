@@ -21,7 +21,6 @@ import { GetDashboardDataUseCase } from '../application/use-cases/get-dashboard-
 import { ChangePasswordUseCase } from '../application/use-cases/change-password.use-case';
 import { ValidatePasswordPolicyUseCase } from '../application/use-cases/validate-password-policy.use-case';
 import { GetPasswordPolicyUseCase } from '../application/use-cases/get-password-policy.use-case';
-import { UserRepository } from '../infrastructure/repositories/user.repository';
 import { MfaRepository } from '../infrastructure/repositories/mfa.repository';
 import { IpAllowListRepository } from '../infrastructure/repositories/ip-allowlist.repository';
 import { PasswordHistoryRepository } from '../infrastructure/repositories/password-history.repository';
