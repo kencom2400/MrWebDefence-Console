@@ -159,16 +159,27 @@ describe('AuthController (e2e)', () => {
     });
 
     it('正常系: ログアウトして、その後同じトークンでプロフィールにアクセスできない', async () => {
+      // ログアウト用の新しいトークンを取得
+      const logoutRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: testUserEmail,
+          password: testUserPassword,
+        })
+        .expect(200);
+
+      const logoutToken = logoutRes.body.accessToken;
+
       // ログアウト
       await request(app.getHttpServer())
         .post('/api/v1/auth/logout')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${logoutToken}`)
         .expect(200);
 
       // ログアウト後に同じトークンでプロフィールにアクセスできないことを確認
       await request(app.getHttpServer())
         .get('/api/v1/auth/profile')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${logoutToken}`)
         .expect(401)
         .expect((res: request.Response) => {
           expect(res.body.message).toBe('Token is invalidated');
