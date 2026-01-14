@@ -45,4 +45,3 @@ export class UpdateUserUseCase {
     return await this.userRepository.update(updatedUser);
   }
 }
-

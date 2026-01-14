@@ -32,4 +32,3 @@ export class UpdateCustomerDto {
   @MaxLength(200)
   address?: string | null;
 }
-

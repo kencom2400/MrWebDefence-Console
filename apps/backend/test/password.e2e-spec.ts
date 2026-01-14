@@ -12,6 +12,7 @@ import Redis from 'ioredis';
 import { UserRepository } from '../src/infrastructure/repositories/user.repository';
 import { PasswordHistoryRepository } from '../src/infrastructure/repositories/password-history.repository';
 import { User } from '../src/domain/entities/user.entity';
+import { UserRole } from '../src/domain/entities/user-role.enum';
 
 describe('Password E2E Tests', () => {
   let app: INestApplication;
@@ -233,11 +234,25 @@ describe('Password E2E Tests', () => {
         'IPasswordHistoryRepository',
       );
 
-      // テストユーザーを取得
-      const testUser = await userRepository.findByEmail('user@example.com');
-      if (testUser) {
+      // テストユーザーを取得または作成
+      let testUser = await userRepository.findByEmail('user@example.com');
+      const initialPasswordHash = '$2b$10$he31Fy7fUPv9rO2E2coIA.z/3/AStVeVgDSlJMCwNDqLOaw0R/67O'; // password123のハッシュ
+
+      if (!testUser) {
+        // テストユーザーが存在しない場合は作成
+        testUser = User.reconstruct(
+          'test-user-id',
+          'user@example.com',
+          initialPasswordHash,
+          UserRole.SERVICE_MEMBER,
+          false,
+          null,
+          new Date(),
+          new Date(),
+        );
+        await userRepository.create(testUser);
+      } else {
         // パスワードを初期状態に戻す
-        const initialPasswordHash = '$2b$10$he31Fy7fUPv9rO2E2coIA.z/3/AStVeVgDSlJMCwNDqLOaw0R/67O'; // password123のハッシュ
         const resetUser = User.reconstruct(
           testUser.id,
           testUser.email,
@@ -248,10 +263,20 @@ describe('Password E2E Tests', () => {
           testUser.createdAt,
           new Date(),
         );
-        await userRepository.save(resetUser);
+        await userRepository.update(resetUser);
+        // 更新後のユーザーを再取得して確認
+        testUser = await userRepository.findById(testUser.id);
+      }
 
-        // パスワード履歴をクリア
+      // パスワード履歴をクリア
+      if (testUser) {
         await passwordHistoryRepository.deleteOldHistory(testUser.id, 0);
+      }
+
+      // ユーザーが正しく保存されているか確認
+      const verifyUser = await userRepository.findByEmail('user@example.com');
+      if (!verifyUser) {
+        throw new Error('Test user not found after setup');
       }
 
       const loginRes = await request(app.getHttpServer())

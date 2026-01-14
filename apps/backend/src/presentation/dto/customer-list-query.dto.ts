@@ -38,4 +38,3 @@ export class CustomerListQueryDto {
   @Max(100)
   limit?: number;
 }
-

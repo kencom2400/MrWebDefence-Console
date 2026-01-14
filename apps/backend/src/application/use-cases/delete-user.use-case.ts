@@ -30,4 +30,3 @@ export class DeleteUserUseCase {
     await this.userRepository.delete(id);
   }
 }
-

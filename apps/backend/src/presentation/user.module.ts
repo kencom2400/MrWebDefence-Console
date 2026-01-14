@@ -53,4 +53,3 @@ import { PasswordService } from '../infrastructure/services/password.service';
   ],
 })
 export class UserModule {}
-

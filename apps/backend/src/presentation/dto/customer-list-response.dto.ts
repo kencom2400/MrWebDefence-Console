@@ -12,4 +12,3 @@ export class CustomerListResponseDto {
   page: number;
   limit: number;
 }
-

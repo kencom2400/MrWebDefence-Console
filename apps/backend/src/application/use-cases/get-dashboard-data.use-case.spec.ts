@@ -19,8 +19,12 @@ describe('GetDashboardDataUseCase', () => {
 
   beforeEach(() => {
     mockUserRepository = {
-      findByEmail: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
       findById: jest.fn(),
+      findByEmail: jest.fn(),
+      findAll: jest.fn(),
       save: jest.fn(),
     } as jest.Mocked<IUserRepository>;
 

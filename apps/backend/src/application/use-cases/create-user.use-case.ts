@@ -50,4 +50,3 @@ export class CreateUserUseCase {
     return await this.userRepository.create(user);
   }
 }
-

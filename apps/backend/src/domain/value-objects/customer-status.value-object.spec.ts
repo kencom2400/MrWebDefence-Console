@@ -34,7 +34,9 @@ describe('CustomerStatus', () => {
     });
 
     it('無効な値の場合エラーを投げる', () => {
-      expect(() => CustomerStatus.create('INVALID')).toThrow("Invalid customer status: INVALID. Must be 'ACTIVE' or 'INACTIVE'");
+      expect(() => CustomerStatus.create('INVALID')).toThrow(
+        "Invalid customer status: INVALID. Must be 'ACTIVE' or 'INACTIVE'",
+      );
     });
   });
 
@@ -80,4 +82,3 @@ describe('CustomerStatus', () => {
     });
   });
 });
-

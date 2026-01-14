@@ -37,4 +37,3 @@ export class ChangeUserRoleUseCase {
     return await this.userRepository.update(updatedUser);
   }
 }
-

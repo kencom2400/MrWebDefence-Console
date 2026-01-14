@@ -30,4 +30,3 @@ export class UserListQueryDto {
   @Max(100)
   limit?: number;
 }
-
