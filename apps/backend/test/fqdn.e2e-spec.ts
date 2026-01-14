@@ -122,6 +122,15 @@ describe('FQDN E2E Tests', () => {
 
   describe('POST /api/v1/fqdns', () => {
     beforeEach(async () => {
+      // 各テスト前にRedisをクリア（テストの独立性を保つため）
+      if (testClient) {
+        try {
+          await testClient.flushdb();
+        } catch (error) {
+          // Redis flushdb失敗時は続行
+        }
+      }
+
       // 各テスト前にFQDNリポジトリをクリア
       const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
       if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
@@ -219,6 +228,15 @@ describe('FQDN E2E Tests', () => {
 
   describe('PATCH /api/v1/fqdns/:id', () => {
     beforeEach(async () => {
+      // 各テスト前にRedisをクリア（テストの独立性を保つため）
+      if (testClient) {
+        try {
+          await testClient.flushdb();
+        } catch (error) {
+          // Redis flushdb失敗時は続行
+        }
+      }
+
       // 各テスト前にFQDNリポジトリをクリア
       const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
       if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
@@ -296,6 +314,15 @@ describe('FQDN E2E Tests', () => {
 
   describe('DELETE /api/v1/fqdns/:id', () => {
     beforeEach(async () => {
+      // 各テスト前にRedisをクリア（テストの独立性を保つため）
+      if (testClient) {
+        try {
+          await testClient.flushdb();
+        } catch (error) {
+          // Redis flushdb失敗時は続行
+        }
+      }
+
       // 各テスト前にFQDNリポジトリをクリア
       const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
       if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
@@ -338,6 +365,15 @@ describe('FQDN E2E Tests', () => {
 
   describe('GET /api/v1/fqdns', () => {
     beforeEach(async () => {
+      // 各テスト前にRedisをクリア（テストの独立性を保つため）
+      if (testClient) {
+        try {
+          await testClient.flushdb();
+        } catch (error) {
+          // Redis flushdb失敗時は続行
+        }
+      }
+
       // 各テスト前にFQDNリポジトリをクリア
       const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
       if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
@@ -428,6 +464,15 @@ describe('FQDN E2E Tests', () => {
 
   describe('GET /api/v1/fqdns/:id', () => {
     beforeEach(async () => {
+      // 各テスト前にRedisをクリア（テストの独立性を保つため）
+      if (testClient) {
+        try {
+          await testClient.flushdb();
+        } catch (error) {
+          // Redis flushdb失敗時は続行
+        }
+      }
+
       // 各テスト前にFQDNリポジトリをクリア
       const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
       if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
@@ -468,17 +513,26 @@ describe('FQDN E2E Tests', () => {
   });
 
   describe('PATCH /api/v1/fqdns/:id/status', () => {
-    let statusAccessToken: string;
-
     beforeEach(async () => {
+      // 各テスト前にRedisをクリア（テストの独立性を保つため）
+      if (testClient) {
+        try {
+          await testClient.flushdb();
+        } catch (error) {
+          // Redis flushdb失敗時は続行
+        }
+      }
+
       // 各テスト前にFQDNリポジトリをクリア
       const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
       if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
         fqdnRepository.clear();
       }
+    });
 
-      // テストの独立性を保つため、このdescribeブロック専用のトークンを取得
-      // Redisはクリアしない（beforeAllで既にクリア済み）
+    it('正常系: FQDNステータスをINACTIVEに更新できる', async () => {
+      // beforeEachでRedisをクリア済み
+      // テストの独立性を保つため、このテスト専用のトークンを取得
       const loginRes = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
@@ -487,11 +541,9 @@ describe('FQDN E2E Tests', () => {
         })
         .expect(200);
 
-      statusAccessToken = loginRes.body.accessToken;
+      const statusAccessToken = loginRes.body.accessToken;
       expect(statusAccessToken).toBeDefined();
-    });
 
-    it('正常系: FQDNステータスをINACTIVEに更新できる', async () => {
       // テスト用のFQDNを作成
       const createResponse = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
@@ -515,6 +567,20 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('正常系: FQDNステータスをACTIVEに更新できる', async () => {
+      // テストの独立性を保つため、このテスト専用のトークンを取得
+      const loginRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'user@example.com',
+          password: 'password123',
+        })
+        .expect(200);
+
+      const statusAccessToken = loginRes.body.accessToken;
+      expect(statusAccessToken).toBeDefined();
+      expect(typeof statusAccessToken).toBe('string');
+      expect(statusAccessToken.length).toBeGreaterThan(0);
+
       // テスト用のFQDNを作成
       const createResponse = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
@@ -544,10 +610,25 @@ describe('FQDN E2E Tests', () => {
         })
         .expect(200);
 
+      expect(response.status).toBe(200);
       expect(response.body.status).toBe('ACTIVE');
     });
 
     it('異常系: 無効なステータスを指定すると400エラー', async () => {
+      // テストの独立性を保つため、このテスト専用のトークンを取得
+      const loginRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'user@example.com',
+          password: 'password123',
+        })
+        .expect(200);
+
+      const statusAccessToken = loginRes.body.accessToken;
+      expect(statusAccessToken).toBeDefined();
+      expect(typeof statusAccessToken).toBe('string');
+      expect(statusAccessToken.length).toBeGreaterThan(0);
+
       // テスト用のFQDNを作成
       const createResponse = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
@@ -556,6 +637,8 @@ describe('FQDN E2E Tests', () => {
           fqdn: 'status-invalid-status-test.com',
         })
         .expect(201);
+
+      expect(createResponse.status).toBe(201);
 
       const testFqdnId = createResponse.body.id;
 
@@ -571,6 +654,18 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('異常系: 存在しないFQDNのステータスを更新しようとすると404エラー', async () => {
+      // テストの独立性を保つため、このテスト専用のトークンを取得
+      const loginRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: 'user@example.com',
+          password: 'password123',
+        })
+        .expect(200);
+
+      const statusAccessToken = loginRes.body.accessToken;
+      expect(statusAccessToken).toBeDefined();
+
       const nonExistentId = '00000000-0000-0000-0000-000000000000';
       await request(app.getHttpServer())
         .patch(`/api/v1/fqdns/${nonExistentId}/status`)

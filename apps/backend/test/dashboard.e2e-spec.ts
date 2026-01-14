@@ -35,6 +35,8 @@ describe('Dashboard (e2e)', () => {
         });
         await testClient.connect();
         await testClient.ping();
+        // テストの独立性を保つため、Redisの状態をクリア
+        await testClient.flushdb();
         await testClient.quit();
         redisReady = true;
       } catch (error) {
