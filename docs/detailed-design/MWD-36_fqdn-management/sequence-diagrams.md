@@ -179,7 +179,7 @@ sequenceDiagram
     end
 ```
 
-## FQDNステータス切り替えフロー
+## FQDNステータス更新フロー
 
 ```mermaid
 sequenceDiagram
