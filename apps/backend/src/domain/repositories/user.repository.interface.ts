@@ -1,34 +1,53 @@
+/**
+ * IUserRepository
+ *
+ * ユーザーリポジトリのインターフェース
+ * ドメイン層に定義され、インフラストラクチャ層で実装される
+ */
+
 import { User } from '../entities/user.entity';
+import { UserRole } from '../entities/user-role.enum';
 
-export interface IUserRepository {
-  /**
-   * メールアドレスからユーザーを検索する
-   * @param email メールアドレス
-   * @returns ユーザーエンティティ、またはnull
-   */
-  findByEmail(email: string): Promise<User | null>;
+/**
+ * ユーザー一覧取得・検索のクエリパラメータ
+ */
+export interface UserListQuery {
+  email?: string;
+  role?: UserRole;
+  page?: number;
+  limit?: number;
+}
 
-  /**
-   * ユーザーIDからユーザーを検索する
-   * @param id ユーザーID
-   * @returns ユーザーエンティティ、またはnull
-   */
-  findById(id: string): Promise<User | null>;
-
-  /**
-   * ユーザーを保存する
-   * @param user ユーザーエンティティ
-   */
-  save(user: User): Promise<void>;
+/**
+ * ユーザー一覧取得・検索の結果
+ */
+export interface UserListResult {
+  users: User[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export interface IUserRepository {
   /**
-   * メールアドレスからユーザーを検索する
-   * @param email メールアドレス
-   * @returns ユーザーエンティティ、またはnull
+   * ユーザーを作成する
+   * @param user ユーザーエンティティ
+   * @returns 作成されたユーザーエンティティ
    */
-  findByEmail(email: string): Promise<User | null>;
+  create(user: User): Promise<User>;
+
+  /**
+   * ユーザーを更新する
+   * @param user ユーザーエンティティ
+   * @returns 更新されたユーザーエンティティ
+   */
+  update(user: User): Promise<User>;
+
+  /**
+   * ユーザーを削除する
+   * @param id ユーザーID
+   */
+  delete(id: string): Promise<void>;
 
   /**
    * ユーザーIDからユーザーを検索する
@@ -38,14 +57,6 @@ export interface IUserRepository {
   findById(id: string): Promise<User | null>;
 
   /**
-   * ユーザーを保存する
-   * @param user ユーザーエンティティ
-   */
-  save(user: User): Promise<void>;
-}
-
-export interface IUserRepository {
-  /**
    * メールアドレスからユーザーを検索する
    * @param email メールアドレス
    * @returns ユーザーエンティティ、またはnull
@@ -53,15 +64,16 @@ export interface IUserRepository {
   findByEmail(email: string): Promise<User | null>;
 
   /**
-   * ユーザーIDからユーザーを検索する
-   * @param id ユーザーID
-   * @returns ユーザーエンティティ、またはnull
+   * ユーザー一覧を取得・検索する
+   * @param query 検索クエリ（検索条件とページネーション情報）
+   * @returns ユーザー一覧とページネーション情報
    */
-  findById(id: string): Promise<User | null>;
+  findAll(query: UserListQuery): Promise<UserListResult>;
 
   /**
-   * ユーザーを保存する
+   * ユーザーを保存する（非推奨）
    * @param user ユーザーエンティティ
+   * @deprecated createまたはupdateを使用してください
    */
   save(user: User): Promise<void>;
 }

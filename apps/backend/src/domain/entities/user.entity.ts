@@ -124,4 +124,47 @@ export class User {
       new Date(),
     );
   }
+
+  /**
+   * メールアドレスを更新する
+   * @param newEmail 新しいメールアドレス
+   * @returns 新しいUserエンティティ（メールアドレス更新済み）
+   */
+  public updateEmail(newEmail: string): User {
+    if (!newEmail || newEmail.trim().length === 0) {
+      throw new Error('Email cannot be empty');
+    }
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(newEmail.trim())) {
+      throw new Error('Invalid email format');
+    }
+    return new User(
+      this.id,
+      newEmail.trim(),
+      this.hashedPassword,
+      this.role,
+      this.mfaEnabled,
+      this.mfaSecret,
+      this.createdAt,
+      new Date(),
+    );
+  }
+
+  /**
+   * ロールを更新する
+   * @param newRole 新しいロール
+   * @returns 新しいUserエンティティ（ロール更新済み）
+   */
+  public updateRole(newRole: UserRole): User {
+    return new User(
+      this.id,
+      this.email,
+      this.hashedPassword,
+      newRole,
+      this.mfaEnabled,
+      this.mfaSecret,
+      this.createdAt,
+      new Date(),
+    );
+  }
 }

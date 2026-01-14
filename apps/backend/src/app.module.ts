@@ -8,6 +8,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './presentation/auth.module';
 import { CustomerModule } from './presentation/customer.module';
+import { UserModule } from './presentation/user.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { CustomerModule } from './presentation/customer.module';
     }),
     AuthModule,
     CustomerModule,
+    UserModule,
   ],
   controllers: [],
   providers: [],
