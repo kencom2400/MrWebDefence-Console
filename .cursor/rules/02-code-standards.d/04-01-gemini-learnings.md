@@ -2029,6 +2029,128 @@ public async deleteOldHistory(userId: string, keepCount: number): Promise<void> 
 - 実装者の理解を助ける
 - 手戻りを防ぐ
 
+#### シーケンス図におけるデータフローの正確性
+
+**問題**: シーケンス図で、リポジトリから返された`savedUser`をコントローラーに返すべき箇所で、元の`user`を返している場合がある。また、リポジトリの`update`メソッドに渡す引数が`user`になっているが、実際には`updatedUser`を渡すべき。
+
+**解決策**: シーケンス図では、エンティティの不変性を保つため、以下の点に注意する：
+1. エンティティの更新メソッド（`updateEmail`、`updateRole`など）は新しいエンティティを返す
+2. リポジトリの`update`メソッドには`updatedUser`を渡す
+3. リポジトリから返された`savedUser`をコントローラーに返す
+
+**例**:
+```mermaid
+sequenceDiagram
+    ChangeUserRoleUseCase->>User: updateRole(role)
+    User-->>ChangeUserRoleUseCase: updatedUser
+    
+    ChangeUserRoleUseCase->>UserRepository: update(updatedUser)
+    UserRepository-->>ChangeUserRoleUseCase: savedUser
+    
+    ChangeUserRoleUseCase-->>UserController: savedUser
+    UserController->>UserController: toResponseDto(savedUser)
+```
+
+**理由**:
+- エンティティの不変性とデータフローが明確になる
+- 実装時の混乱を防ぐ
+- 設計書の正確性向上
+
+#### 設計書における型定義の明確化
+
+**問題**: クラス図で使用されている型（例: `UserListQuery`、`UserListResult`）がクラス図内で定義されていない場合、レイヤー間のデータの流れが不明確になる。
+
+**解決策**: クラス図には、すべての型（Value Object、DTO、Query、Resultなど）を明示的に定義する。
+
+**例**:
+```mermaid
+class UserListQuery {
+    <<Value Object>>
+    +string? email
+    +UserRole? role
+    +number page
+    +number limit
+}
+
+class UserListResult {
+    <<Value Object>>
+    +User[] users
+    +number total
+    +number page
+    +number limit
+}
+```
+
+**理由**:
+- レイヤー間のデータの流れが明確になる
+- 実装時の混乱を防ぐ
+- 設計書の完全性向上
+
+#### 既存インターフェースの変更点の明記
+
+**問題**: 既存のインターフェース（例: `IUserRepository`）を変更する場合、変更点（メソッドの追加、削除、変更）が設計書に明記されていないと、実装者が混乱する。
+
+**解決策**: 既存インターフェースからの変更点を明記する。
+
+**例**:
+```markdown
+**既存インターフェースからの変更点**:
+- `save(user: User): Promise<void>` は、より責務が明確な `create(user: User): Promise<User>` と `update(user: User): Promise<User>` に置き換えられます
+- `create`と`update`は、保存されたエンティティを返すため、戻り値が`Promise<User>`に変更されます
+- 既存の`save`メソッドは非推奨となり、将来的に削除される予定です
+```
+
+**理由**:
+- 変更の意図が明確になる
+- 実装者の理解を助ける
+- 設計書の信頼性向上
+
+#### API仕様の具体性向上
+
+**問題**: API仕様で「パスワードポリシーに準拠」と記載されているが、具体的なポリシー（最小長、最大長、文字種の要件など）が明記されていない場合、APIを利用する開発者が困る。
+
+**解決策**: API仕様には、具体的な要件を明記する。
+
+**例**:
+```markdown
+- `password`: パスワード（パスワードポリシーに準拠）
+  - 最小長: 8文字以上
+  - 最大長: 128文字以下
+  - 大文字、小文字、数字、記号を含むことが推奨されます（パスワードポリシー設定により必須要件が異なる場合があります）
+```
+
+**理由**:
+- APIを利用する開発者の理解を助ける
+- 実装時の混乱を防ぐ
+- API仕様の完全性向上
+
+#### パフォーマンス考慮事項の明記
+
+**問題**: 設計書で部分一致検索などのパフォーマンスに影響を与える可能性がある機能を定義する場合、将来のデータベース実装時の考慮事項が明記されていない。
+
+**解決策**: パフォーマンスに影響を与える可能性がある機能については、将来の実装時の考慮事項を明記する。
+
+**例**:
+```markdown
+- `email`: メールアドレス（部分一致検索、オプション）
+  - **注意**: 部分一致検索（`LIKE '%...%'`）は、データ量が増加した場合にパフォーマンスに影響を与える可能性があります。将来的なデータベース実装時には、PostgreSQLのtrigramインデックスなどの最適化を検討してください。
+```
+
+**理由**:
+- 将来の実装時の考慮事項が明確になる
+- パフォーマンス問題の早期発見
+- 設計書の堅牢性向上
+
+#### 用語の明確化
+
+**問題**: 設計書で「ステータス値」という用語を使用すると、HTTPステータスコードと混同される可能性がある。
+
+**解決策**: より具体的な用語を使用する（例: 「ロールの値」、「roleフィールドの定義」）。
+
+**理由**:
+- 誤解を防ぐ
+- 設計書の明確性向上
+
 #### シーケンス図での実装時の注意事項の明記
 
 **問題**: シーケンス図で使用しているメソッドが既存実装に存在しない場合、実装者がどのように対応すべきかが不明確。

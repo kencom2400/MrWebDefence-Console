@@ -107,6 +107,22 @@ classDiagram
         SERVICE_MEMBER
     }
     
+    class UserListQuery {
+        <<Value Object>>
+        +string? email
+        +UserRole? role
+        +number page
+        +number limit
+    }
+    
+    class UserListResult {
+        <<Value Object>>
+        +User[] users
+        +number total
+        +number page
+        +number limit
+    }
+    
     class IUserRepository {
         <<interface>>
         +create(user: User): Promise~User~
@@ -153,6 +169,11 @@ classDiagram
     GetUserListUseCase --> IUserRepository : depends on
     GetUserByIdUseCase --> IUserRepository : depends on
     ChangeUserRoleUseCase --> IUserRepository : depends on
+    
+    GetUserListUseCase --> UserListQuery : uses
+    GetUserListUseCase --> UserListResult : returns
+    IUserRepository --> UserListQuery : uses
+    IUserRepository --> UserListResult : returns
     
     UserRepository ..|> IUserRepository : implements
     
@@ -224,7 +245,31 @@ classDiagram
 #### IUserRepository
 ユーザーリポジトリのインターフェース。ドメイン層とインフラストラクチャ層を分離します。
 
+**既存インターフェースからの変更点**:
+- `save(user: User): Promise<void>` は、より責務が明確な `create(user: User): Promise<User>` と `update(user: User): Promise<User>` に置き換えられます
+- `create`と`update`は、保存されたエンティティを返すため、戻り値が`Promise<User>`に変更されます
+- `delete(id: string): Promise<void>` と `findAll(query: UserListQuery): Promise<UserListResult>` が追加されます
+- 既存の`save`メソッドは非推奨となり、将来的に削除される予定です
+
+この変更により、`ICustomerRepository`との一貫性が保たれ、責務がより明確になります。
+
 ### Infrastructure Layer
+
+#### UserListQuery
+ユーザー一覧取得・検索のクエリパラメータを表すValue Object。
+
+- `email`: メールアドレス（部分一致検索、オプション）
+- `role`: ユーザーロール（オプション）
+- `page`: ページ番号（デフォルト: 1）
+- `limit`: 1ページあたりの件数（デフォルト: 10）
+
+#### UserListResult
+ユーザー一覧取得・検索の結果を表すValue Object。
+
+- `users`: ユーザー配列
+- `total`: 総件数
+- `page`: 現在のページ番号
+- `limit`: 1ページあたりの件数
 
 #### UserRepository
 ユーザーリポジトリの実装。現段階ではインメモリ実装ですが、将来的にはデータベースに接続します。

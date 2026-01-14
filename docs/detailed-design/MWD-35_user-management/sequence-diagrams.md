@@ -88,8 +88,8 @@ sequenceDiagram
                     UpdateUserUseCase->>UserRepository: update(updatedUser)
                     UserRepository-->>UpdateUserUseCase: savedUser
                     
-                    UpdateUserUseCase-->>UserController: user
-                    UserController->>UserController: toResponseDto(user)
+                    UpdateUserUseCase-->>UserController: savedUser
+                    UserController->>UserController: toResponseDto(savedUser)
                     UserController-->>Client: 200 OK { user }
                 end
             else メールアドレスが変更されない
@@ -209,11 +209,11 @@ sequenceDiagram
             Note over User: 実装時にUser EntityにupdateRoleメソッドを追加<br/>またはUser.reconstructで新しいエンティティを作成
             User-->>ChangeUserRoleUseCase: updatedUser
             
-            ChangeUserRoleUseCase->>UserRepository: update(user)
+            ChangeUserRoleUseCase->>UserRepository: update(updatedUser)
             UserRepository-->>ChangeUserRoleUseCase: savedUser
             
-            ChangeUserRoleUseCase-->>UserController: user
-            UserController->>UserController: toResponseDto(user)
+            ChangeUserRoleUseCase-->>UserController: savedUser
+            UserController->>UserController: toResponseDto(savedUser)
             UserController-->>Client: 200 OK { user }
         end
     end
