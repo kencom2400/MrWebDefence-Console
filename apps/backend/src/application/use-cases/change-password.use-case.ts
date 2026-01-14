@@ -95,7 +95,7 @@ export class ChangePasswordUseCase {
 
     // ユーザーエンティティを更新（不変性のため新しいインスタンスを作成）
     const updatedUser = user.updatePassword(newPasswordHash);
-    await this.userRepository.save(updatedUser);
+    await this.userRepository.update(updatedUser);
   }
 
   /**
