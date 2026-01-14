@@ -106,9 +106,9 @@ classDiagram
         +FqdnStatus status
         +Date createdAt
         +Date updatedAt
-        +create(fqdn, description?)
-        +reconstruct(id, fqdn, description?, status, createdAt, updatedAt)
-        +update(fqdn?, description?)
+        +create(fqdn: string, description?: string)
+        +reconstruct(id: string, fqdn: string, description?: string, status: FqdnStatus, createdAt: Date, updatedAt: Date)
+        +update(fqdn?: string, description?: string)
         +activate()
         +deactivate()
     }
