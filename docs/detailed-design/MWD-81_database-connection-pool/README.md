@@ -28,7 +28,6 @@ Onion Architecture（オニオンアーキテクチャ）に従い、レイヤ�
 ┌─────────────────────────────────────┐
 │  Infrastructure Layer               │
 │  - DatabaseConnectionPool           │
-│  - ConnectionPoolConfig             │
 │  - ConnectionPoolMonitor            │
 └──────────────┬──────────────────────┘
                │ 依存
@@ -98,6 +97,8 @@ Onion Architecture（オニオンアーキテクチャ）に従い、レイヤ�
 - `DB_POOL_CONNECTION_TIMEOUT`: 接続取得タイムアウト（ミリ秒、デフォルト: 30000）
 - `DB_POOL_IDLE_TIMEOUT`: アイドル接続のタイムアウト（ミリ秒、デフォルト: 600000）
 - `DB_POOL_MAX_LIFETIME`: 接続の最大生存時間（ミリ秒、デフォルト: 3600000）
+- `DB_POOL_RETRY_ATTEMPTS`: 接続失敗時のリトライ回数（デフォルト: 3）
+- `DB_POOL_RETRY_DELAY`: リトライ間隔（ミリ秒、デフォルト: 1000）
 
 ## セキュリティ考慮事項
 

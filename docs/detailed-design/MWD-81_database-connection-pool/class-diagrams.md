@@ -99,14 +99,11 @@ stateDiagram-v2
     Uninitialized --> Initializing: initialize()
     Initializing --> Ready: initialization success
     Initializing --> Error: initialization failed
-    Ready --> Active: getConnection()
-    Active --> Idle: releaseConnection()
-    Idle --> Active: getConnection()
-    Idle --> Expired: idleTimeout exceeded
-    Active --> Expired: maxLifetime exceeded
-    Expired --> [*]: cleanup
-    Ready --> [*]: destroy()
-    Error --> [*]: destroy()
+    Ready --> ShuttingDown: destroy()
+    ShuttingDown --> Shutdown: all connections closed
+    Shutdown --> [*]
+    Error --> ShuttingDown: destroy()
+    Error --> [*]: immediate shutdown
 ```
 
 ## 接続のライフサイクル

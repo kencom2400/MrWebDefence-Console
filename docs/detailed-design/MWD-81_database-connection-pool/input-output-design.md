@@ -81,9 +81,8 @@ interface ConnectionPoolStatus {
 - `Promise<Connection>`: データベース接続オブジェクト
 
 **失敗時:**
-- `ConnectionTimeoutError`: 接続取得タイムアウト
+- `ConnectionTimeoutError`: 接続取得タイムアウト（最大接続数に達している場合、タイムアウトまで待機したが接続が利用可能にならなかった場合に発生）
 - `ConnectionError`: 接続作成失敗（リトライ後も失敗）
-- `PoolExhaustedError`: 接続プールが枯渇している
 
 #### エラー詳細
 
@@ -100,13 +99,6 @@ class ConnectionError extends Error {
     super(message);
     this.name = 'ConnectionError';
     this.cause = cause;
-  }
-}
-
-class PoolExhaustedError extends Error {
-  constructor(maxConnections: number) {
-    super(`Connection pool exhausted. Max connections: ${maxConnections}`);
-    this.name = 'PoolExhaustedError';
   }
 }
 ```

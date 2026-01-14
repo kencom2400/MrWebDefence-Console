@@ -85,13 +85,7 @@ sequenceDiagram
         DatabaseConnectionPool->>Connection: updateLastUsedAt()
         DatabaseConnectionPool-->>UseCase: released
         
-        Note over ConnectionPoolMonitor: 監視プロセスがアイドル接続をチェック
-        ConnectionPoolMonitor->>DatabaseConnectionPool: cleanupIdleConnections()
-        alt アイドルタイムアウト超過
-            DatabaseConnectionPool->>Connection: close()
-            Connection-->>DatabaseConnectionPool: closed
-            DatabaseConnectionPool->>DatabaseConnectionPool: removeFromIdle()
-        end
+        Note over DatabaseConnectionPool: アイドル接続のクリーンアップは<br/>ConnectionPoolMonitorの定期的な監視プロセスで実行される<br/>（接続プール監視フローを参照）
     else 接続が無効
         Connection-->>DatabaseConnectionPool: false
         DatabaseConnectionPool->>DatabaseConnectionPool: removeFromActive()
