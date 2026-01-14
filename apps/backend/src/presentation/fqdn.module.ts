@@ -29,17 +29,5 @@ import { FqdnRepository } from '../infrastructure/repositories/fqdn.repository';
       useClass: FqdnRepository,
     },
   ],
-  exports: [
-    CreateFqdnUseCase,
-    UpdateFqdnUseCase,
-    DeleteFqdnUseCase,
-    GetFqdnListUseCase,
-    GetFqdnByIdUseCase,
-    UpdateFqdnStatusUseCase,
-    {
-      provide: 'IFqdnRepository',
-      useClass: FqdnRepository,
-    },
-  ],
 })
 export class FqdnModule {}

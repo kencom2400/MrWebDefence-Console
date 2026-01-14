@@ -36,7 +36,7 @@ export class UpdateFqdnUseCase {
       const normalizedFqdn = fqdn.trim().toLowerCase();
       if (normalizedFqdn !== existingFqdn.fqdn) {
         const duplicateFqdn = await this.fqdnRepository.findByFqdn(normalizedFqdn);
-        if (duplicateFqdn && duplicateFqdn.id !== id) {
+        if (duplicateFqdn) {
           throw new ConflictException('FQDN already exists');
         }
       }

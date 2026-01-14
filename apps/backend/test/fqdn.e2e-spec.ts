@@ -130,12 +130,6 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('正常系: FQDNを作成できる', async () => {
-      // 各テスト前にFQDNリポジトリをクリア
-      const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
-      if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
-        fqdnRepository.clear();
-      }
-
       const response = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -154,12 +148,6 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('正常系: 説明なしでFQDNを作成できる', async () => {
-      // 各テスト前にFQDNリポジトリをクリア
-      const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
-      if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
-        fqdnRepository.clear();
-      }
-
       const response = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -173,12 +161,6 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('正常系: 大文字のFQDNを小文字に正規化して作成できる', async () => {
-      // 各テスト前にFQDNリポジトリをクリア
-      const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
-      if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
-        fqdnRepository.clear();
-      }
-
       const response = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
         .set('Authorization', `Bearer ${accessToken}`)
@@ -212,12 +194,6 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('異常系: 重複するFQDNを作成しようとすると409エラー', async () => {
-      // 各テスト前にFQDNリポジトリをクリア
-      const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
-      if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
-        fqdnRepository.clear();
-      }
-
       // 最初のFQDNを作成
       await request(app.getHttpServer())
         .post('/api/v1/fqdns')
@@ -242,8 +218,6 @@ describe('FQDN E2E Tests', () => {
   });
 
   describe('PATCH /api/v1/fqdns/:id', () => {
-    let createdFqdnId: string;
-
     beforeEach(async () => {
       // 各テスト前にFQDNリポジトリをクリア
       const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
@@ -399,12 +373,6 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('正常系: FQDNで検索できる', async () => {
-      // 各テスト前にFQDNリポジトリをクリアして再作成
-      const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
-      if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
-        fqdnRepository.clear();
-      }
-
       // テスト用のFQDNを作成
       const fqdns = [
         { fqdn: 'search-filter1.com', description: '検索テスト1' },
@@ -432,12 +400,6 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('正常系: ページネーションが動作する', async () => {
-      // 各テスト前にFQDNリポジトリをクリアして再作成
-      const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
-      if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
-        fqdnRepository.clear();
-      }
-
       // テスト用のFQDNを作成
       const fqdns = [
         { fqdn: 'pagination1.com', description: 'ページ1' },
@@ -497,12 +459,6 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('異常系: 存在しないFQDNを取得しようとすると404エラー', async () => {
-      // 各テスト前にFQDNリポジトリをクリア
-      const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
-      if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
-        fqdnRepository.clear();
-      }
-
       const nonExistentId = '00000000-0000-0000-0000-000000000000';
       await request(app.getHttpServer())
         .get(`/api/v1/fqdns/${nonExistentId}`)
@@ -544,12 +500,6 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('正常系: FQDNステータスをACTIVEに更新できる', async () => {
-      // 各テスト前にFQDNリポジトリをクリア
-      const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
-      if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
-        fqdnRepository.clear();
-      }
-
       // テスト用のFQDNを作成
       const createResponse = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
@@ -583,12 +533,6 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('異常系: 無効なステータスを指定すると400エラー', async () => {
-      // 各テスト前にFQDNリポジトリをクリア
-      const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
-      if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
-        fqdnRepository.clear();
-      }
-
       // テスト用のFQDNを作成
       const createResponse = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
@@ -612,12 +556,6 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('異常系: 存在しないFQDNのステータスを更新しようとすると404エラー', async () => {
-      // 各テスト前にFQDNリポジトリをクリア
-      const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
-      if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
-        fqdnRepository.clear();
-      }
-
       const nonExistentId = '00000000-0000-0000-0000-000000000000';
       await request(app.getHttpServer())
         .patch(`/api/v1/fqdns/${nonExistentId}/status`)

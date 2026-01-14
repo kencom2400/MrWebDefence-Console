@@ -129,4 +129,13 @@ export class FqdnRepository implements IFqdnRepository {
       limit,
     };
   }
+
+  /**
+   * リポジトリの状態をクリアする（テスト用）
+   * すべてのFQDNデータとマッピングを削除する
+   */
+  clear(): void {
+    this.fqdns.clear();
+    this.fqdnToIdMap.clear();
+  }
 }
