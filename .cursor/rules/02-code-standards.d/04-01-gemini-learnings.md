@@ -2169,3 +2169,327 @@ sequenceDiagram
 - 実装時の対応方法が明確になる
 - 設計書の一貫性を保つ
 - 実装者の混乱を防ぐ
+
+---
+
+## 12. コードの簡潔化とNestJSベストプラクティス
+
+### リポジトリの`update`メソッドの簡潔化
+
+**問題**: リポジトリの`update`メソッドで、既に存在チェックを行っているにもかかわらず、再度`if (existingUser)`チェックを行っている。また、メールアドレスが変更されない場合の防御的なコードが不要な場合がある。
+
+**解決策**: 
+1. 既に`this.users.has(user.id)`で存在チェックを行っている場合、`this.users.get(user.id)`は常に`User`オブジェクトを返すため、`if (existingUser)`チェックは不要。非nullアサーション（`!`）を使用する。
+2. メールアドレスが変更されない場合の`else`ブロックは、他の部分（`create`や`constructor`）が正しく実装されていれば不要。削除することで、メソッドの主目的がより明確になる。
+
+**例**:
+```typescript
+// ❌ 冗長なチェック
+async update(user: User): Promise<User> {
+  if (!this.users.has(user.id)) {
+    throw new Error(`User with id ${user.id} not found`);
+  }
+  const existingUser = this.users.get(user.id);
+  if (existingUser) {
+    if (existingUser.email.toLowerCase() !== user.email.toLowerCase()) {
+      // ...
+    } else {
+      // 防御的なコード（不要な場合がある）
+      if (!this.emailToIdMap.has(user.email.toLowerCase())) {
+        this.emailToIdMap.set(user.email.toLowerCase(), user.id);
+      }
+    }
+  }
+  // ...
+}
+
+// ✅ 簡潔化
+async update(user: User): Promise<User> {
+  if (!this.users.has(user.id)) {
+    throw new Error(`User with id ${user.id} not found`);
+  }
+  const existingUser = this.users.get(user.id)!;
+  if (existingUser.email.toLowerCase() !== user.email.toLowerCase()) {
+    // 古いメールアドレスのマッピングを削除
+    this.emailToIdMap.delete(existingUser.email.toLowerCase());
+    // 新しいメールアドレスのマッピングを追加
+    this.emailToIdMap.set(user.email.toLowerCase(), user.id);
+  }
+  // ...
+}
+```
+
+**理由**:
+- コードが簡潔になり、可読性が向上する
+- メソッドの主目的が明確になる
+- 不要な防御的コードを削除することで、パフォーマンスが向上する可能性がある
+
+### コントローラーでのDTOオブジェクトの直接渡し
+
+**問題**: コントローラーでUseCaseを呼び出す際に、DTOオブジェクトの各プロパティを個別に渡しているが、DTOとUseCaseが期待する型が互換性がある場合、DTOオブジェクトを直接渡すことができる。
+
+**解決策**: DTOとUseCaseが期待する型が互換性がある場合、DTOオブジェクトを直接渡す。
+
+**例**:
+```typescript
+// ❌ 各プロパティを個別に渡す
+public async findAll(@Query() query: UserListQueryDto): Promise<UserListResponseDto> {
+  const result = await this.getUserListUseCase.execute({
+    email: query.email,
+    role: query.role,
+    page: query.page,
+    limit: query.limit,
+  });
+  // ...
+}
+
+// ✅ DTOオブジェクトを直接渡す
+public async findAll(@Query() query: UserListQueryDto): Promise<UserListResponseDto> {
+  const result = await this.getUserListUseCase.execute(query);
+  // ...
+}
+```
+
+**理由**:
+- コードが簡潔になり、可読性が向上する
+- プロパティの追加・削除時の修正箇所が減る
+- 型安全性が保たれる
+
+### NestJSモジュールの`exports`でのトークン指定
+
+**問題**: NestJSモジュールにおいて、`exports`配列でプロバイダを再定義するのは冗長。`providers`配列で定義したプロバイダをエクスポートする場合は、そのトークン（文字列トークンの場合）を指定するのが一般的。
+
+**解決策**: `exports`配列では、プロバイダを再定義するのではなく、トークンを指定する。
+
+**例**:
+```typescript
+// ❌ プロバイダを再定義
+@Module({
+  providers: [
+    {
+      provide: 'IUserRepository',
+      useClass: UserRepository,
+    },
+  ],
+  exports: [
+    {
+      provide: 'IUserRepository',
+      useClass: UserRepository,
+    },
+  ],
+})
+
+// ✅ トークンを指定
+@Module({
+  providers: [
+    {
+      provide: 'IUserRepository',
+      useClass: UserRepository,
+    },
+  ],
+  exports: [
+    'IUserRepository',
+  ],
+})
+```
+
+**理由**:
+- コードがクリーンになり、NestJSのベストプラクティスに沿った形になる
+- プロバイダ定義の重複を避けられる
+- メンテナンス性が向上する
+
+### リポジトリの`delete`メソッドの戻り値設計
+
+**問題**: Use Case層で`findById`で存在確認してから`delete`を呼び出すと、リポジトリへのアクセスが2回発生し、非効率。また、実際のデータベース環境では競合状態（Race Condition）を引き起こす可能性がある。
+
+**解決策**: `delete`メソッドの戻り値を`Promise<void>`から`Promise<boolean>`（削除が成功したかどうか）に変更し、Use Case側でその結果をハンドルする。
+
+**例**:
+```typescript
+// ❌ 非効率な実装
+public async execute(id: string): Promise<void> {
+  // ユーザーの存在確認（1回目のアクセス）
+  const user = await this.userRepository.findById(id);
+  if (!user) {
+    throw new NotFoundException('User not found');
+  }
+  // ユーザーを削除（2回目のアクセス）
+  await this.userRepository.delete(id);
+}
+
+// ✅ 効率的な実装
+public async execute(id: string): Promise<void> {
+  const wasDeleted = await this.userRepository.delete(id);
+  if (!wasDeleted) {
+    throw new NotFoundException('User not found');
+  }
+}
+
+// リポジトリインターフェース
+export interface IUserRepository {
+  /**
+   * ユーザーを削除する
+   * @param id ユーザーID
+   * @returns 削除が成功した場合true、ユーザーが見つからない場合false
+   */
+  delete(id: string): Promise<boolean>;
+}
+
+// リポジトリ実装
+async delete(id: string): Promise<boolean> {
+  const user = this.users.get(id);
+  if (!user) {
+    return false;
+  }
+  // 削除処理
+  this.users.delete(id);
+  return true;
+}
+```
+
+**理由**:
+- リポジトリへのアクセスが1回で済み、パフォーマンスが向上する
+- 競合状態のリスクを軽減できる
+- コードがシンプルになり、可読性が向上する
+
+### Use Case層でのバリデーション重複の回避
+
+**問題**: Use Case層でページネーションパラメータなどのバリデーションを行っているが、DTO層（`class-validator`）で既にバリデーションが行われている場合、重複している。
+
+**解決策**: NestJSの`ValidationPipe`がグローバルに適用されている場合、DTOでのバリデーションがコントローラー層で自動的に実行されるため、Use Case層でのバリデーションは不要。バリデーションはプレゼンテーション層の責務とする。
+
+**例**:
+```typescript
+// ❌ 重複したバリデーション
+public async execute(query: UserListQuery): Promise<UserListResult> {
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 10;
+  
+  // DTO層で既にバリデーション済みなのに、再度バリデーション
+  if (page < 1) {
+    throw new BadRequestException('Page must be a positive number');
+  }
+  if (limit < 1 || limit > 100) {
+    throw new BadRequestException('Limit must be between 1 and 100');
+  }
+  
+  return await this.userRepository.findAll({ ... });
+}
+
+// ✅ バリデーションを削除
+public async execute(query: UserListQuery): Promise<UserListResult> {
+  // デフォルト値の設定のみ
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 10;
+  
+  // バリデーションはDTO層（UserListQueryDto）でclass-validatorにより実行される
+  return await this.userRepository.findAll({
+    email: query.email,
+    role: query.role,
+    page,
+    limit,
+  });
+}
+```
+
+**理由**:
+- コードの重複をなくし、保守性が向上する
+- 関心事を分離する（バリデーションはプレゼンテーション層の責務）
+- Use Case層ではバリデーション済みのクリーンなデータが渡されることを期待できる
+
+### Use Caseのメソッドシグネチャ設計（コマンドオブジェクトパターン）
+
+**問題**: Use Caseの`execute`メソッドで、DTOから各プロパティを個別に渡していると、将来的にDTOにプロパティが追加された場合、Use Caseのメソッドシグネチャを変更する必要があり、修正箇所が増える。
+
+**解決策**: Use CaseがDTOのような単一のコマンドオブジェクトを受け取るように設計する。これにより、将来的にDTOにプロパティが追加されても、Use Caseのメソッドシグネチャを変更する必要がなくなり、修正箇所を最小限に抑えることができる。
+
+**例**:
+```typescript
+// ❌ 各プロパティを個別に渡す
+public async execute(
+  email: string,
+  password: string,
+  role: UserRole = UserRole.SERVICE_MEMBER,
+): Promise<User> {
+  // ...
+}
+
+// コントローラー側
+const user = await this.createUserUseCase.execute(
+  createUserDto.email,
+  createUserDto.password,
+  createUserDto.role,
+);
+
+// ✅ コマンドオブジェクトを受け取る
+public async execute(command: {
+  email: string;
+  password: string;
+  role?: UserRole;
+}): Promise<User> {
+  // ...
+}
+
+// コントローラー側
+const user = await this.createUserUseCase.execute(createUserDto);
+```
+
+**理由**:
+- 保守性が向上する（DTOにプロパティが追加されても、Use Caseのシグネチャを変更する必要がない）
+- コードが簡潔になる
+- 型安全性が保たれる
+
+### Use Caseでの不要な更新処理の回避
+
+**問題**: Use Caseで、値が提供されない、または変更がない場合でもリポジトリの`update`メソッドが呼び出されている。これにより、不要なリポジトリへのアクセスが発生する。
+
+**解決策**: 値の変更がある場合のみ更新処理を行うように修正する。これにより、意図が明確になり、不要なリポジトリへのアクセスを避けることができる。
+
+**例**:
+```typescript
+// ❌ 変更がない場合でもupdateが呼び出される
+public async execute(id: string, email?: string): Promise<User> {
+  const existingUser = await this.userRepository.findById(id);
+  if (!existingUser) {
+    throw new NotFoundException('User not found');
+  }
+
+  // メールアドレスが変更される場合、重複チェック
+  if (email && email !== existingUser.email) {
+    // ...
+  }
+
+  // 変更がない場合でもupdateが呼び出される
+  const updatedUser = email ? existingUser.updateEmail(email) : existingUser;
+  return await this.userRepository.update(updatedUser);
+}
+
+// ✅ 変更がある場合のみupdateを呼び出す
+public async execute(id: string, email?: string): Promise<User> {
+  const existingUser = await this.userRepository.findById(id);
+  if (!existingUser) {
+    throw new NotFoundException('User not found');
+  }
+
+  // メールアドレスが変更される場合のみ更新処理を行う
+  if (email && email !== existingUser.email) {
+    // 重複チェック
+    const duplicateUser = await this.userRepository.findByEmail(email);
+    if (duplicateUser && duplicateUser.id !== id) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    // ユーザー情報を更新
+    const updatedUser = existingUser.updateEmail(email);
+    return await this.userRepository.update(updatedUser);
+  }
+
+  // メールアドレスが提供されない、または変更がない場合は既存のユーザーを返す
+  return existingUser;
+}
+```
+
+**理由**:
+- 意図が明確になる
+- 不要なリポジトリへのアクセスを避けることができる
+- パフォーマンスが向上する可能性がある

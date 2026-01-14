@@ -12,6 +12,7 @@ import Redis from 'ioredis';
 import { UserRepository } from '../src/infrastructure/repositories/user.repository';
 import { PasswordHistoryRepository } from '../src/infrastructure/repositories/password-history.repository';
 import { User } from '../src/domain/entities/user.entity';
+import { UserRole } from '../src/domain/entities/user-role.enum';
 
 describe('Password E2E Tests', () => {
   let app: INestApplication;
@@ -148,6 +149,42 @@ describe('Password E2E Tests', () => {
         }
       }
 
+      // ユーザーのパスワードを初期状態（password123）に戻す
+      // app.getを使用して、アプリケーションのDIコンテナから直接取得
+      const userRepository = app.get<UserRepository>('IUserRepository');
+      const passwordHistoryRepository = app.get<PasswordHistoryRepository>(
+        'IPasswordHistoryRepository',
+      );
+
+      // テストユーザーを取得または作成
+      let testUser = await userRepository.findByEmail('user@example.com');
+      const initialPasswordHash = '$2b$10$he31Fy7fUPv9rO2E2coIA.z/3/AStVeVgDSlJMCwNDqLOaw0R/67O'; // password123のハッシュ
+
+      if (testUser) {
+        // 既存のユーザーを削除
+        try {
+          await userRepository.delete(testUser.id);
+        } catch (error) {
+          // 削除に失敗した場合は無視（既に削除されている可能性がある）
+        }
+      }
+
+      // テストユーザーを再作成
+      testUser = User.reconstruct(
+        'test-user-id',
+        'user@example.com',
+        initialPasswordHash,
+        UserRole.SERVICE_MEMBER,
+        false,
+        null,
+        new Date(),
+        new Date(),
+      );
+      await userRepository.create(testUser);
+
+      // パスワード履歴をクリア
+      await passwordHistoryRepository.deleteOldHistory(testUser.id, 0);
+
       const loginRes = await request(app.getHttpServer())
         .post('/api/v1/auth/login')
         .send({
@@ -228,30 +265,47 @@ describe('Password E2E Tests', () => {
       }
 
       // ユーザーのパスワードを初期状態（password123）に戻す
-      const userRepository = moduleFixture.get<UserRepository>('IUserRepository');
-      const passwordHistoryRepository = moduleFixture.get<PasswordHistoryRepository>(
+      // app.getを使用して、アプリケーションのDIコンテナから直接取得
+      const userRepository = app.get<UserRepository>('IUserRepository');
+      const passwordHistoryRepository = app.get<PasswordHistoryRepository>(
         'IPasswordHistoryRepository',
       );
 
-      // テストユーザーを取得
-      const testUser = await userRepository.findByEmail('user@example.com');
-      if (testUser) {
-        // パスワードを初期状態に戻す
-        const initialPasswordHash = '$2b$10$he31Fy7fUPv9rO2E2coIA.z/3/AStVeVgDSlJMCwNDqLOaw0R/67O'; // password123のハッシュ
-        const resetUser = User.reconstruct(
-          testUser.id,
-          testUser.email,
-          initialPasswordHash,
-          testUser.role,
-          testUser.mfaEnabled,
-          testUser.mfaSecret,
-          testUser.createdAt,
-          new Date(),
-        );
-        await userRepository.save(resetUser);
+      // テストユーザーを取得または作成
+      let testUser = await userRepository.findByEmail('user@example.com');
+      const initialPasswordHash = '$2b$10$he31Fy7fUPv9rO2E2coIA.z/3/AStVeVgDSlJMCwNDqLOaw0R/67O'; // password123のハッシュ
 
-        // パスワード履歴をクリア
+      if (testUser) {
+        // 既存のユーザーを削除
+        try {
+          await userRepository.delete(testUser.id);
+        } catch (error) {
+          // 削除に失敗した場合は無視（既に削除されている可能性がある）
+        }
+      }
+
+      // テストユーザーを再作成
+      testUser = User.reconstruct(
+        'test-user-id',
+        'user@example.com',
+        initialPasswordHash,
+        UserRole.SERVICE_MEMBER,
+        false,
+        null,
+        new Date(),
+        new Date(),
+      );
+      await userRepository.create(testUser);
+
+      // パスワード履歴をクリア
+      if (testUser) {
         await passwordHistoryRepository.deleteOldHistory(testUser.id, 0);
+      }
+
+      // ユーザーが正しく保存されているか確認
+      const verifyUser = await userRepository.findByEmail('user@example.com');
+      if (!verifyUser) {
+        throw new Error('Test user not found after setup');
       }
 
       const loginRes = await request(app.getHttpServer())

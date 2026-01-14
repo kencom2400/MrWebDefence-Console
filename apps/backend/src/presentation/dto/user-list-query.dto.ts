@@ -1,29 +1,21 @@
 /**
- * CustomerListQueryDto
+ * UserListQueryDto
  *
- * 顧客一覧取得・検索時のクエリDTO
+ * ユーザー一覧取得・検索時のクエリDTO
  */
 
 import { IsString, IsOptional, IsEnum, IsInt, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
-import { CustomerStatusEnum } from '../../domain/value-objects/customer-status.value-object';
+import { UserRole } from '../../domain/entities/user-role.enum';
 
-export class CustomerListQueryDto {
-  @IsOptional()
-  @IsString()
-  name?: string;
-
+export class UserListQueryDto {
   @IsOptional()
   @IsString()
   email?: string;
 
   @IsOptional()
-  @IsString()
-  company?: string;
-
-  @IsOptional()
-  @IsEnum(CustomerStatusEnum)
-  status?: CustomerStatusEnum;
+  @IsEnum(UserRole)
+  role?: UserRole;
 
   @IsOptional()
   @Type(() => Number)

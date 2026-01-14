@@ -21,7 +21,6 @@ import { GetDashboardDataUseCase } from '../application/use-cases/get-dashboard-
 import { ChangePasswordUseCase } from '../application/use-cases/change-password.use-case';
 import { ValidatePasswordPolicyUseCase } from '../application/use-cases/validate-password-policy.use-case';
 import { GetPasswordPolicyUseCase } from '../application/use-cases/get-password-policy.use-case';
-import { UserRepository } from '../infrastructure/repositories/user.repository';
 import { MfaRepository } from '../infrastructure/repositories/mfa.repository';
 import { IpAllowListRepository } from '../infrastructure/repositories/ip-allowlist.repository';
 import { PasswordHistoryRepository } from '../infrastructure/repositories/password-history.repository';
@@ -34,16 +33,14 @@ import { QrCodeService } from '../infrastructure/services/qr-code.service';
 import { BackupCodeService } from '../infrastructure/services/backup-code.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { UserModule } from './user.module';
 
 @Module({
+  imports: [UserModule],
   controllers: [AuthController, MfaController, DashboardController, PasswordController],
   providers: [
     LoginUseCase,
     LogoutUseCase,
-    {
-      provide: 'IUserRepository',
-      useClass: UserRepository,
-    },
     {
       provide: 'ITokenBlacklistRepository',
       useClass: RedisTokenBlacklistRepository,

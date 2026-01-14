@@ -30,4 +30,3 @@ export class CreateCustomerDto {
   @MaxLength(200)
   address?: string;
 }
-

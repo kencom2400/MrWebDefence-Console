@@ -72,4 +72,3 @@ export interface ICustomerRepository {
    */
   findAll(query: CustomerListQuery): Promise<CustomerListResult>;
 }
-

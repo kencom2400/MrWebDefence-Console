@@ -31,4 +31,3 @@ import { CustomerRepository } from '../infrastructure/repositories/customer.repo
   ],
 })
 export class CustomerModule {}
-

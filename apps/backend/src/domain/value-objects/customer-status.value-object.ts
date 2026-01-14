@@ -29,7 +29,10 @@ export class CustomerStatus {
     }
 
     const normalizedValue = value.toUpperCase();
-    if (normalizedValue !== CustomerStatusEnum.ACTIVE && normalizedValue !== CustomerStatusEnum.INACTIVE) {
+    if (
+      normalizedValue !== CustomerStatusEnum.ACTIVE &&
+      normalizedValue !== CustomerStatusEnum.INACTIVE
+    ) {
       throw new Error(`Invalid customer status: ${value}. Must be 'ACTIVE' or 'INACTIVE'`);
     }
 
@@ -94,4 +97,3 @@ export class CustomerStatus {
     return this.value === other.value;
   }
 }
-

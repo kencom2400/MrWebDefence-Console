@@ -11,4 +11,3 @@ export class ToggleCustomerStatusDto {
   @IsEnum(CustomerStatusEnum)
   status: CustomerStatusEnum;
 }
-
