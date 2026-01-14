@@ -7,6 +7,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './presentation/auth.module';
+import { CustomerModule } from './presentation/customer.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { AuthModule } from './presentation/auth.module';
       isGlobal: true, // アプリケーション全体でConfigModuleを利用可能にする
     }),
     AuthModule,
+    CustomerModule,
   ],
   controllers: [],
   providers: [],
