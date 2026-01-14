@@ -2493,3 +2493,439 @@ public async execute(id: string, email?: string): Promise<User> {
 - 意図が明確になる
 - 不要なリポジトリへのアクセスを避けることができる
 - パフォーマンスが向上する可能性がある
+
+---
+
+## 22. 詳細設計書の品質向上（PR #48）
+
+**学習元**: PR #48 - FQDN管理機能の詳細設計書作成（Geminiレビュー指摘）
+
+### 22-1. バリデーションルールの矛盾解消 🟡 High
+
+**問題**: バリデーションルールの記述と無効な例が矛盾している場合、実装時に混乱を招く。
+
+**解決策**:
+- バリデーションルールの記述と無効な例を整合させる
+- ルールを具体的で明確な表現にする（例: 「少なくとも1つのラベルが必要」→「少なくとも2つのラベルが必要、少なくとも1つのピリオドを含む必要がある」）
+
+**実装例**:
+```markdown
+# ❌ 悪い例: 矛盾がある
+5. **形式**: `label1.label2.label3` の形式（少なくとも1つのラベルが必要）
+
+**無効な例**:
+- `example` (TLDがない)
+
+# ✅ 良い例: 明確で矛盾がない
+5. **形式**: `label1.label2.label3` の形式（少なくとも2つのラベルが必要、少なくとも1つのピリオドを含む必要がある）
+
+**無効な例**:
+- `example` (TLDがない、ピリオドを含まない)
+```
+
+**理由**:
+- 実装時の混乱を避ける
+- 設計の意図が明確になる
+
+### 22-2. クラス図における型定義の完全性 🟡 Medium
+
+**問題**: クラス図で使用されている型（`FqdnListQuery`、`FqdnListResult`など）が定義されていない場合、設計の完全性が損なわれる。
+
+**解決策**:
+- クラス図で使用されているすべての型を定義する
+- Value Objectとして明示的に追加する
+- プロパティと説明を記載する
+
+**実装例**:
+```mermaid
+classDiagram
+    class FqdnListQuery {
+        <<ValueObject>>
+        +string? fqdn
+        +FqdnStatus? status
+        +number? page
+        +number? limit
+    }
+    
+    class FqdnListResult {
+        <<ValueObject>>
+        +Fqdn[] fqdns
+        +number total
+        +number page
+        +number limit
+    }
+```
+
+**理由**:
+- ApplicationレイヤーとDomainレイヤーでどのようなデータがやり取りされるかが明確になる
+- 設計の完全性が向上する
+
+### 22-3. 命名規則の一貫性 🟡 Medium
+
+**問題**: メソッド名やクラス名が実際の動作と一致しない場合（例: `Toggle`という名前だが実際は特定の値に設定する）、混乱を招く。
+
+**解決策**:
+- メソッド名やクラス名は実際の動作を正確に反映する
+- `Toggle`（反転）ではなく、`Update`（更新）を使用する
+- コントローラーのメソッド名も同様に一貫性を保つ
+
+**実装例**:
+```typescript
+// ❌ 悪い例: 名前と動作が不一致
+class ToggleFqdnStatusUseCase {
+  execute(id: string, status: FqdnStatus): Promise<Fqdn> {
+    // リクエストで指定された特定の値に設定する（トグルではない）
+  }
+}
+
+// ✅ 良い例: 名前と動作が一致
+class UpdateFqdnStatusUseCase {
+  execute(id: string, status: FqdnStatus): Promise<Fqdn> {
+    // リクエストで指定された特定の値に更新する
+  }
+}
+```
+
+**理由**:
+- 処理フローの理解が容易になる
+- コードの可読性が向上する
+
+### 22-4. クラス図における型の明記 🟡 Medium
+
+**問題**: クラス図でメソッドの引数に型が指定されていない場合、設計の明確さが損なわれる。
+
+**解決策**:
+- クラス図のメソッド定義に型を明記する
+- 実装コードと一致させる
+
+**実装例**:
+```mermaid
+classDiagram
+    class Fqdn {
+        +create(fqdn: string, description?: string)
+        +reconstruct(id: string, fqdn: string, description?: string, status: FqdnStatus, createdAt: Date, updatedAt: Date)
+        +update(fqdn?: string, description?: string)
+    }
+```
+
+**理由**:
+- コードの可読性が向上する
+- 設計の明確さが向上する
+
+### 22-5. バリデーションルールの明確化 🟡 Medium
+
+**問題**: バリデーションルールの記述が曖昧な場合（例: 「大文字は使用不可、小文字に変換される」）、2つの解釈が可能になる。
+
+**解決策**:
+- バリデーションルールを具体的に記述する
+- 大文字を含む入力の扱いを明確にする（受け入れるか、エラーとするか）
+- 正規化処理がある場合は明記する
+
+**実装例**:
+```markdown
+# ❌ 悪い例: 曖昧な記述
+- `EXAMPLE.COM` (大文字は使用不可、小文字に変換される)
+
+# ✅ 良い例: 明確な記述
+- `EXAMPLE.COM` (大文字を含むFQDNは受け入れ、内部で小文字に正規化して扱う)
+```
+
+**理由**:
+- 実装時の混乱を避ける
+- 設計の意図が明確になる
+
+**参照**: PR #48 - FQDN管理機能の詳細設計書作成（Geminiレビュー指摘）
+
+### 22-6. 設計書内の矛盾の解消 🟡 High
+
+**問題**: 設計書内で矛盾した記述がある場合（例: ある場所で「受け入れる」と記載されているのに、別の場所で「無効な例」として挙げられている）、実装時に混乱を招く。
+
+**解決策**:
+- 設計書全体を通して一貫性を保つ
+- 矛盾する記述を削除または修正する
+- 注釈として別途記載する場合は、無効な例から削除する
+
+**実装例**:
+```markdown
+# ❌ 悪い例: 矛盾がある
+## バリデーションルール
+- 大文字を含むFQDNは受け入れ、内部で小文字に正規化して扱う
+
+## 無効な例
+- `EXAMPLE.COM` (大文字を含むFQDNは受け入れ、内部で小文字に正規化して扱う)
+
+# ✅ 良い例: 一貫性がある
+## バリデーションルール
+- 大文字を含むFQDNは受け入れ、内部で小文字に正規化して扱う
+
+## 無効な例
+- `-example.com` (先頭がハイフン)
+- `example-.com` (末尾がハイフン)
+
+**注**: 大文字を含むFQDN（例: `EXAMPLE.COM`）は受け入れ、内部で小文字に正規化して扱います。これはドメイン名がケースインセンシティブであるためです。
+```
+
+**理由**:
+- 実装時の混乱を避ける
+- 設計の意図が明確になる
+
+### 22-7. 設計書全体での命名の一貫性 🟡 Medium
+
+**問題**: クラス図、クラス説明、シーケンス図などで命名が統一されていない場合、実装時に混乱を招く。
+
+**解決策**:
+- 設計書全体で命名を統一する
+- クラス図、クラス説明、シーケンス図、READMEなどすべての箇所で同じ名前を使用する
+
+**実装例**:
+```markdown
+# ❌ 悪い例: 命名が統一されていない
+## クラス図
+class UpdateFqdnStatusUseCase { ... }
+
+## クラス説明
+- **ToggleFqdnStatusUseCase**: FQDN有効/無効化処理
+
+# ✅ 良い例: 命名が統一されている
+## クラス図
+class UpdateFqdnStatusUseCase { ... }
+
+## クラス説明
+- **UpdateFqdnStatusUseCase**: FQDNステータス更新処理
+```
+
+**理由**:
+- 実装時の混乱を避ける
+- 設計の一貫性が保たれる
+
+### 22-8. クラス図とシーケンス図の整合性 🟡 Medium
+
+**問題**: クラス図の戻り値の型とシーケンス図の動作が一致しない場合（例: クラス図では`Promise<Fqdn | null>`だが、シーケンス図では例外をスローする）、実装時に混乱を招く。
+
+**解決策**:
+- クラス図の戻り値の型をシーケンス図の動作と一致させる
+- 例外をスローする場合は、戻り値から`null`を除外する
+- 例外をスローする旨を明記する
+
+**実装例**:
+```mermaid
+# ❌ 悪い例: 戻り値と動作が不一致
+classDiagram
+    class GetFqdnByIdUseCase {
+        +execute(id: string): Promise~Fqdn | null~
+    }
+
+sequenceDiagram
+    GetFqdnByIdUseCase->>FqdnRepository: findById(id)
+    alt FQDNが見つからない
+        FqdnRepository-->>GetFqdnByIdUseCase: null
+        GetFqdnByIdUseCase-->>FqdnController: NotFoundException
+    end
+
+# ✅ 良い例: 戻り値と動作が一致
+classDiagram
+    class GetFqdnByIdUseCase {
+        +execute(id: string): Promise~Fqdn~
+    }
+
+sequenceDiagram
+    GetFqdnByIdUseCase->>FqdnRepository: findById(id)
+    alt FQDNが見つからない
+        FqdnRepository-->>GetFqdnByIdUseCase: null
+        GetFqdnByIdUseCase-->>FqdnController: NotFoundException
+    end
+```
+
+**理由**:
+- 実装時の混乱を避ける
+- 既存の実装パターン（GetCustomerByIdUseCaseなど）と一貫性が保たれる
+- コントローラー層でのエラーハンドリングがシンプルになる
+
+**参照**: PR #48 - FQDN管理機能の詳細設計書作成（Geminiレビュー指摘 第2弾）
+
+### 22-9. プレゼンテーション層とアプリケーション層の責務分離 🟡 Medium
+
+**問題**: アプリケーション層のUseCaseでドメインのValue Objectを直接受け取る場合、プレゼンテーション層からドメイン層への依存が生じ、責務の分離が曖昧になる。
+
+**解決策**:
+- プレゼンテーション層からアプリケーション層へ渡されるデータはDTOにマッピングされたプリミティブ型（enum）を使用する
+- 既存の実装パターン（例: `CustomerStatusEnum`）に倣う
+- Value Objectとenumの名前が重複しないようにする（例: `FqdnStatus` Value Objectと`FqdnStatusEnum` enum）
+
+**実装例**:
+```typescript
+// ❌ 悪い例: Value Objectを直接受け取る
+class UpdateFqdnStatusUseCase {
+  execute(id: string, status: FqdnStatus): Promise<Fqdn> {
+    // FqdnStatusはValue Object（ドメイン層）
+  }
+}
+
+// ✅ 良い例: enumを使用する
+class UpdateFqdnStatusUseCase {
+  execute(id: string, status: FqdnStatusEnum): Promise<Fqdn> {
+    // FqdnStatusEnumはenum（プリミティブ型）
+  }
+}
+```
+
+**理由**:
+- ドメインオブジェクトがプレゼンテーション層に漏れ出すことを防ぐ
+- 責務の分離がより明確になる
+- 既存の実装パターンとの一貫性が保たれる
+
+### 22-10. クラス図における戻り値の型定義 🟡 Medium
+
+**問題**: クラス図でメソッドの戻り値の型が指定されていない場合、設計の明確さが損なわれる。
+
+**解決策**:
+- クラス図のメソッド定義に戻り値の型を明記する
+- 静的メソッド（ファクトリメソッド）には`<<static>>`を明記する
+
+**実装例**:
+```mermaid
+classDiagram
+    class Fqdn {
+        <<static>> +create(fqdn: string, description?: string): Fqdn
+        <<static>> +reconstruct(id: string, fqdn: string, description?: string, status: FqdnStatus, createdAt: Date, updatedAt: Date): Fqdn
+        +update(fqdn?: string, description?: string): Fqdn
+        +activate(): Fqdn
+        +deactivate(): Fqdn
+    }
+```
+
+**理由**:
+- 設計の明確さが向上する
+- 実装時の混乱を避ける
+
+### 22-11. Value Objectの不変性保証 🟡 Medium
+
+**問題**: Value Objectに公開メソッドとして`validate()`が定義されている場合、不正な状態のオブジェクトが生成される可能性がある。
+
+**解決策**:
+- 静的ファクトリメソッド`create`を定義し、その中で検証を行う
+- コンストラクタは`private`にする（クラス図では明示しないが、実装時に考慮）
+- 既存の実装パターン（例: `CustomerStatus`）に倣う
+
+**実装例**:
+```mermaid
+classDiagram
+    class FqdnStatus {
+        <<ValueObject>>
+        +string value
+        <<static>> +create(value: string): FqdnStatus
+        +isActive(): boolean
+        +isInactive(): boolean
+    }
+```
+
+**理由**:
+- Value Objectの不変性が保証される
+- 不正な状態のオブジェクトが生成されるのを防ぐ
+
+### 22-12. 設計書全体での用語の一貫性 🟡 Medium
+
+**問題**: 設計書内で用語が統一されていない場合（例: 「切り替え」と「更新」が混在）、実装時に混乱を招く。
+
+**解決策**:
+- 設計書全体で用語を統一する
+- タイトル、説明、シーケンス図などすべての箇所で同じ用語を使用する
+- 実際の動作を正確に表す用語を選択する（例: 状態を反転させる場合は「切り替え」、指定された値に設定する場合は「更新」）
+
+**実装例**:
+```markdown
+# ❌ 悪い例: 用語が統一されていない
+## エンドポイント
+### 6. FQDNステータス切り替え
+
+## シーケンス図
+## FQDNステータス切り替えフロー
+
+## ユースケース
+- **UpdateFqdnStatusUseCase**: FQDNステータス更新処理
+
+# ✅ 良い例: 用語が統一されている
+## エンドポイント
+### 6. FQDNステータス更新
+
+## シーケンス図
+## FQDNステータス更新フロー
+
+## ユースケース
+- **UpdateFqdnStatusUseCase**: FQDNステータス更新処理
+```
+
+**理由**:
+- 実装時の混乱を避ける
+- 設計の一貫性が保たれる
+
+### 22-13. シーケンス図における静的メソッド呼び出しの明示 🟡 Medium
+
+**問題**: シーケンス図で静的メソッド（ファクトリメソッド）の呼び出しが通常のメソッド呼び出しと区別されていない場合、実装者が設計意図を誤解する可能性がある。
+
+**解決策**:
+- 静的メソッドの呼び出しは`ClassName.methodName(...)`のように表現する
+- これにより、クラスから直接呼び出していることが分かる
+
+**実装例**:
+```mermaid
+sequenceDiagram
+    CreateFqdnUseCase->>Fqdn: Fqdn.create(fqdn, description?)
+```
+
+**理由**:
+- 実装者が設計意図を誤解するのを防ぐ
+- 静的メソッドであることが明確になる
+
+**参照**: PR #48 - FQDN管理機能の詳細設計書作成（Geminiレビュー指摘 第3弾）
+
+### 22-14. ドメインエンティティにおけるValue Objectの使用 🟡 Medium
+
+**問題**: ドメインエンティティのプロパティの型がenum（プリミティブ型）になっている場合、ドメインの振る舞いをカプセル化できず、ドメイン駆動設計の原則に反する。
+
+**解決策**:
+- ドメインエンティティのプロパティの型はValue Objectを使用する
+- 既存の実装パターン（例: `Customer`エンティティの`status`プロパティは`CustomerStatus`値オブジェクト）に倣う
+- クラス図とメソッドシグネチャで一貫性を保つ
+
+**実装例**:
+```mermaid
+classDiagram
+    class Fqdn {
+        +string id
+        +string fqdn
+        +string? description
+        +FqdnStatus status  # Value Object
+        +Date createdAt
+        +Date updatedAt
+        +reconstruct(id: string, fqdn: string, description?: string, status: FqdnStatus, createdAt: Date, updatedAt: Date): Fqdn
+    }
+```
+
+**理由**:
+- ドメインの振る舞いをカプセル化できる
+- ドメイン駆動設計の原則に従う
+- 既存の実装パターンとの一貫性が保たれる
+
+### 22-15. シーケンス図における変数名の一貫性 🟡 Medium
+
+**問題**: シーケンス図で定義されていない変数名が使われている場合、実装時に混乱を招く。
+
+**解決策**:
+- シーケンス図で使用する変数名は、メソッドの引数名や既に定義されている変数名と一致させる
+- 一貫性を保ち、混乱を避ける
+
+**実装例**:
+```mermaid
+# ❌ 悪い例: 定義されていない変数名
+UpdateFqdnUseCase->>FqdnRepository: findByFqdn(newFqdn)
+
+# ✅ 良い例: メソッドの引数名と一致
+UpdateFqdnUseCase->>FqdnRepository: findByFqdn(fqdn)
+```
+
+**理由**:
+- 実装時の混乱を避ける
+- 設計の一貫性が保たれる
+
+**参照**: PR #48 - FQDN管理機能の詳細設計書作成（Geminiレビュー指摘 第4弾）
