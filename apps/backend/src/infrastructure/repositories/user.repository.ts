@@ -76,20 +76,12 @@ export class UserRepository implements IUserRepository {
     }
 
     // メールアドレスが変更された場合、emailToIdMapを更新
-    const existingUser = this.users.get(user.id);
-    if (existingUser) {
-      if (existingUser.email.toLowerCase() !== user.email.toLowerCase()) {
-        // 古いメールアドレスのマッピングを削除
-        this.emailToIdMap.delete(existingUser.email.toLowerCase());
-        // 新しいメールアドレスのマッピングを追加
-        this.emailToIdMap.set(user.email.toLowerCase(), user.id);
-      } else {
-        // メールアドレスが同じ場合でも、emailToIdMapにエントリが存在することを確認
-        // （念のため、確実にマッピングが存在するようにする）
-        if (!this.emailToIdMap.has(user.email.toLowerCase())) {
-          this.emailToIdMap.set(user.email.toLowerCase(), user.id);
-        }
-      }
+    const existingUser = this.users.get(user.id)!;
+    if (existingUser.email.toLowerCase() !== user.email.toLowerCase()) {
+      // 古いメールアドレスのマッピングを削除
+      this.emailToIdMap.delete(existingUser.email.toLowerCase());
+      // 新しいメールアドレスのマッピングを追加
+      this.emailToIdMap.set(user.email.toLowerCase(), user.id);
     }
 
     this.users.set(user.id, user);

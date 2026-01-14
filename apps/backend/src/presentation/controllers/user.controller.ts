@@ -98,12 +98,7 @@ export class UserController {
   @Get()
   @HttpCode(HttpStatus.OK)
   public async findAll(@Query() query: UserListQueryDto): Promise<UserListResponseDto> {
-    const result = await this.getUserListUseCase.execute({
-      email: query.email,
-      role: query.role,
-      page: query.page,
-      limit: query.limit,
-    });
+    const result = await this.getUserListUseCase.execute(query);
     return {
       users: result.users.map((u) => this.toResponseDto(u)),
       total: result.total,

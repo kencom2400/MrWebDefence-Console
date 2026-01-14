@@ -2169,3 +2169,131 @@ sequenceDiagram
 - 実装時の対応方法が明確になる
 - 設計書の一貫性を保つ
 - 実装者の混乱を防ぐ
+
+---
+
+## 12. コードの簡潔化とNestJSベストプラクティス
+
+### リポジトリの`update`メソッドの簡潔化
+
+**問題**: リポジトリの`update`メソッドで、既に存在チェックを行っているにもかかわらず、再度`if (existingUser)`チェックを行っている。また、メールアドレスが変更されない場合の防御的なコードが不要な場合がある。
+
+**解決策**: 
+1. 既に`this.users.has(user.id)`で存在チェックを行っている場合、`this.users.get(user.id)`は常に`User`オブジェクトを返すため、`if (existingUser)`チェックは不要。非nullアサーション（`!`）を使用する。
+2. メールアドレスが変更されない場合の`else`ブロックは、他の部分（`create`や`constructor`）が正しく実装されていれば不要。削除することで、メソッドの主目的がより明確になる。
+
+**例**:
+```typescript
+// ❌ 冗長なチェック
+async update(user: User): Promise<User> {
+  if (!this.users.has(user.id)) {
+    throw new Error(`User with id ${user.id} not found`);
+  }
+  const existingUser = this.users.get(user.id);
+  if (existingUser) {
+    if (existingUser.email.toLowerCase() !== user.email.toLowerCase()) {
+      // ...
+    } else {
+      // 防御的なコード（不要な場合がある）
+      if (!this.emailToIdMap.has(user.email.toLowerCase())) {
+        this.emailToIdMap.set(user.email.toLowerCase(), user.id);
+      }
+    }
+  }
+  // ...
+}
+
+// ✅ 簡潔化
+async update(user: User): Promise<User> {
+  if (!this.users.has(user.id)) {
+    throw new Error(`User with id ${user.id} not found`);
+  }
+  const existingUser = this.users.get(user.id)!;
+  if (existingUser.email.toLowerCase() !== user.email.toLowerCase()) {
+    // 古いメールアドレスのマッピングを削除
+    this.emailToIdMap.delete(existingUser.email.toLowerCase());
+    // 新しいメールアドレスのマッピングを追加
+    this.emailToIdMap.set(user.email.toLowerCase(), user.id);
+  }
+  // ...
+}
+```
+
+**理由**:
+- コードが簡潔になり、可読性が向上する
+- メソッドの主目的が明確になる
+- 不要な防御的コードを削除することで、パフォーマンスが向上する可能性がある
+
+### コントローラーでのDTOオブジェクトの直接渡し
+
+**問題**: コントローラーでUseCaseを呼び出す際に、DTOオブジェクトの各プロパティを個別に渡しているが、DTOとUseCaseが期待する型が互換性がある場合、DTOオブジェクトを直接渡すことができる。
+
+**解決策**: DTOとUseCaseが期待する型が互換性がある場合、DTOオブジェクトを直接渡す。
+
+**例**:
+```typescript
+// ❌ 各プロパティを個別に渡す
+public async findAll(@Query() query: UserListQueryDto): Promise<UserListResponseDto> {
+  const result = await this.getUserListUseCase.execute({
+    email: query.email,
+    role: query.role,
+    page: query.page,
+    limit: query.limit,
+  });
+  // ...
+}
+
+// ✅ DTOオブジェクトを直接渡す
+public async findAll(@Query() query: UserListQueryDto): Promise<UserListResponseDto> {
+  const result = await this.getUserListUseCase.execute(query);
+  // ...
+}
+```
+
+**理由**:
+- コードが簡潔になり、可読性が向上する
+- プロパティの追加・削除時の修正箇所が減る
+- 型安全性が保たれる
+
+### NestJSモジュールの`exports`でのトークン指定
+
+**問題**: NestJSモジュールにおいて、`exports`配列でプロバイダを再定義するのは冗長。`providers`配列で定義したプロバイダをエクスポートする場合は、そのトークン（文字列トークンの場合）を指定するのが一般的。
+
+**解決策**: `exports`配列では、プロバイダを再定義するのではなく、トークンを指定する。
+
+**例**:
+```typescript
+// ❌ プロバイダを再定義
+@Module({
+  providers: [
+    {
+      provide: 'IUserRepository',
+      useClass: UserRepository,
+    },
+  ],
+  exports: [
+    {
+      provide: 'IUserRepository',
+      useClass: UserRepository,
+    },
+  ],
+})
+
+// ✅ トークンを指定
+@Module({
+  providers: [
+    {
+      provide: 'IUserRepository',
+      useClass: UserRepository,
+    },
+  ],
+  exports: [
+    'IUserRepository',
+  ],
+})
+```
+
+**理由**:
+- コードがクリーンになり、NestJSのベストプラクティスに沿った形になる
+- プロバイダ定義の重複を避けられる
+- メンテナンス性が向上する

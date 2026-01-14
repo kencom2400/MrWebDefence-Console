@@ -46,10 +46,7 @@ import { PasswordService } from '../infrastructure/services/password.service';
     GetUserListUseCase,
     GetUserByIdUseCase,
     ChangeUserRoleUseCase,
-    {
-      provide: 'IUserRepository',
-      useClass: UserRepository,
-    },
+    'IUserRepository',
   ],
 })
 export class UserModule {}
