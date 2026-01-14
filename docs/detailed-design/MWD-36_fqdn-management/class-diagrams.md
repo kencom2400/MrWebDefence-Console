@@ -72,6 +72,22 @@ classDiagram
         +execute(query: FqdnListQuery): Promise~FqdnListResult~
     }
     
+    class FqdnListQuery {
+        <<ValueObject>>
+        +string? fqdn
+        +FqdnStatus? status
+        +number? page
+        +number? limit
+    }
+    
+    class FqdnListResult {
+        <<ValueObject>>
+        +Fqdn[] fqdns
+        +number total
+        +number page
+        +number limit
+    }
+    
     class GetFqdnByIdUseCase {
         -IFqdnRepository fqdnRepository
         +execute(id: string): Promise~Fqdn | null~
@@ -142,6 +158,8 @@ classDiagram
     UpdateFqdnUseCase --> IFqdnRepository : depends on
     DeleteFqdnUseCase --> IFqdnRepository : depends on
     GetFqdnListUseCase --> IFqdnRepository : depends on
+    GetFqdnListUseCase --> FqdnListQuery : uses
+    GetFqdnListUseCase --> FqdnListResult : returns
     GetFqdnByIdUseCase --> IFqdnRepository : depends on
     ToggleFqdnStatusUseCase --> IFqdnRepository : depends on
     
@@ -208,6 +226,22 @@ FQDNステータスを表す値オブジェクト。有効（ACTIVE）と無効�
 FQDNリポジトリのインターフェース。ドメイン層とインフラストラクチャ層を分離します。
 
 - `findByFqdn`: FQDN文字列による検索（重複チェック用）
+
+#### FqdnListQuery Value Object
+FQDN一覧取得・検索のクエリパラメータを表す値オブジェクト。
+
+- `fqdn`: FQDN文字列（部分一致検索、オプション）
+- `status`: ステータス（オプション）
+- `page`: ページ番号（オプション）
+- `limit`: 1ページあたりの件数（オプション）
+
+#### FqdnListResult Value Object
+FQDN一覧取得・検索の結果を表す値オブジェクト。
+
+- `fqdns`: FQDNエンティティの配列
+- `total`: 総件数
+- `page`: 現在のページ番号
+- `limit`: 1ページあたりの件数
 
 ### Infrastructure Layer
 
