@@ -215,7 +215,7 @@ FQDNエンティティ。FQDNの基本情報とステータスを保持します
 - `id`: FQDN ID（UUID）
 - `fqdn`: FQDN文字列（例: example.com）
 - `description`: 説明（オプション）
-- `status`: ステータス（有効/無効）
+- `status`: ステータス（`FqdnStatus`値オブジェクト、有効/無効）
 - `createdAt`: 作成日時
 - `updatedAt`: 更新日時
 
