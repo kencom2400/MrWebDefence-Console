@@ -28,7 +28,7 @@ classDiagram
         +string id
         +string fqdn
         +string? description
-        +FqdnStatus status
+        +FqdnStatusEnum status
         +Date createdAt
         +Date updatedAt
     }
@@ -42,13 +42,13 @@ classDiagram
     
     class FqdnListQueryDto {
         +string? fqdn
-        +FqdnStatus? status
+        +FqdnStatusEnum? status
         +number? page
         +number? limit
     }
     
     class UpdateFqdnStatusDto {
-        +FqdnStatus status
+        +FqdnStatusEnum status
     }
     
     %% Application Layer
@@ -75,7 +75,7 @@ classDiagram
     class FqdnListQuery {
         <<ValueObject>>
         +string? fqdn
-        +FqdnStatus? status
+        +FqdnStatusEnum? status
         +number? page
         +number? limit
     }
@@ -95,7 +95,7 @@ classDiagram
     
     class UpdateFqdnStatusUseCase {
         -IFqdnRepository fqdnRepository
-        +execute(id: string, status: FqdnStatus): Promise~Fqdn~
+        +execute(id: string, status: FqdnStatusEnum): Promise~Fqdn~
     }
     
     %% Domain Layer
@@ -103,14 +103,14 @@ classDiagram
         +string id
         +string fqdn
         +string? description
-        +FqdnStatus status
+        +FqdnStatusEnum status
         +Date createdAt
         +Date updatedAt
-        +create(fqdn: string, description?: string)
-        +reconstruct(id: string, fqdn: string, description?: string, status: FqdnStatus, createdAt: Date, updatedAt: Date)
-        +update(fqdn?: string, description?: string)
-        +activate()
-        +deactivate()
+        <<static>> +create(fqdn: string, description?: string): Fqdn
+        <<static>> +reconstruct(id: string, fqdn: string, description?: string, status: FqdnStatus, createdAt: Date, updatedAt: Date): Fqdn
+        +update(fqdn?: string, description?: string): Fqdn
+        +activate(): Fqdn
+        +deactivate(): Fqdn
     }
     
     class FqdnStatus {

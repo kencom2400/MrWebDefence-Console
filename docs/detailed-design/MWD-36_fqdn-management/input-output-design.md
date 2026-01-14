@@ -171,7 +171,7 @@
 
 **クエリパラメータ**:
 - `fqdn`: FQDN文字列（部分一致検索、オプション）
-- `status`: ステータス（`ACTIVE` または `INACTIVE`、オプション）
+- `status`: ステータス（`FqdnStatusEnum.ACTIVE` または `FqdnStatusEnum.INACTIVE`、オプション）
 - `page`: ページ番号（デフォルト: 1、最小: 1）
 - `limit`: 1ページあたりの件数（デフォルト: 10、最小: 1、最大: 100）
 
@@ -321,9 +321,9 @@ GET /api/v1/fqdns?fqdn=example&status=ACTIVE&page=1&limit=10
 
 ## データ型定義
 
-### FqdnStatus
+### FqdnStatusEnum
 ```typescript
-enum FqdnStatus {
+enum FqdnStatusEnum {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE'
 }
@@ -335,7 +335,7 @@ interface FqdnResponseDto {
   id: string;              // UUID
   fqdn: string;           // FQDN文字列
   description?: string;   // 説明（オプション）
-  status: FqdnStatus;     // ステータス
+  status: FqdnStatusEnum;     // ステータス
   createdAt: Date;        // 作成日時
   updatedAt: Date;        // 更新日時
 }
@@ -369,7 +369,7 @@ interface FqdnListResponseDto {
 - `limit`: オプション、1以上100以下の整数、デフォルト: 10
 
 ### UpdateFqdnStatusDto
-- `status`: 必須、`ACTIVE` または `INACTIVE`
+- `status`: 必須、`FqdnStatusEnum.ACTIVE` または `FqdnStatusEnum.INACTIVE`
 
 ## FQDN形式のバリデーション詳細
 
