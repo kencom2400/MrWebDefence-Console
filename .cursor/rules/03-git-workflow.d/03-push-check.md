@@ -85,7 +85,7 @@ test.skip('取引データがない場合はメッセージを表示する', asy
 # 1. すべてのチェックを実行（コンテナ使用）
 ./scripts/backend/lint.sh
 ./scripts/backend/build.sh
-./scripts/backend/test.sh all
+./scripts/backend/test.sh unit
 ./scripts/backend/test.sh e2e
 
 # 2. すべてPASSしたことを確認
@@ -210,7 +210,7 @@ git diff --name-only | grep -v '\.md$' | wc -l
 ./scripts/backend/build.sh
 
 # 3. ユニットテスト（必須・コンテナ使用）
-./scripts/backend/test.sh all
+./scripts/backend/test.sh unit
 
 # 4. E2Eテスト（必須・コンテナ使用）
 ./scripts/backend/test.sh e2e
@@ -322,7 +322,7 @@ pushする前に、必ずコンテナを使用したスクリプトを実行す�
 # 1. すべてのチェックを実行（コンテナ使用）
 ./scripts/backend/lint.sh
 ./scripts/backend/build.sh
-./scripts/backend/test.sh all
+./scripts/backend/test.sh unit
 ./scripts/backend/test.sh e2e
 
 # 2. テスト結果を確認（failedが0であることを確認）

@@ -17,7 +17,7 @@
 ```bash
 1. ./scripts/backend/lint.sh      # 構文・スタイル（コンテナ使用）
 2. ./scripts/backend/build.sh     # ビルド確認（コンテナ使用）⭐ 重要
-3. ./scripts/backend/test.sh all  # ユニットテスト（コンテナ使用）
+3. ./scripts/backend/test.sh unit  # ユニットテスト（コンテナ使用）
 4. ./scripts/backend/test.sh e2e  # E2Eテスト（コンテナ使用）
 ```
 
