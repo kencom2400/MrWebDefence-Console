@@ -2635,3 +2635,110 @@ classDiagram
 - 設計の意図が明確になる
 
 **参照**: PR #48 - FQDN管理機能の詳細設計書作成（Geminiレビュー指摘）
+
+### 22-6. 設計書内の矛盾の解消 🟡 High
+
+**問題**: 設計書内で矛盾した記述がある場合（例: ある場所で「受け入れる」と記載されているのに、別の場所で「無効な例」として挙げられている）、実装時に混乱を招く。
+
+**解決策**:
+- 設計書全体を通して一貫性を保つ
+- 矛盾する記述を削除または修正する
+- 注釈として別途記載する場合は、無効な例から削除する
+
+**実装例**:
+```markdown
+# ❌ 悪い例: 矛盾がある
+## バリデーションルール
+- 大文字を含むFQDNは受け入れ、内部で小文字に正規化して扱う
+
+## 無効な例
+- `EXAMPLE.COM` (大文字を含むFQDNは受け入れ、内部で小文字に正規化して扱う)
+
+# ✅ 良い例: 一貫性がある
+## バリデーションルール
+- 大文字を含むFQDNは受け入れ、内部で小文字に正規化して扱う
+
+## 無効な例
+- `-example.com` (先頭がハイフン)
+- `example-.com` (末尾がハイフン)
+
+**注**: 大文字を含むFQDN（例: `EXAMPLE.COM`）は受け入れ、内部で小文字に正規化して扱います。これはドメイン名がケースインセンシティブであるためです。
+```
+
+**理由**:
+- 実装時の混乱を避ける
+- 設計の意図が明確になる
+
+### 22-7. 設計書全体での命名の一貫性 🟡 Medium
+
+**問題**: クラス図、クラス説明、シーケンス図などで命名が統一されていない場合、実装時に混乱を招く。
+
+**解決策**:
+- 設計書全体で命名を統一する
+- クラス図、クラス説明、シーケンス図、READMEなどすべての箇所で同じ名前を使用する
+
+**実装例**:
+```markdown
+# ❌ 悪い例: 命名が統一されていない
+## クラス図
+class UpdateFqdnStatusUseCase { ... }
+
+## クラス説明
+- **ToggleFqdnStatusUseCase**: FQDN有効/無効化処理
+
+# ✅ 良い例: 命名が統一されている
+## クラス図
+class UpdateFqdnStatusUseCase { ... }
+
+## クラス説明
+- **UpdateFqdnStatusUseCase**: FQDNステータス更新処理
+```
+
+**理由**:
+- 実装時の混乱を避ける
+- 設計の一貫性が保たれる
+
+### 22-8. クラス図とシーケンス図の整合性 🟡 Medium
+
+**問題**: クラス図の戻り値の型とシーケンス図の動作が一致しない場合（例: クラス図では`Promise<Fqdn | null>`だが、シーケンス図では例外をスローする）、実装時に混乱を招く。
+
+**解決策**:
+- クラス図の戻り値の型をシーケンス図の動作と一致させる
+- 例外をスローする場合は、戻り値から`null`を除外する
+- 例外をスローする旨を明記する
+
+**実装例**:
+```mermaid
+# ❌ 悪い例: 戻り値と動作が不一致
+classDiagram
+    class GetFqdnByIdUseCase {
+        +execute(id: string): Promise~Fqdn | null~
+    }
+
+sequenceDiagram
+    GetFqdnByIdUseCase->>FqdnRepository: findById(id)
+    alt FQDNが見つからない
+        FqdnRepository-->>GetFqdnByIdUseCase: null
+        GetFqdnByIdUseCase-->>FqdnController: NotFoundException
+    end
+
+# ✅ 良い例: 戻り値と動作が一致
+classDiagram
+    class GetFqdnByIdUseCase {
+        +execute(id: string): Promise~Fqdn~
+    }
+
+sequenceDiagram
+    GetFqdnByIdUseCase->>FqdnRepository: findById(id)
+    alt FQDNが見つからない
+        FqdnRepository-->>GetFqdnByIdUseCase: null
+        GetFqdnByIdUseCase-->>FqdnController: NotFoundException
+    end
+```
+
+**理由**:
+- 実装時の混乱を避ける
+- 既存の実装パターン（GetCustomerByIdUseCaseなど）と一貫性が保たれる
+- コントローラー層でのエラーハンドリングがシンプルになる
+
+**参照**: PR #48 - FQDN管理機能の詳細設計書作成（Geminiレビュー指摘 第2弾）
