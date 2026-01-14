@@ -81,7 +81,10 @@ sequenceDiagram
                 else メールアドレスが重複しない
                     UserRepository-->>UpdateUserUseCase: null
                     
-                    Note over User: User EntityにupdateEmailメソッドが必要<br/>または新しいUserエンティティを作成
+                    UpdateUserUseCase->>User: updateEmail(newEmail)
+                    Note over User: 実装時にUser EntityにupdateEmailメソッドを追加<br/>またはUser.reconstructで新しいエンティティを作成
+                    User-->>UpdateUserUseCase: updatedUser
+                    
                     UpdateUserUseCase->>UserRepository: update(updatedUser)
                     UserRepository-->>UpdateUserUseCase: savedUser
                     
@@ -203,6 +206,7 @@ sequenceDiagram
             UserRepository-->>ChangeUserRoleUseCase: user
             
             ChangeUserRoleUseCase->>User: updateRole(role)
+            Note over User: 実装時にUser EntityにupdateRoleメソッドを追加<br/>またはUser.reconstructで新しいエンティティを作成
             User-->>ChangeUserRoleUseCase: updatedUser
             
             ChangeUserRoleUseCase->>UserRepository: update(user)

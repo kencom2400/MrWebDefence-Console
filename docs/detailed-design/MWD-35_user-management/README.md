@@ -84,9 +84,9 @@ Onion Architecture（オニオンアーキテクチャ）に従い、レイヤ�
 
 ### 3. Domain Layer
 
-- **User Entity**: ユーザーエンティティ（既存）
+- **User Entity**: ユーザーエンティティ（既存、`updateEmail`と`updateRole`メソッドの追加が必要）
 - **UserRole Enum**: ユーザーロール（既存: SERVICE_ADMIN, SERVICE_MEMBER）
-- **IUserRepository**: ユーザーリポジトリのインターフェース（既存、拡張が必要）
+- **IUserRepository**: ユーザーリポジトリのインターフェース（既存、`create`、`update`、`delete`、`findAll`メソッドの追加が必要）
 
 ### 4. Infrastructure Layer
 
@@ -126,6 +126,26 @@ Onion Architecture（オニオンアーキテクチャ）に従い、レイヤ�
 - 入力バリデーション: すべての入力データをバリデーション
 - データ保護: ユーザー情報の機密性を保護
 - ログ記録: ユーザー情報の変更履歴を記録（将来実装）
+
+## 実装時の注意事項
+
+### User Entityの拡張
+
+既存のUser Entityには以下のメソッドが実装されていますが、本機能の実装には追加のメソッドが必要です：
+
+- **既存メソッド**: `create`, `reconstruct`, `updatePassword`, `enableMfa`, `disableMfa`
+- **追加が必要**: `updateEmail`, `updateRole`
+
+これらのメソッドは、既存の`updatePassword`メソッドと同様に、新しいUserエンティティを返す不変性を保つ実装とします。
+
+### IUserRepositoryの拡張
+
+既存のIUserRepositoryには以下のメソッドが実装されていますが、本機能の実装には追加のメソッドが必要です：
+
+- **既存メソッド**: `findByEmail`, `findById`, `save`
+- **追加が必要**: `create`, `update`, `delete`, `findAll`
+
+これらのメソッドは、顧客管理機能の`ICustomerRepository`と同様のインターフェース設計とします。
 
 ## 参照資料
 

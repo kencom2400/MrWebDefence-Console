@@ -95,6 +95,10 @@ classDiagram
         +Date updatedAt
         +create(id, email, hashedPassword, role?): User
         +reconstruct(id, email, hashedPassword, role, mfaEnabled, mfaSecret, createdAt, updatedAt): User
+        +updatePassword(newHashedPassword: string): User
+        +enableMfa(secret: string): User
+        +disableMfa(): User
+        +updateEmail(email: string): User
         +updateRole(role: UserRole): User
     }
     
@@ -208,6 +212,8 @@ classDiagram
 - `mfaSecret`: MFAシークレット（オプション）
 - `createdAt`: 作成日時
 - `updatedAt`: 更新日時
+
+**注意**: 既存のUser Entityには`updatePassword`、`enableMfa`、`disableMfa`メソッドが実装されていますが、`updateEmail`と`updateRole`メソッドは実装されていません。実装時にこれらのメソッドを追加する必要があります。
 
 #### UserRole Enum
 ユーザーロールを表す列挙型。
