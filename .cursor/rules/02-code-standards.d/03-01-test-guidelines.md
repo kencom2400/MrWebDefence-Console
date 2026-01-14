@@ -132,23 +132,27 @@ afterAll(async () => {
 2. **E2Eテストコードを作成する（該当する場合）**
    - 新規APIエンドポイント: Backend E2Eテスト
    - 新規UI機能: Frontend E2Eテスト
-3. **必ずテストを実行する**
-   - ユニットテスト: `./scripts/test/test.sh all`
-   - E2Eテスト: `./scripts/test/test-e2e.sh`
+3. **必ずテストを実行する（コンテナ使用）**
+   - ユニットテスト: `./scripts/backend/test.sh unit`（コンテナ使用）
+   - E2Eテスト: `./scripts/backend/test.sh e2e`（コンテナ使用）
 4. **全てのテストが成功するまで修正する**
 
-#### テスト実行コマンド
+#### テスト実行コマンド（コンテナ使用が必須）
 
 ```bash
-# ユニットテスト
-cd apps/backend
-pnpm test <module-name>
+# ユニットテスト（コンテナ使用）
+./scripts/backend/test.sh unit
 
-# E2Eテスト
-./scripts/test/test-e2e.sh all  # 全て
-./scripts/test/test-e2e.sh backend  # Backendのみ
-./scripts/test/test-e2e.sh frontend  # Frontendのみ
+# E2Eテスト（コンテナ使用）
+./scripts/backend/test.sh e2e
+
+# すべてのテスト（ユニット + E2E）
+./scripts/backend/test.sh all
 ```
+
+**⚠️ 重要: テスト実行は必ずコンテナを使用したスクリプトで実行すること**
+- ❌ ローカルで直接実行: `pnpm test`, `pnpm test:e2e` など（禁止）
+- ✅ コンテナを使用: `./scripts/backend/test.sh unit`, `./scripts/backend/test.sh e2e`（必須）
 
 ### テストの構造（AAA パターン）
 

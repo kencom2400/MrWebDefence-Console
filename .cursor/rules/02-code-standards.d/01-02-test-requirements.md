@@ -76,11 +76,11 @@ PRテンプレート（`.github/pull_request_template.md`）には以下のチ�
 - [ ] すべてのテストがパスすることを確認した
 - [ ] カバレッジレポートを確認し、追加コードがカバーされていることを確認した
 - [ ] E2Eテストが必要な場合は追加した
-- [ ] ローカルでの4ステップチェックを完了した
-  - [ ] `./scripts/test/lint.sh`
-  - [ ] `pnpm build`
-  - [ ] `./scripts/test/test.sh all`
-  - [ ] `./scripts/test/test-e2e.sh frontend`
+- [ ] ローカルでの4ステップチェックを完了した（コンテナ使用）
+  - [ ] `./scripts/backend/lint.sh`（コンテナ使用）
+  - [ ] `./scripts/backend/build.sh`（コンテナ使用）
+  - [ ] `./scripts/backend/test.sh unit`（コンテナ使用）
+  - [ ] `./scripts/backend/test.sh e2e`（コンテナ使用、該当する場合）
 - [ ] テストなしでマージする場合、例外ケースに該当し、その理由を記載した
 
 **PR作成時は必ずこのチェックリストを確認し、すべての項目をチェックしてください。**

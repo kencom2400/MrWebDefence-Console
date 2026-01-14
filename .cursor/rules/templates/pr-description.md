@@ -48,8 +48,8 @@ Related to #YYY
 
 ```bash
 ./scripts/test/lint.sh
-./scripts/test/test.sh all
-./scripts/test/test-e2e.sh frontend
+./scripts/backend/test.sh unit
+./scripts/backend/test.sh e2e
 ```
 ````
 

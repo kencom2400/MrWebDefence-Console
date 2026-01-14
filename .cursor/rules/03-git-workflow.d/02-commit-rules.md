@@ -118,20 +118,26 @@ run_terminal_cmd({
 #### コミット前のチェックリスト
 
 - [ ] コードが正しく動作するか確認
-- [ ] **ビルドが成功するか確認（必須）**
+- [ ] **ビルドが成功するか確認（必須・コンテナ使用）**
   ```bash
-  ./scripts/build/build.sh
+  ./scripts/backend/build.sh
   ```
-- [ ] **Lintエラーがないか確認（必須）**
+- [ ] **Lintエラーがないか確認（必須・コンテナ使用）**
   ```bash
-  ./scripts/test/lint.sh
+  ./scripts/backend/lint.sh
   ```
-- [ ] **テストがすべてパスするか確認（必須）**
+- [ ] **ユニットテストがすべてパスするか確認（必須・コンテナ使用）**
   ```bash
-  ./scripts/test/test.sh all
+  ./scripts/backend/test.sh unit
+  ```
+- [ ] **E2Eテストがすべてパスするか確認（必須・コンテナ使用、該当する場合）**
+  ```bash
+  ./scripts/backend/test.sh e2e
   ```
 - [ ] 不要なコメントやconsole.logを削除
 - [ ] 変更内容が一貫性を持っているか確認
+
+**⚠️ 重要: テスト実行は必ずコンテナを使用したスクリプトで実行すること**
 
 ### 🚨 必ず守るべきコミットタイミング
 

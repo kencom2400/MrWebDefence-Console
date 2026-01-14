@@ -30,11 +30,14 @@
 
 **コミット前チェックリスト:**
 
-- [ ] ビルドが成功するか（`./scripts/build/build.sh`）
-- [ ] Lintエラーがないか（`./scripts/test/lint.sh`）
-- [ ] テストがパスするか（`./scripts/test/test.sh all`）
+- [ ] ビルドが成功するか（`./scripts/backend/build.sh` - コンテナ使用）
+- [ ] Lintエラーがないか（`./scripts/backend/lint.sh` - コンテナ使用）
+- [ ] ユニットテストがパスするか（`./scripts/backend/test.sh unit` - コンテナ使用）
+- [ ] E2Eテストがパスするか（`./scripts/backend/test.sh e2e` - コンテナ使用、該当する場合）
 - [ ] 不要なコメントやconsole.logを削除
 - [ ] コミットメッセージが適切か
+
+**⚠️ 重要: テスト実行は必ずコンテナを使用したスクリプトで実行すること**
 
 **参照ルール:**
 
