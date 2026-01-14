@@ -497,13 +497,9 @@ run_terminal_cmd({
 
 **🚨 CRITICAL: AIアシスタントへの指示**
 
-`@start-task`コマンドを受け取った際は、**必ず`required_permissions: ['all']`を指定して実行**してください。これは必須事項です。
+**🔴 重要**: `@start-task`コマンドの詳細な実行手順については、**`.cursor/rules/02-code-standards.d/02-task-start.md`** を参照してください。
 
 **実行内容:**
-
-0. **ルールファイル再読込**（最優先）
-   - すべてのルールファイルを読み込む（@inc-all-rulesと同じ処理）
-   - 最新のプロジェクトルールに従って作業を実行
 
 1. **Issue取得**
    - Jiraから「To Do」ステータスのIssueを取得
