@@ -64,6 +64,21 @@ export class CustomerRepository implements ICustomerRepository {
   }
 
   /**
+   * メールアドレスから顧客を検索する
+   * @param email メールアドレス
+   * @returns 顧客エンティティ、またはnull
+   */
+  async findByEmail(email: string): Promise<Customer | null> {
+    const normalizedEmail = email.toLowerCase().trim();
+    for (const customer of this.customers.values()) {
+      if (customer.email.toLowerCase().trim() === normalizedEmail) {
+        return customer;
+      }
+    }
+    return null;
+  }
+
+  /**
    * 顧客一覧を取得・検索する
    * @param query 検索クエリ（検索条件とページネーション情報）
    * @returns 顧客一覧とページネーション情報

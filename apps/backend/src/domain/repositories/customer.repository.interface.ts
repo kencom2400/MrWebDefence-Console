@@ -59,6 +59,13 @@ export interface ICustomerRepository {
   findById(id: string): Promise<Customer | null>;
 
   /**
+   * メールアドレスから顧客を検索する
+   * @param email メールアドレス
+   * @returns 顧客エンティティ、またはnull
+   */
+  findByEmail(email: string): Promise<Customer | null>;
+
+  /**
    * 顧客一覧を取得・検索する
    * @param query 検索クエリ（検索条件とページネーション情報）
    * @returns 顧客一覧とページネーション情報

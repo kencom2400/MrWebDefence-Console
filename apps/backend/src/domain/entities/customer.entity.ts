@@ -58,29 +58,12 @@ export class Customer {
     company?: string | null,
     address?: string | null,
   ): Customer {
-    if (!name || name.trim().length === 0) {
-      throw new Error('Customer name cannot be empty');
-    }
-    if (name.length > 100) {
-      throw new Error('Customer name must be 100 characters or less');
-    }
-    if (!email || email.trim().length === 0) {
-      throw new Error('Customer email cannot be empty');
-    }
-    // 簡易的なメールアドレス形式チェック
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(email)) {
-      throw new Error('Invalid email format');
-    }
-    if (phone && phone.length > 20) {
-      throw new Error('Phone number must be 20 characters or less');
-    }
-    if (company && company.length > 100) {
-      throw new Error('Company name must be 100 characters or less');
-    }
-    if (address && address.length > 200) {
-      throw new Error('Address must be 200 characters or less');
-    }
+    // バリデーション
+    Customer.validateName(name);
+    Customer.validateEmail(email);
+    Customer.validatePhone(phone);
+    Customer.validateCompany(company);
+    Customer.validateAddress(address);
 
     const now: Date = new Date();
     return new Customer(
@@ -145,28 +128,12 @@ export class Customer {
     const newCompany = company !== undefined ? (company?.trim() || null) : this.company;
     const newAddress = address !== undefined ? (address?.trim() || null) : this.address;
 
-    if (newName.length === 0) {
-      throw new Error('Customer name cannot be empty');
-    }
-    if (newName.length > 100) {
-      throw new Error('Customer name must be 100 characters or less');
-    }
-    if (newEmail.length === 0) {
-      throw new Error('Customer email cannot be empty');
-    }
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(newEmail)) {
-      throw new Error('Invalid email format');
-    }
-    if (newPhone && newPhone.length > 20) {
-      throw new Error('Phone number must be 20 characters or less');
-    }
-    if (newCompany && newCompany.length > 100) {
-      throw new Error('Company name must be 100 characters or less');
-    }
-    if (newAddress && newAddress.length > 200) {
-      throw new Error('Address must be 200 characters or less');
-    }
+    // バリデーション
+    Customer.validateName(newName);
+    Customer.validateEmail(newEmail);
+    Customer.validatePhone(newPhone);
+    Customer.validateCompany(newCompany);
+    Customer.validateAddress(newAddress);
 
     return new Customer(
       this.id,
@@ -221,6 +188,69 @@ export class Customer {
       this.createdAt,
       new Date(),
     );
+  }
+
+  /**
+   * 顧客名をバリデーションする
+   * @param name 顧客名
+   * @throws Error バリデーション失敗時
+   */
+  private static validateName(name: string): void {
+    if (!name || name.trim().length === 0) {
+      throw new Error('Customer name cannot be empty');
+    }
+    if (name.length > 100) {
+      throw new Error('Customer name must be 100 characters or less');
+    }
+  }
+
+  /**
+   * メールアドレスをバリデーションする
+   * @param email メールアドレス
+   * @throws Error バリデーション失敗時
+   */
+  private static validateEmail(email: string): void {
+    if (!email || email.trim().length === 0) {
+      throw new Error('Customer email cannot be empty');
+    }
+    // 簡易的なメールアドレス形式チェック
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      throw new Error('Invalid email format');
+    }
+  }
+
+  /**
+   * 電話番号をバリデーションする
+   * @param phone 電話番号（オプション）
+   * @throws Error バリデーション失敗時
+   */
+  private static validatePhone(phone: string | null | undefined): void {
+    if (phone && phone.length > 20) {
+      throw new Error('Phone number must be 20 characters or less');
+    }
+  }
+
+  /**
+   * 会社名をバリデーションする
+   * @param company 会社名（オプション）
+   * @throws Error バリデーション失敗時
+   */
+  private static validateCompany(company: string | null | undefined): void {
+    if (company && company.length > 100) {
+      throw new Error('Company name must be 100 characters or less');
+    }
+  }
+
+  /**
+   * 住所をバリデーションする
+   * @param address 住所（オプション）
+   * @throws Error バリデーション失敗時
+   */
+  private static validateAddress(address: string | null | undefined): void {
+    if (address && address.length > 200) {
+      throw new Error('Address must be 200 characters or less');
+    }
   }
 }
 

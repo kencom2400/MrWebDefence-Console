@@ -33,11 +33,9 @@ export class CreateCustomerUseCase {
     company?: string | null,
     address?: string | null,
   ): Promise<Customer> {
-    // メールアドレスの重複チェック（簡易実装：全件取得してチェック）
-    // TODO: 将来的にはリポジトリにfindByEmailメソッドを追加して最適化
-    const existingCustomers = await this.customerRepository.findAll({ limit: 1000 });
-    const duplicateCustomer = existingCustomers.customers.find((c) => c.email === email);
-    if (duplicateCustomer) {
+    // メールアドレスの重複チェック
+    const existingCustomer = await this.customerRepository.findByEmail(email);
+    if (existingCustomer) {
       throw new ConflictException('Customer with this email already exists');
     }
 

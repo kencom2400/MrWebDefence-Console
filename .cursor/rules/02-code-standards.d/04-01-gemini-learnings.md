@@ -60,6 +60,58 @@ sequenceDiagram
 - 手戻りを防ぐ
 - 設計書の信頼性向上
 
+### 13-14. リポジトリパターンとパフォーマンス最適化（PR #45）
+
+**学習元**: PR #45 - 顧客管理機能の実装（Geminiレビュー指摘）
+
+#### メールアドレス重複チェックの最適化
+
+**問題**: メールアドレスの重複チェックで全件取得してチェックしていた。顧客数が増えるとパフォーマンスの問題が発生する。
+
+**解決策**:
+- リポジトリインターフェースに`findByEmail`メソッドを追加
+- リポジトリ実装でメールアドレスを直接検索するロジックを実装
+- UseCaseで`findByEmail`を使用して重複チェックを行う
+
+**理由**:
+- パフォーマンスの向上（全件取得ではなく直接検索）
+- 正確性の向上（大文字小文字を区別しない検索）
+- スケーラビリティの向上
+
+#### ドメインエンティティのバリデーションロジックの重複排除
+
+**問題**: `create`メソッドと`update`メソッドで同じバリデーションロジックが重複していた。
+
+**解決策**: バリデーションロジックをプライベート静的メソッドとして抽出し、`create`と`update`の両方で再利用する。
+
+**例**:
+```typescript
+// ✅ 良い例: バリデーションロジックを抽出
+private static validateName(name: string): void {
+  if (!name || name.trim().length === 0) {
+    throw new Error('Customer name cannot be empty');
+  }
+  if (name.length > 100) {
+    throw new Error('Customer name must be 100 characters or less');
+  }
+}
+
+public static create(...): Customer {
+  Customer.validateName(name);
+  // ...
+}
+
+public update(...): Customer {
+  Customer.validateName(newName);
+  // ...
+}
+```
+
+**理由**:
+- コードの重複を削減
+- 保守性の向上（バリデーションロジックの変更が1箇所で済む）
+- 一貫性の確保
+
 ### 13-13. RESTful API設計のベストプラクティス（PR #44 - 続き）
 
 **学習元**: PR #44 - 顧客管理機能の詳細設計書作成（Geminiレビュー指摘）
