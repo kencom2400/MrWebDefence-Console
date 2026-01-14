@@ -116,7 +116,7 @@ classDiagram
     class FqdnStatus {
         <<ValueObject>>
         +string value
-        +validate()
+        <<static>> +create(value: string): FqdnStatus
         +isActive(): boolean
         +isInactive(): boolean
     }
