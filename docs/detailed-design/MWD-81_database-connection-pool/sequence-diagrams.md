@@ -44,10 +44,20 @@ sequenceDiagram
     alt アイドル接続が存在する
         DatabaseConnectionPool->>DatabaseConnectionPool: getIdleConnection()
         DatabaseConnectionPool->>Connection: isValid()
-        Connection-->>DatabaseConnectionPool: true
-        DatabaseConnectionPool->>DatabaseConnectionPool: removeFromIdle()
-        DatabaseConnectionPool->>DatabaseConnectionPool: addToActive()
-        DatabaseConnectionPool-->>UseCase: connection
+        alt 接続が有効
+            Connection-->>DatabaseConnectionPool: true
+            DatabaseConnectionPool->>DatabaseConnectionPool: removeFromIdle()
+            DatabaseConnectionPool->>DatabaseConnectionPool: addToActive()
+            DatabaseConnectionPool-->>UseCase: connection
+        else 接続が無効
+            Connection-->>DatabaseConnectionPool: false
+            DatabaseConnectionPool->>DatabaseConnectionPool: removeInvalidConnection(connection)
+            DatabaseConnectionPool->>Connection: close()
+            Connection-->>DatabaseConnectionPool: closed
+            Note over DatabaseConnectionPool: 別のアイドル接続を探すか、新規作成を試みる
+            DatabaseConnectionPool->>DatabaseConnectionPool: getConnection() // 再帰的に取得処理を呼び出す
+            DatabaseConnectionPool-->>UseCase: connection
+        end
     else アイドル接続が存在しない && 最大接続数未満
         DatabaseConnectionPool->>DatabaseConnectionPool: createConnection()
         DatabaseConnectionPool->>Connection: new Connection()

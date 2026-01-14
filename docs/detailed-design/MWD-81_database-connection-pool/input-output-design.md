@@ -78,7 +78,7 @@ interface ConnectionPoolStatus {
 #### 出力
 
 **成功時:**
-- `Promise<Connection>`: データベース接続オブジェクト
+- `Promise<IConnection>`: データベース接続オブジェクト
 
 **失敗時:**
 - `ConnectionTimeoutError`: 接続取得タイムアウト（最大接続数に達している場合、タイムアウトまで待機したが接続が利用可能にならなかった場合に発生）
@@ -111,7 +111,7 @@ class ConnectionError extends Error {
 
 #### 入力
 
-- `connection: Connection`: 返却する接続オブジェクト
+- `connection: IConnection`: 返却する接続オブジェクト
 
 #### 出力
 
@@ -208,20 +208,21 @@ class DestructionError extends Error {
 
 ## 接続オブジェクト
 
-### Connection
+### IConnection
 
-データベース接続を表すオブジェクトです。
+データベース接続を表すインターフェースです。
 
 #### プロパティ
 
 ```typescript
-interface Connection {
+interface IConnection {
   id: string;                    // 接続の一意なID
   createdAt: Date;               // 接続作成日時
   lastUsedAt: Date;              // 最終使用日時
-  isActive: boolean;             // アクティブかどうか
 }
 ```
+
+**注意**: 接続が使用中（Active）か待機中（Idle）かという状態は、接続オブジェクト自身が持つ情報ではなく、接続プール（`DatabaseConnectionPool`）が管理します。これにより、プールとオブジェクトの間で状態の不整合が起きるリスクを回避します。
 
 #### メソッド
 

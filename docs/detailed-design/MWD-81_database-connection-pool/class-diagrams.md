@@ -41,7 +41,6 @@ classDiagram
         +id: string
         +createdAt: Date
         +lastUsedAt: Date
-        +isActive: boolean
         +isValid(): Promise~boolean~
         +close(): Promise~void~
     }
@@ -80,7 +79,6 @@ classDiagram
         +id: string
         +createdAt: Date
         +lastUsedAt: Date
-        +isActive: boolean
         +isValid(): Promise~boolean~
         +close(): Promise~void~
     }
@@ -115,7 +113,6 @@ stateDiagram-v2
     ShuttingDown --> Shutdown: all connections closed
     Shutdown --> [*]
     Error --> ShuttingDown: destroy()
-    Error --> [*]: immediate shutdown
 ```
 
 ## 接続のライフサイクル
