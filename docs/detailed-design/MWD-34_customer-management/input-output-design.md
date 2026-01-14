@@ -73,7 +73,7 @@
 
 ### 2. 顧客更新
 
-**エンドポイント**: `PUT /api/v1/customers/:id`
+**エンドポイント**: `PATCH /api/v1/customers/:id`
 
 **認証**: 必須（JWT）
 
@@ -163,19 +163,27 @@
 }
 ```
 
-### 4. 顧客一覧取得
+### 4. 顧客一覧取得・検索
 
 **エンドポイント**: `GET /api/v1/customers`
 
 **認証**: 必須（JWT）
 
 **クエリパラメータ**:
+- `name`: 顧客名（部分一致検索、オプション）
+- `email`: メールアドレス（部分一致検索、オプション）
+- `company`: 会社名（部分一致検索、オプション）
+- `status`: ステータス（`ACTIVE` または `INACTIVE`、オプション）
 - `page`: ページ番号（デフォルト: 1、最小: 1）
 - `limit`: 1ページあたりの件数（デフォルト: 10、最小: 1、最大: 100）
 
 **リクエスト例**:
 ```
+# 一覧取得
 GET /api/v1/customers?page=1&limit=10
+
+# 検索（名前とステータスで絞り込み）
+GET /api/v1/customers?name=山田&status=ACTIVE&page=1&limit=10
 ```
 
 **レスポンス** (200 OK):
@@ -255,59 +263,7 @@ GET /api/v1/customers?page=1&limit=10
 }
 ```
 
-### 6. 顧客検索
-
-**エンドポイント**: `GET /api/v1/customers/search`
-
-**認証**: 必須（JWT）
-
-**クエリパラメータ**:
-- `name`: 顧客名（部分一致検索、オプション）
-- `email`: メールアドレス（部分一致検索、オプション）
-- `company`: 会社名（部分一致検索、オプション）
-- `status`: ステータス（`ACTIVE` または `INACTIVE`、オプション）
-- `page`: ページ番号（デフォルト: 1、最小: 1）
-- `limit`: 1ページあたりの件数（デフォルト: 10、最小: 1、最大: 100）
-
-**リクエスト例**:
-```
-GET /api/v1/customers/search?name=山田&status=ACTIVE&page=1&limit=10
-```
-
-**レスポンス** (200 OK):
-```json
-{
-  "customers": [
-    {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
-      "name": "山田太郎",
-      "email": "yamada@example.com",
-      "phone": "090-1234-5678",
-      "company": "株式会社サンプル",
-      "address": "東京都渋谷区...",
-      "status": "ACTIVE",
-      "createdAt": "2026-01-13T10:00:00.000Z",
-      "updatedAt": "2026-01-13T10:00:00.000Z"
-    }
-  ],
-  "total": 1,
-  "page": 1,
-  "limit": 10
-}
-```
-
-**エラー** (400 Bad Request):
-```json
-{
-  "statusCode": 400,
-  "message": [
-    "status must be one of the following values: ACTIVE, INACTIVE"
-  ],
-  "error": "Bad Request"
-}
-```
-
-### 7. 顧客ステータス切り替え
+### 6. 顧客ステータス切り替え
 
 **エンドポイント**: `PATCH /api/v1/customers/:id/status`
 
@@ -426,10 +382,10 @@ interface CustomerListResponseDto {
 - 指定されたフィールドのみ更新される
 - バリデーションルールはCreateCustomerDtoと同じ
 
-### SearchCustomersDto
-- `name`: オプション、文字列
-- `email`: オプション、文字列
-- `company`: オプション、文字列
+### CustomerListQueryDto（一覧取得・検索共通）
+- `name`: オプション、文字列（部分一致検索）
+- `email`: オプション、文字列（部分一致検索）
+- `company`: オプション、文字列（部分一致検索）
 - `status`: オプション、`ACTIVE` または `INACTIVE`
 - `page`: オプション、正の整数、デフォルト: 1
 - `limit`: オプション、1以上100以下の整数、デフォルト: 10

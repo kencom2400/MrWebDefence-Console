@@ -99,7 +99,7 @@ sequenceDiagram
     end
 ```
 
-## 顧客一覧取得フロー
+## 顧客一覧取得・検索フロー
 
 ```mermaid
 sequenceDiagram
@@ -108,7 +108,9 @@ sequenceDiagram
     participant GetCustomerListUseCase
     participant CustomerRepository
 
-    Client->>CustomerController: GET /api/v1/customers?page=1&limit=10
+    Note over Client: 一覧取得: GET /api/v1/customers?page=1&limit=10<br/>検索: GET /api/v1/customers?name=山田&status=ACTIVE&page=1&limit=10
+    
+    Client->>CustomerController: GET /api/v1/customers?[検索パラメータ]&page=1&limit=10
     CustomerController->>GetCustomerListUseCase: execute(query)
     
     GetCustomerListUseCase->>CustomerRepository: findAll(query)
@@ -143,26 +145,6 @@ sequenceDiagram
         CustomerController->>CustomerController: toResponseDto(customer)
         CustomerController-->>Client: 200 OK { customer }
     end
-```
-
-## 顧客検索フロー
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant CustomerController
-    participant SearchCustomersUseCase
-    participant CustomerRepository
-
-    Client->>CustomerController: GET /api/v1/customers/search?name=xxx&email=yyy&status=ACTIVE
-    CustomerController->>SearchCustomersUseCase: execute(query)
-    
-    SearchCustomersUseCase->>CustomerRepository: search(query)
-    CustomerRepository-->>SearchCustomersUseCase: { customers, total, page, limit }
-    
-    SearchCustomersUseCase-->>CustomerController: result
-    CustomerController->>CustomerController: toListResponseDto(result)
-    CustomerController-->>Client: 200 OK { customers, total, page, limit }
 ```
 
 ## 顧客ステータス切り替えフロー

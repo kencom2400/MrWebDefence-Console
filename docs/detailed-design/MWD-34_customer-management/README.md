@@ -11,11 +11,10 @@
 ### スコープ
 
 - 顧客登録API実装（POST /api/v1/customers）
-- 顧客編集API実装（PUT /api/v1/customers/:id）
+- 顧客編集API実装（PATCH /api/v1/customers/:id）
 - 顧客削除API実装（DELETE /api/v1/customers/:id）
-- 顧客一覧取得API実装（GET /api/v1/customers）
+- 顧客一覧取得・検索API実装（GET /api/v1/customers、検索クエリパラメータ対応）
 - 顧客詳細取得API実装（GET /api/v1/customers/:id）
-- 顧客検索API実装（GET /api/v1/customers/search）
 - 顧客有効/無効化API実装（PATCH /api/v1/customers/:id/status）
 
 ## アーキテクチャ

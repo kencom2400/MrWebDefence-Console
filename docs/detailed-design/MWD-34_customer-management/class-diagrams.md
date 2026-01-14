@@ -50,7 +50,7 @@ classDiagram
         +number limit
     }
     
-    class SearchCustomersDto {
+    class CustomerListQueryDto {
         +string? name
         +string? email
         +string? company
@@ -87,11 +87,6 @@ classDiagram
     class GetCustomerByIdUseCase {
         -ICustomerRepository customerRepository
         +execute(id: string): Promise~Customer | null~
-    }
-    
-    class SearchCustomersUseCase {
-        -ICustomerRepository customerRepository
-        +execute(query: SearchQuery): Promise~CustomerListResult~
     }
     
     class ToggleCustomerStatusUseCase {
@@ -151,10 +146,10 @@ classDiagram
     CustomerController --> DeleteCustomerUseCase : uses
     CustomerController --> GetCustomerListUseCase : uses
     CustomerController --> GetCustomerByIdUseCase : uses
-    CustomerController --> SearchCustomersUseCase : uses
     CustomerController --> ToggleCustomerStatusUseCase : uses
     CustomerController --> CreateCustomerDto : receives
     CustomerController --> UpdateCustomerDto : receives
+    CustomerController --> CustomerListQueryDto : receives
     CustomerController --> CustomerResponseDto : returns
     CustomerController --> CustomerListResponseDto : returns
     
@@ -163,7 +158,6 @@ classDiagram
     DeleteCustomerUseCase --> ICustomerRepository : depends on
     GetCustomerListUseCase --> ICustomerRepository : depends on
     GetCustomerByIdUseCase --> ICustomerRepository : depends on
-    SearchCustomersUseCase --> ICustomerRepository : depends on
     ToggleCustomerStatusUseCase --> ICustomerRepository : depends on
     
     Customer --> CustomerStatus : uses
@@ -173,7 +167,6 @@ classDiagram
     UpdateCustomerUseCase --> Customer : updates
     GetCustomerListUseCase --> Customer : returns
     GetCustomerByIdUseCase --> Customer : returns
-    SearchCustomersUseCase --> Customer : returns
     ToggleCustomerStatusUseCase --> Customer : updates
 ```
 
@@ -197,7 +190,7 @@ classDiagram
 - **UpdateCustomerDto**: 顧客更新時のリクエストDTO
 - **CustomerResponseDto**: 顧客情報のレスポンスDTO
 - **CustomerListResponseDto**: 顧客一覧のレスポンスDTO（ページネーション情報含む）
-- **SearchCustomersDto**: 顧客検索時のリクエストDTO
+- **CustomerListQueryDto**: 顧客一覧取得・検索時のクエリDTO（検索パラメータ含む）
 - **ToggleStatusDto**: ステータス変更時のリクエストDTO
 
 ### Application Layer
@@ -208,9 +201,8 @@ classDiagram
 - **CreateCustomerUseCase**: 顧客作成処理
 - **UpdateCustomerUseCase**: 顧客更新処理
 - **DeleteCustomerUseCase**: 顧客削除処理
-- **GetCustomerListUseCase**: 顧客一覧取得処理
+- **GetCustomerListUseCase**: 顧客一覧取得・検索処理（検索クエリパラメータ対応）
 - **GetCustomerByIdUseCase**: 顧客詳細取得処理
-- **SearchCustomersUseCase**: 顧客検索処理
 - **ToggleCustomerStatusUseCase**: 顧客有効/無効化処理
 
 ### Domain Layer
