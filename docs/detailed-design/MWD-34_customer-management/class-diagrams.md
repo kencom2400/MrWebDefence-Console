@@ -177,9 +177,8 @@ classDiagram
 - `create`: 新規顧客を作成
 - `update`: 既存顧客を更新
 - `delete`: 顧客を削除
-- `findAll`: 顧客一覧を取得（ページネーション対応）
+- `findAll`: 顧客一覧を取得・検索（検索クエリパラメータ対応、ページネーション対応）
 - `findOne`: 顧客詳細を取得
-- `search`: 顧客を検索
 - `toggleStatus`: 顧客の有効/無効状態を切り替え
 
 #### DTOs
