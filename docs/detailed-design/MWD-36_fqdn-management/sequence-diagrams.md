@@ -68,7 +68,7 @@ sequenceDiagram
             FqdnRepository-->>UpdateFqdnUseCase: existingFqdn
             
             alt fqdnが変更される場合
-                UpdateFqdnUseCase->>FqdnRepository: findByFqdn(newFqdn)
+                UpdateFqdnUseCase->>FqdnRepository: findByFqdn(fqdn)
                 
                 alt 新しいFQDNが既に存在する
                     FqdnRepository-->>UpdateFqdnUseCase: duplicateFqdn
