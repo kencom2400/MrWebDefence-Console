@@ -11,7 +11,7 @@ classDiagram
         +delete(id: string): Promise~void~
         +findAll(query: FqdnListQueryDto): Promise~FqdnListResponseDto~
         +findOne(id: string): Promise~FqdnResponseDto~
-        +toggleStatus(id: string, statusDto: ToggleFqdnStatusDto): Promise~FqdnResponseDto~
+        +updateStatus(id: string, statusDto: UpdateFqdnStatusDto): Promise~FqdnResponseDto~
     }
     
     class CreateFqdnDto {
@@ -47,7 +47,7 @@ classDiagram
         +number? limit
     }
     
-    class ToggleFqdnStatusDto {
+    class UpdateFqdnStatusDto {
         +FqdnStatus status
     }
     
@@ -93,7 +93,7 @@ classDiagram
         +execute(id: string): Promise~Fqdn | null~
     }
     
-    class ToggleFqdnStatusUseCase {
+    class UpdateFqdnStatusUseCase {
         -IFqdnRepository fqdnRepository
         +execute(id: string, status: FqdnStatus): Promise~Fqdn~
     }
@@ -147,7 +147,7 @@ classDiagram
     FqdnController --> DeleteFqdnUseCase : uses
     FqdnController --> GetFqdnListUseCase : uses
     FqdnController --> GetFqdnByIdUseCase : uses
-    FqdnController --> ToggleFqdnStatusUseCase : uses
+    FqdnController --> UpdateFqdnStatusUseCase : uses
     FqdnController --> CreateFqdnDto : receives
     FqdnController --> UpdateFqdnDto : receives
     FqdnController --> FqdnListQueryDto : receives
@@ -161,7 +161,7 @@ classDiagram
     GetFqdnListUseCase --> FqdnListQuery : uses
     GetFqdnListUseCase --> FqdnListResult : returns
     GetFqdnByIdUseCase --> IFqdnRepository : depends on
-    ToggleFqdnStatusUseCase --> IFqdnRepository : depends on
+    UpdateFqdnStatusUseCase --> IFqdnRepository : depends on
     
     Fqdn --> FqdnStatus : uses
     FqdnRepository ..|> IFqdnRepository : implements
@@ -170,7 +170,7 @@ classDiagram
     UpdateFqdnUseCase --> Fqdn : updates
     GetFqdnListUseCase --> Fqdn : returns
     GetFqdnByIdUseCase --> Fqdn : returns
-    ToggleFqdnStatusUseCase --> Fqdn : updates
+    UpdateFqdnStatusUseCase --> Fqdn : updates
 ```
 
 ## クラス説明
@@ -185,7 +185,7 @@ FQDN管理に関するHTTPエンドポイントを提供するコントローラ
 - `delete`: FQDNを削除
 - `findAll`: FQDN一覧を取得・検索（検索クエリパラメータ対応、ページネーション対応）
 - `findOne`: FQDN詳細を取得
-- `toggleStatus`: FQDNの有効/無効状態を切り替え
+- `updateStatus`: FQDNのステータスを更新
 
 #### DTOs
 - **CreateFqdnDto**: FQDN作成時のリクエストDTO
@@ -193,7 +193,7 @@ FQDN管理に関するHTTPエンドポイントを提供するコントローラ
 - **FqdnResponseDto**: FQDN情報のレスポンスDTO
 - **FqdnListResponseDto**: FQDN一覧のレスポンスDTO（ページネーション情報含む）
 - **FqdnListQueryDto**: FQDN一覧取得・検索時のクエリDTO（検索パラメータ含む）
-- **ToggleFqdnStatusDto**: ステータス変更時のリクエストDTO
+- **UpdateFqdnStatusDto**: ステータス更新時のリクエストDTO
 
 ### Application Layer
 

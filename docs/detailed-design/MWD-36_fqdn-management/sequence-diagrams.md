@@ -185,39 +185,39 @@ sequenceDiagram
 sequenceDiagram
     participant Client
     participant FqdnController
-    participant ToggleFqdnStatusUseCase
+    participant UpdateFqdnStatusUseCase
     participant FqdnRepository
     participant Fqdn
 
     Client->>FqdnController: PATCH /api/v1/fqdns/:id/status<br/>{ status: "ACTIVE" | "INACTIVE" }
-    FqdnController->>FqdnController: validate(ToggleFqdnStatusDto)
+    FqdnController->>FqdnController: validate(UpdateFqdnStatusDto)
     
     alt バリデーションエラー
         FqdnController-->>Client: 400 Bad Request
     else バリデーション成功
-        FqdnController->>ToggleFqdnStatusUseCase: execute(id, status)
+        FqdnController->>UpdateFqdnStatusUseCase: execute(id, status)
         
-        ToggleFqdnStatusUseCase->>FqdnRepository: findById(id)
+        UpdateFqdnStatusUseCase->>FqdnRepository: findById(id)
         
         alt FQDNが見つからない
-            FqdnRepository-->>ToggleFqdnStatusUseCase: null
-            ToggleFqdnStatusUseCase-->>FqdnController: NotFoundException
+            FqdnRepository-->>UpdateFqdnStatusUseCase: null
+            UpdateFqdnStatusUseCase-->>FqdnController: NotFoundException
             FqdnController-->>Client: 404 Not Found
         else FQDNが見つかった
-            FqdnRepository-->>ToggleFqdnStatusUseCase: fqdn
+            FqdnRepository-->>UpdateFqdnStatusUseCase: fqdn
             
             alt status === "ACTIVE"
-                ToggleFqdnStatusUseCase->>Fqdn: activate()
+                UpdateFqdnStatusUseCase->>Fqdn: activate()
             else status === "INACTIVE"
-                ToggleFqdnStatusUseCase->>Fqdn: deactivate()
+                UpdateFqdnStatusUseCase->>Fqdn: deactivate()
             end
             
-            Fqdn-->>ToggleFqdnStatusUseCase: updatedFqdn
+            Fqdn-->>UpdateFqdnStatusUseCase: updatedFqdn
             
-            ToggleFqdnStatusUseCase->>FqdnRepository: update(fqdn)
-            FqdnRepository-->>ToggleFqdnStatusUseCase: savedFqdn
+            UpdateFqdnStatusUseCase->>FqdnRepository: update(fqdn)
+            FqdnRepository-->>UpdateFqdnStatusUseCase: savedFqdn
             
-            ToggleFqdnStatusUseCase-->>FqdnController: fqdn
+            UpdateFqdnStatusUseCase-->>FqdnController: fqdn
             FqdnController->>FqdnController: toResponseDto(fqdn)
             FqdnController-->>Client: 200 OK { fqdn }
         end

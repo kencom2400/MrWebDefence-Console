@@ -368,7 +368,7 @@ interface FqdnListResponseDto {
 - `page`: オプション、正の整数、デフォルト: 1
 - `limit`: オプション、1以上100以下の整数、デフォルト: 10
 
-### ToggleFqdnStatusDto
+### UpdateFqdnStatusDto
 - `status`: 必須、`ACTIVE` または `INACTIVE`
 
 ## FQDN形式のバリデーション詳細

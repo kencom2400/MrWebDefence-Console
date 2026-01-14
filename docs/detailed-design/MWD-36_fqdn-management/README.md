@@ -15,7 +15,7 @@ FQDN（Fully Qualified Domain Name）の登録・編集・削除、有効/無効
 - FQDN削除API実装（DELETE /api/v1/fqdns/:id）
 - FQDN一覧取得・検索API実装（GET /api/v1/fqdns、検索クエリパラメータ対応）
 - FQDN詳細取得API実装（GET /api/v1/fqdns/:id）
-- FQDN有効/無効化API実装（PATCH /api/v1/fqdns/:id/status）
+- FQDNステータス更新API実装（PATCH /api/v1/fqdns/:id/status）
 
 ## アーキテクチャ
 
@@ -39,7 +39,7 @@ Onion Architecture（オニオンアーキテクチャ）に従い、レイヤ�
 │  - DeleteFqdnUseCase                │
 │  - GetFqdnListUseCase               │
 │  - GetFqdnByIdUseCase               │
-│  - ToggleFqdnStatusUseCase          │
+│  - UpdateFqdnStatusUseCase          │
 └──────────────┬──────────────────────┘
                │ 依存
 ┌──────────────▼──────────────────────┐
@@ -78,7 +78,7 @@ Onion Architecture（オニオンアーキテクチャ）に従い、レイヤ�
 - **DeleteFqdnUseCase**: FQDN削除処理のユースケース
 - **GetFqdnListUseCase**: FQDN一覧取得・検索処理のユースケース（検索クエリパラメータ対応）
 - **GetFqdnByIdUseCase**: FQDN詳細取得処理のユースケース
-- **ToggleFqdnStatusUseCase**: FQDN有効/無効化処理のユースケース
+- **UpdateFqdnStatusUseCase**: FQDNステータス更新処理のユースケース
 
 ### 3. Domain Layer
 
