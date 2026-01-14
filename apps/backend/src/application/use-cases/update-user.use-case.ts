@@ -30,18 +30,20 @@ export class UpdateUserUseCase {
       throw new NotFoundException('User not found');
     }
 
-    // メールアドレスが変更される場合、重複チェック
+    // メールアドレスが変更される場合のみ更新処理を行う
     if (email && email !== existingUser.email) {
+      // 重複チェック
       const duplicateUser = await this.userRepository.findByEmail(email);
       if (duplicateUser && duplicateUser.id !== id) {
         throw new ConflictException('User with this email already exists');
       }
+
+      // ユーザー情報を更新
+      const updatedUser = existingUser.updateEmail(email);
+      return await this.userRepository.update(updatedUser);
     }
 
-    // ユーザー情報を更新
-    const updatedUser = email ? existingUser.updateEmail(email) : existingUser;
-
-    // リポジトリに保存
-    return await this.userRepository.update(updatedUser);
+    // メールアドレスが提供されない、または変更がない場合は既存のユーザーを返す
+    return existingUser;
   }
 }

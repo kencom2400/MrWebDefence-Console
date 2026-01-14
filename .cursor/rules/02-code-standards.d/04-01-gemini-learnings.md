@@ -2396,3 +2396,100 @@ public async execute(query: UserListQuery): Promise<UserListResult> {
 - コードの重複をなくし、保守性が向上する
 - 関心事を分離する（バリデーションはプレゼンテーション層の責務）
 - Use Case層ではバリデーション済みのクリーンなデータが渡されることを期待できる
+
+### Use Caseのメソッドシグネチャ設計（コマンドオブジェクトパターン）
+
+**問題**: Use Caseの`execute`メソッドで、DTOから各プロパティを個別に渡していると、将来的にDTOにプロパティが追加された場合、Use Caseのメソッドシグネチャを変更する必要があり、修正箇所が増える。
+
+**解決策**: Use CaseがDTOのような単一のコマンドオブジェクトを受け取るように設計する。これにより、将来的にDTOにプロパティが追加されても、Use Caseのメソッドシグネチャを変更する必要がなくなり、修正箇所を最小限に抑えることができる。
+
+**例**:
+```typescript
+// ❌ 各プロパティを個別に渡す
+public async execute(
+  email: string,
+  password: string,
+  role: UserRole = UserRole.SERVICE_MEMBER,
+): Promise<User> {
+  // ...
+}
+
+// コントローラー側
+const user = await this.createUserUseCase.execute(
+  createUserDto.email,
+  createUserDto.password,
+  createUserDto.role,
+);
+
+// ✅ コマンドオブジェクトを受け取る
+public async execute(command: {
+  email: string;
+  password: string;
+  role?: UserRole;
+}): Promise<User> {
+  // ...
+}
+
+// コントローラー側
+const user = await this.createUserUseCase.execute(createUserDto);
+```
+
+**理由**:
+- 保守性が向上する（DTOにプロパティが追加されても、Use Caseのシグネチャを変更する必要がない）
+- コードが簡潔になる
+- 型安全性が保たれる
+
+### Use Caseでの不要な更新処理の回避
+
+**問題**: Use Caseで、値が提供されない、または変更がない場合でもリポジトリの`update`メソッドが呼び出されている。これにより、不要なリポジトリへのアクセスが発生する。
+
+**解決策**: 値の変更がある場合のみ更新処理を行うように修正する。これにより、意図が明確になり、不要なリポジトリへのアクセスを避けることができる。
+
+**例**:
+```typescript
+// ❌ 変更がない場合でもupdateが呼び出される
+public async execute(id: string, email?: string): Promise<User> {
+  const existingUser = await this.userRepository.findById(id);
+  if (!existingUser) {
+    throw new NotFoundException('User not found');
+  }
+
+  // メールアドレスが変更される場合、重複チェック
+  if (email && email !== existingUser.email) {
+    // ...
+  }
+
+  // 変更がない場合でもupdateが呼び出される
+  const updatedUser = email ? existingUser.updateEmail(email) : existingUser;
+  return await this.userRepository.update(updatedUser);
+}
+
+// ✅ 変更がある場合のみupdateを呼び出す
+public async execute(id: string, email?: string): Promise<User> {
+  const existingUser = await this.userRepository.findById(id);
+  if (!existingUser) {
+    throw new NotFoundException('User not found');
+  }
+
+  // メールアドレスが変更される場合のみ更新処理を行う
+  if (email && email !== existingUser.email) {
+    // 重複チェック
+    const duplicateUser = await this.userRepository.findByEmail(email);
+    if (duplicateUser && duplicateUser.id !== id) {
+      throw new ConflictException('User with this email already exists');
+    }
+
+    // ユーザー情報を更新
+    const updatedUser = existingUser.updateEmail(email);
+    return await this.userRepository.update(updatedUser);
+  }
+
+  // メールアドレスが提供されない、または変更がない場合は既存のユーザーを返す
+  return existingUser;
+}
+```
+
+**理由**:
+- 意図が明確になる
+- 不要なリポジトリへのアクセスを避けることができる
+- パフォーマンスが向上する可能性がある
