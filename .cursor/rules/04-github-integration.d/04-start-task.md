@@ -31,11 +31,19 @@ run_terminal_cmd({
 **実行内容:**
 
 0. **ルールファイル再読込**（最優先）
-   - すべてのルールファイルを読み込む（@inc-all-rulesと同じ処理）
+   - `.cursorrules`ファイルに記載されているすべてのルールファイルを読み込む（@inc-all-rulesと同じ処理）
    - 最新のプロジェクトルールに従って作業を実行
+   - 具体的には、`.cursorrules`ファイルの`@include`ディレクティブで指定されているすべてのファイルを読み込む
+
+0.5. **ISSUE_TRACKERの確認**
+   - `scripts/github/config.sh`または`scripts/jira/config.sh`から`ISSUE_TRACKER`を確認
+   - `ISSUE_TRACKER=jira`の場合は`scripts/jira/workflow/start-task.sh`を実行
+   - `ISSUE_TRACKER=github`の場合は`scripts/github/workflow/start-task.sh`を実行
+   - **必ず`required_permissions: ['all']`を指定**してください
 
 1. **Issue取得**
-   - GitHub Projectsから「📝 To Do」ステータスのIssueを取得
+   - GitHub Projects: 「📝 To Do」ステータスのIssueを取得
+   - Jira: 「To Do」ステータスのIssueを取得
    - 各IssueのAssignee情報を確認
    - 自分にアサインされているOPENなIssueをフィルタリング
 
