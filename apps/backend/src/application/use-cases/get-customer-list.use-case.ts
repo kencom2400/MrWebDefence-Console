@@ -4,7 +4,7 @@
  * 顧客一覧取得・検索処理のユースケース
  */
 
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException } from '@nestjs/common';
 import { ICustomerRepository, CustomerListQuery, CustomerListResult } from '../../domain/repositories/customer.repository.interface';
 
 @Injectable()
@@ -18,6 +18,7 @@ export class GetCustomerListUseCase {
    * 顧客一覧取得・検索処理を実行する
    * @param query 検索クエリ（検索条件とページネーション情報）
    * @returns 顧客一覧とページネーション情報
+   * @throws BadRequestException ページネーションパラメータが無効な場合
    */
   public async execute(query: CustomerListQuery): Promise<CustomerListResult> {
     // デフォルト値の設定
@@ -26,10 +27,10 @@ export class GetCustomerListUseCase {
 
     // ページネーションのバリデーション
     if (page < 1) {
-      throw new Error('Page must be a positive number');
+      throw new BadRequestException('Page must be a positive number');
     }
     if (limit < 1 || limit > 100) {
-      throw new Error('Limit must be between 1 and 100');
+      throw new BadRequestException('Limit must be between 1 and 100');
     }
 
     // リポジトリから顧客一覧を取得

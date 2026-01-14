@@ -60,7 +60,7 @@ sequenceDiagram
 - 手戻りを防ぐ
 - 設計書の信頼性向上
 
-### 13-14. リポジトリパターンとパフォーマンス最適化（PR #45）
+### 13-15. リポジトリパターンとパフォーマンス最適化（PR #45）
 
 **学習元**: PR #45 - 顧客管理機能の実装（Geminiレビュー指摘）
 
@@ -111,6 +111,56 @@ public update(...): Customer {
 - コードの重複を削減
 - 保守性の向上（バリデーションロジックの変更が1箇所で済む）
 - 一貫性の確保
+
+### 13-16. データ整合性とエラーハンドリングの改善（PR #45 - 続き）
+
+**学習元**: PR #45 - 顧客管理機能の実装（Geminiレビュー指摘）
+
+#### 更新時の一意性チェック
+
+**問題**: 顧客更新時にメールアドレスが変更される場合、他の顧客と重複していないかチェックしていなかった。データの整合性を保つために重要。
+
+**解決策**: 更新時にメールアドレスが変更される場合、重複チェックを追加する。
+
+**例**:
+```typescript
+// ✅ 良い例: 更新時のメールアドレス重複チェック
+if (email && email !== existingCustomer.email) {
+  const duplicateCustomer = await this.customerRepository.findByEmail(email);
+  if (duplicateCustomer && duplicateCustomer.id !== id) {
+    throw new ConflictException('Customer with this email already exists');
+  }
+}
+```
+
+**理由**:
+- データの整合性を保つ
+- 一意性制約の維持
+- ユーザーエクスペリエンスの向上（適切なエラーメッセージ）
+
+#### エラーハンドリングの標準化
+
+**問題**: UseCaseで汎用的な`Error`をthrowしていた。NestJSの例外クラスを使用することで、適切なHTTPステータスコードが返される。
+
+**解決策**: NestJSの例外クラス（`BadRequestException`など）を使用する。
+
+**例**:
+```typescript
+// ❌ 悪い例: 汎用的なError
+if (page < 1) {
+  throw new Error('Page must be a positive number');
+}
+
+// ✅ 良い例: NestJSの例外クラス
+if (page < 1) {
+  throw new BadRequestException('Page must be a positive number');
+}
+```
+
+**理由**:
+- 適切なHTTPステータスコードが自動的に返される
+- エラーレスポンスの一貫性
+- フレームワークの標準に準拠
 
 ### 13-13. RESTful API設計のベストプラクティス（PR #44 - 続き）
 
