@@ -13,6 +13,7 @@ import { IFqdnRepository } from '../src/domain/repositories/fqdn.repository.inte
 import { UserRepository } from '../src/infrastructure/repositories/user.repository';
 import { User } from '../src/domain/entities/user.entity';
 import { UserRole } from '../src/domain/entities/user-role.enum';
+import { TokenManager } from './helpers/token-manager';
 
 describe('FQDN E2E Tests', () => {
   let app: INestApplication;
@@ -90,16 +91,8 @@ describe('FQDN E2E Tests', () => {
     );
     await userRepository.create(testUser);
 
-    // ログインしてアクセストークンを取得
-    const loginRes = await request(app.getHttpServer())
-      .post('/api/v1/auth/login')
-      .send({
-        email: 'user@example.com',
-        password: 'password123',
-      })
-      .expect(200);
-
-    accessToken = loginRes.body.accessToken;
+    // トークンマネージャーからトークンを取得（キャッシュがあれば再利用）
+    accessToken = await TokenManager.getToken(app);
     expect(accessToken).toBeDefined();
 
     // 生成したトークンが既にブラックリストに登録されている場合、削除
@@ -121,11 +114,15 @@ describe('FQDN E2E Tests', () => {
   });
 
   describe('POST /api/v1/fqdns', () => {
+    let sharedToken: string;
+
     beforeEach(async () => {
       // 各テスト前にRedisをクリア（テストの独立性を保つため）
       if (testClient) {
         try {
           await testClient.flushdb();
+          // Redisをクリアしたので、トークンキャッシュもクリア
+          TokenManager.clearAllCache();
         } catch (error) {
           // Redis flushdb失敗時は続行
         }
@@ -136,12 +133,15 @@ describe('FQDN E2E Tests', () => {
       if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
         fqdnRepository.clear();
       }
+
+      // このdescribeブロック内で共有するトークンを取得
+      sharedToken = await TokenManager.getToken(app);
     });
 
     it('正常系: FQDNを作成できる', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'create-test.com',
           description: 'サンプルドメイン',
@@ -159,7 +159,7 @@ describe('FQDN E2E Tests', () => {
     it('正常系: 説明なしでFQDNを作成できる', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'no-description-test.com',
         })
@@ -172,7 +172,7 @@ describe('FQDN E2E Tests', () => {
     it('正常系: 大文字のFQDNを小文字に正規化して作成できる', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'EXAMPLE.COM',
         })
@@ -193,7 +193,7 @@ describe('FQDN E2E Tests', () => {
     it('異常系: 無効なFQDN形式の場合400エラー', async () => {
       const response = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'invalid',
         })
@@ -206,7 +206,7 @@ describe('FQDN E2E Tests', () => {
       // 最初のFQDNを作成
       await request(app.getHttpServer())
         .post('/api/v1/fqdns')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'duplicate-test.com',
         })
@@ -215,7 +215,7 @@ describe('FQDN E2E Tests', () => {
       // 同じFQDNを再度作成しようとする
       const response = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'duplicate-test.com',
         })
@@ -227,11 +227,15 @@ describe('FQDN E2E Tests', () => {
   });
 
   describe('PATCH /api/v1/fqdns/:id', () => {
+    let sharedToken: string;
+
     beforeEach(async () => {
       // 各テスト前にRedisをクリア（テストの独立性を保つため）
       if (testClient) {
         try {
           await testClient.flushdb();
+          // Redisをクリアしたので、トークンキャッシュもクリア
+          TokenManager.clearAllCache();
         } catch (error) {
           // Redis flushdb失敗時は続行
         }
@@ -242,13 +246,16 @@ describe('FQDN E2E Tests', () => {
       if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
         fqdnRepository.clear();
       }
+
+      // このdescribeブロック内で共有するトークンを取得
+      sharedToken = await TokenManager.getToken(app);
     });
 
     it('正常系: FQDN文字列を更新できる', async () => {
       // テスト用のFQDNを作成
       const createResponse = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'update-fqdn-test.com',
           description: '更新テスト用',
@@ -259,7 +266,7 @@ describe('FQDN E2E Tests', () => {
 
       const response = await request(app.getHttpServer())
         .patch(`/api/v1/fqdns/${testFqdnId}`)
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'updated-fqdn-test.com',
         })
@@ -273,7 +280,7 @@ describe('FQDN E2E Tests', () => {
       // テスト用のFQDNを作成
       const createResponse = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'update-description-test.com',
           description: '更新テスト用',
@@ -284,7 +291,7 @@ describe('FQDN E2E Tests', () => {
 
       const response = await request(app.getHttpServer())
         .patch(`/api/v1/fqdns/${testFqdnId}`)
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           description: '更新された説明',
         })
@@ -304,7 +311,7 @@ describe('FQDN E2E Tests', () => {
       const nonExistentId = '00000000-0000-0000-0000-000000000000';
       await request(app.getHttpServer())
         .patch(`/api/v1/fqdns/${nonExistentId}`)
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'updated.com',
         })
@@ -313,11 +320,15 @@ describe('FQDN E2E Tests', () => {
   });
 
   describe('DELETE /api/v1/fqdns/:id', () => {
+    let sharedToken: string;
+
     beforeEach(async () => {
       // 各テスト前にRedisをクリア（テストの独立性を保つため）
       if (testClient) {
         try {
           await testClient.flushdb();
+          // Redisをクリアしたので、トークンキャッシュもクリア
+          TokenManager.clearAllCache();
         } catch (error) {
           // Redis flushdb失敗時は続行
         }
@@ -328,13 +339,16 @@ describe('FQDN E2E Tests', () => {
       if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
         fqdnRepository.clear();
       }
+
+      // このdescribeブロック内で共有するトークンを取得
+      sharedToken = await TokenManager.getToken(app);
     });
 
     it('正常系: FQDNを削除できる', async () => {
       // テスト用のFQDNを作成
       const createResponse = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'delete-test.com',
         })
@@ -344,13 +358,13 @@ describe('FQDN E2E Tests', () => {
 
       await request(app.getHttpServer())
         .delete(`/api/v1/fqdns/${testFqdnId}`)
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .expect(204);
 
       // 削除されたことを確認
       await request(app.getHttpServer())
         .get(`/api/v1/fqdns/${testFqdnId}`)
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .expect(404);
     });
 
@@ -358,17 +372,21 @@ describe('FQDN E2E Tests', () => {
       const nonExistentId = '00000000-0000-0000-0000-000000000000';
       await request(app.getHttpServer())
         .delete(`/api/v1/fqdns/${nonExistentId}`)
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .expect(404);
     });
   });
 
   describe('GET /api/v1/fqdns', () => {
+    let sharedToken: string;
+
     beforeEach(async () => {
       // 各テスト前にRedisをクリア（テストの独立性を保つため）
       if (testClient) {
         try {
           await testClient.flushdb();
+          // Redisをクリアしたので、トークンキャッシュもクリア
+          TokenManager.clearAllCache();
         } catch (error) {
           // Redis flushdb失敗時は続行
         }
@@ -379,6 +397,9 @@ describe('FQDN E2E Tests', () => {
       if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
         fqdnRepository.clear();
       }
+
+      // このdescribeブロック内で共有するトークンを取得
+      sharedToken = await TokenManager.getToken(app);
     });
 
     it('正常系: FQDN一覧を取得できる', async () => {
@@ -391,14 +412,14 @@ describe('FQDN E2E Tests', () => {
       for (const fqdnData of fqdns) {
         await request(app.getHttpServer())
           .post('/api/v1/fqdns')
-          .set('Authorization', `Bearer ${accessToken}`)
+          .set('Authorization', `Bearer ${sharedToken}`)
           .send(fqdnData)
           .expect(201);
       }
 
       const response = await request(app.getHttpServer())
         .get('/api/v1/fqdns')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .expect(200);
 
       expect(response.body).toHaveProperty('fqdns');
@@ -419,14 +440,14 @@ describe('FQDN E2E Tests', () => {
       for (const fqdnData of fqdns) {
         await request(app.getHttpServer())
           .post('/api/v1/fqdns')
-          .set('Authorization', `Bearer ${accessToken}`)
+          .set('Authorization', `Bearer ${sharedToken}`)
           .send(fqdnData)
           .expect(201);
       }
 
       const response = await request(app.getHttpServer())
         .get('/api/v1/fqdns?fqdn=search-filter')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .expect(200);
 
       expect(response.body.fqdns.length).toBeGreaterThan(0);
@@ -446,14 +467,14 @@ describe('FQDN E2E Tests', () => {
       for (const fqdnData of fqdns) {
         await request(app.getHttpServer())
           .post('/api/v1/fqdns')
-          .set('Authorization', `Bearer ${accessToken}`)
+          .set('Authorization', `Bearer ${sharedToken}`)
           .send(fqdnData)
           .expect(201);
       }
 
       const response = await request(app.getHttpServer())
         .get('/api/v1/fqdns?page=1&limit=2')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .expect(200);
 
       expect(response.body.page).toBe(1);
@@ -463,11 +484,15 @@ describe('FQDN E2E Tests', () => {
   });
 
   describe('GET /api/v1/fqdns/:id', () => {
+    let sharedToken: string;
+
     beforeEach(async () => {
       // 各テスト前にRedisをクリア（テストの独立性を保つため）
       if (testClient) {
         try {
           await testClient.flushdb();
+          // Redisをクリアしたので、トークンキャッシュもクリア
+          TokenManager.clearAllCache();
         } catch (error) {
           // Redis flushdb失敗時は続行
         }
@@ -478,13 +503,16 @@ describe('FQDN E2E Tests', () => {
       if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
         fqdnRepository.clear();
       }
+
+      // このdescribeブロック内で共有するトークンを取得
+      sharedToken = await TokenManager.getToken(app);
     });
 
     it('正常系: FQDN詳細を取得できる', async () => {
       // テスト用のFQDNを作成
       const createResponse = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'detail-test.com',
           description: '詳細取得テスト用',
@@ -495,7 +523,7 @@ describe('FQDN E2E Tests', () => {
 
       const response = await request(app.getHttpServer())
         .get(`/api/v1/fqdns/${testFqdnId}`)
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .expect(200);
 
       expect(response.body.id).toBe(testFqdnId);
@@ -507,17 +535,21 @@ describe('FQDN E2E Tests', () => {
       const nonExistentId = '00000000-0000-0000-0000-000000000000';
       await request(app.getHttpServer())
         .get(`/api/v1/fqdns/${nonExistentId}`)
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .expect(404);
     });
   });
 
   describe('PATCH /api/v1/fqdns/:id/status', () => {
+    let sharedToken: string;
+
     beforeEach(async () => {
       // 各テスト前にRedisをクリア（テストの独立性を保つため）
       if (testClient) {
         try {
           await testClient.flushdb();
+          // Redisをクリアしたので、トークンキャッシュもクリア
+          TokenManager.clearAllCache();
         } catch (error) {
           // Redis flushdb失敗時は続行
         }
@@ -528,26 +560,18 @@ describe('FQDN E2E Tests', () => {
       if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
         fqdnRepository.clear();
       }
+
+      // このdescribeブロック内で共有するトークンを取得
+      sharedToken = await TokenManager.getToken(app);
     });
 
     it('正常系: FQDNステータスをINACTIVEに更新できる', async () => {
-      // beforeEachでRedisをクリア済み
-      // テストの独立性を保つため、このテスト専用のトークンを取得
-      const loginRes = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({
-          email: 'user@example.com',
-          password: 'password123',
-        })
-        .expect(200);
-
-      const statusAccessToken = loginRes.body.accessToken;
-      expect(statusAccessToken).toBeDefined();
+      // beforeEachで共有トークンを取得済み
 
       // テスト用のFQDNを作成
       const createResponse = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
-        .set('Authorization', `Bearer ${statusAccessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'status-inactive-test.com',
         })
@@ -557,7 +581,7 @@ describe('FQDN E2E Tests', () => {
 
       const response = await request(app.getHttpServer())
         .patch(`/api/v1/fqdns/${testFqdnId}/status`)
-        .set('Authorization', `Bearer ${statusAccessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           status: 'INACTIVE',
         })
@@ -567,24 +591,12 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('正常系: FQDNステータスをACTIVEに更新できる', async () => {
-      // テストの独立性を保つため、このテスト専用のトークンを取得
-      const loginRes = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({
-          email: 'user@example.com',
-          password: 'password123',
-        })
-        .expect(200);
-
-      const statusAccessToken = loginRes.body.accessToken;
-      expect(statusAccessToken).toBeDefined();
-      expect(typeof statusAccessToken).toBe('string');
-      expect(statusAccessToken.length).toBeGreaterThan(0);
+      // beforeEachで共有トークンを取得済み
 
       // テスト用のFQDNを作成
       const createResponse = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
-        .set('Authorization', `Bearer ${statusAccessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'status-active-update-test.com',
         })
@@ -595,7 +607,7 @@ describe('FQDN E2E Tests', () => {
       // まずINACTIVEに変更
       await request(app.getHttpServer())
         .patch(`/api/v1/fqdns/${testFqdnId}/status`)
-        .set('Authorization', `Bearer ${statusAccessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           status: 'INACTIVE',
         })
@@ -604,7 +616,7 @@ describe('FQDN E2E Tests', () => {
       // 再度ACTIVEに変更
       const response = await request(app.getHttpServer())
         .patch(`/api/v1/fqdns/${testFqdnId}/status`)
-        .set('Authorization', `Bearer ${statusAccessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           status: 'ACTIVE',
         })
@@ -615,24 +627,12 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('異常系: 無効なステータスを指定すると400エラー', async () => {
-      // テストの独立性を保つため、このテスト専用のトークンを取得
-      const loginRes = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({
-          email: 'user@example.com',
-          password: 'password123',
-        })
-        .expect(200);
-
-      const statusAccessToken = loginRes.body.accessToken;
-      expect(statusAccessToken).toBeDefined();
-      expect(typeof statusAccessToken).toBe('string');
-      expect(statusAccessToken.length).toBeGreaterThan(0);
+      // beforeEachで共有トークンを取得済み
 
       // テスト用のFQDNを作成
       const createResponse = await request(app.getHttpServer())
         .post('/api/v1/fqdns')
-        .set('Authorization', `Bearer ${statusAccessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           fqdn: 'status-invalid-status-test.com',
         })
@@ -644,7 +644,7 @@ describe('FQDN E2E Tests', () => {
 
       const response = await request(app.getHttpServer())
         .patch(`/api/v1/fqdns/${testFqdnId}/status`)
-        .set('Authorization', `Bearer ${statusAccessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           status: 'INVALID',
         })
@@ -654,22 +654,12 @@ describe('FQDN E2E Tests', () => {
     });
 
     it('異常系: 存在しないFQDNのステータスを更新しようとすると404エラー', async () => {
-      // テストの独立性を保つため、このテスト専用のトークンを取得
-      const loginRes = await request(app.getHttpServer())
-        .post('/api/v1/auth/login')
-        .send({
-          email: 'user@example.com',
-          password: 'password123',
-        })
-        .expect(200);
-
-      const statusAccessToken = loginRes.body.accessToken;
-      expect(statusAccessToken).toBeDefined();
+      // beforeEachで共有トークンを取得済み
 
       const nonExistentId = '00000000-0000-0000-0000-000000000000';
       await request(app.getHttpServer())
         .patch(`/api/v1/fqdns/${nonExistentId}/status`)
-        .set('Authorization', `Bearer ${statusAccessToken}`)
+        .set('Authorization', `Bearer ${sharedToken}`)
         .send({
           status: 'INACTIVE',
         })
