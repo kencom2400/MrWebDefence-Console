@@ -40,7 +40,7 @@ sequenceDiagram
     participant CustomerRepository
     participant Customer
 
-    Client->>CustomerController: PUT /api/v1/customers/:id<br/>{ name?, email?, phone?, company?, address? }
+    Client->>CustomerController: PATCH /api/v1/customers/:id<br/>{ name?, email?, phone?, company?, address? }
     CustomerController->>CustomerController: validate(UpdateCustomerDto)
     
     alt バリデーションエラー

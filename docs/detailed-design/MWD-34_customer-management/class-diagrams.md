@@ -11,7 +11,6 @@ classDiagram
         +delete(id: string): Promise~void~
         +findAll(query: CustomerListQueryDto): Promise~CustomerListResponseDto~
         +findOne(id: string): Promise~CustomerResponseDto~
-        +search(query: SearchCustomersDto): Promise~CustomerListResponseDto~
         +toggleStatus(id: string, statusDto: ToggleStatusDto): Promise~CustomerResponseDto~
     }
     
@@ -127,7 +126,6 @@ classDiagram
         +delete(id: string): Promise~void~
         +findById(id: string): Promise~Customer | null~
         +findAll(query: CustomerListQuery): Promise~CustomerListResult~
-        +search(query: SearchQuery): Promise~CustomerListResult~
     }
     
     %% Infrastructure Layer
@@ -137,7 +135,6 @@ classDiagram
         +delete(id: string): Promise~void~
         +findById(id: string): Promise~Customer | null~
         +findAll(query: CustomerListQuery): Promise~CustomerListResult~
-        +search(query: SearchQuery): Promise~CustomerListResult~
     }
     
     %% Relationships

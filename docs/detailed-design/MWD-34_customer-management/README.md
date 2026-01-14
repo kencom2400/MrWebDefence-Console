@@ -39,7 +39,6 @@ Onion Architecture（オニオンアーキテクチャ）に従い、レイヤ�
 │  - DeleteCustomerUseCase            │
 │  - GetCustomerListUseCase           │
 │  - GetCustomerByIdUseCase           │
-│  - SearchCustomersUseCase           │
 │  - ToggleCustomerStatusUseCase       │
 └──────────────┬──────────────────────┘
                │ 依存
@@ -77,9 +76,8 @@ Onion Architecture（オニオンアーキテクチャ）に従い、レイヤ�
 - **CreateCustomerUseCase**: 顧客作成処理のユースケース
 - **UpdateCustomerUseCase**: 顧客更新処理のユースケース
 - **DeleteCustomerUseCase**: 顧客削除処理のユースケース
-- **GetCustomerListUseCase**: 顧客一覧取得処理のユースケース
+- **GetCustomerListUseCase**: 顧客一覧取得・検索処理のユースケース（検索クエリパラメータ対応）
 - **GetCustomerByIdUseCase**: 顧客詳細取得処理のユースケース
-- **SearchCustomersUseCase**: 顧客検索処理のユースケース
 - **ToggleCustomerStatusUseCase**: 顧客有効/無効化処理のユースケース
 
 ### 3. Domain Layer
@@ -102,21 +100,13 @@ Onion Architecture（オニオンアーキテクチャ）に従い、レイヤ�
 4. CustomerRepositoryが顧客情報を保存
 5. レスポンスとして顧客情報を返却
 
-### 顧客一覧取得フロー
+### 顧客一覧取得・検索フロー
 
-1. クライアントが顧客一覧取得リクエストを送信
+1. クライアントが顧客一覧取得・検索リクエストを送信（検索条件はクエリパラメータで指定）
 2. CustomerControllerがリクエストを受信
-3. GetCustomerListUseCaseが顧客一覧取得処理を実行
-4. CustomerRepositoryが顧客一覧を取得
+3. GetCustomerListUseCaseが顧客一覧取得・検索処理を実行
+4. CustomerRepositoryが検索条件に基づいて顧客を取得（検索条件がない場合は全件取得）
 5. レスポンスとして顧客一覧を返却
-
-### 顧客検索フロー
-
-1. クライアントが顧客検索リクエストを送信（検索条件を含む）
-2. CustomerControllerがリクエストを受信
-3. SearchCustomersUseCaseが顧客検索処理を実行
-4. CustomerRepositoryが検索条件に基づいて顧客を検索
-5. レスポンスとして検索結果を返却
 
 ## セキュリティ考慮事項
 
