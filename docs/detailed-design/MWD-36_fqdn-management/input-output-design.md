@@ -252,7 +252,7 @@ GET /api/v1/fqdns?fqdn=example&status=ACTIVE&page=1&limit=10
 }
 ```
 
-### 6. FQDNステータス切り替え
+### 6. FQDNステータス更新
 
 **エンドポイント**: `PATCH /api/v1/fqdns/:id/status`
 
