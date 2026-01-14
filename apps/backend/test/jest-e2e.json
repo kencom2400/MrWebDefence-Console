@@ -4,8 +4,13 @@
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.(t|j)s$": ["ts-jest", {
+      "tsconfig": {
+        "esModuleInterop": true
+      }
+    }]
   },
+  "setupFilesAfterEnv": ["<rootDir>/setup-jest.ts"],
   "testTimeout": 60000,
   "maxWorkers": 1
 }
