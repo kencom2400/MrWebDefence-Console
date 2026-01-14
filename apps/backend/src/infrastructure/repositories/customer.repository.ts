@@ -12,7 +12,6 @@ import {
   CustomerListQuery,
   CustomerListResult,
 } from '../../domain/repositories/customer.repository.interface';
-import { CustomerStatusEnum } from '../../domain/value-objects/customer-status.value-object';
 
 @Injectable()
 export class CustomerRepository implements ICustomerRepository {
@@ -125,4 +124,3 @@ export class CustomerRepository implements ICustomerRepository {
     };
   }
 }
-

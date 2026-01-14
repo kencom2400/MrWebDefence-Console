@@ -5,7 +5,7 @@
  * ドメイン層の最内層に位置し、外部に依存しない
  */
 
-import { CustomerStatus, CustomerStatusEnum } from '../value-objects/customer-status.value-object';
+import { CustomerStatus } from '../value-objects/customer-status.value-object';
 
 export class Customer {
   public readonly id: string;
@@ -58,21 +58,27 @@ export class Customer {
     company?: string | null,
     address?: string | null,
   ): Customer {
-    // バリデーション
-    Customer.validateName(name);
-    Customer.validateEmail(email);
-    Customer.validatePhone(phone);
-    Customer.validateCompany(company);
-    Customer.validateAddress(address);
+    // トリム後の値でバリデーション
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPhone = phone?.trim() || null;
+    const trimmedCompany = company?.trim() || null;
+    const trimmedAddress = address?.trim() || null;
+
+    Customer.validateName(trimmedName);
+    Customer.validateEmail(trimmedEmail);
+    Customer.validatePhone(trimmedPhone);
+    Customer.validateCompany(trimmedCompany);
+    Customer.validateAddress(trimmedAddress);
 
     const now: Date = new Date();
     return new Customer(
       id,
-      name.trim(),
-      email.trim(),
-      phone?.trim() || null,
-      company?.trim() || null,
-      address?.trim() || null,
+      trimmedName,
+      trimmedEmail,
+      trimmedPhone,
+      trimmedCompany,
+      trimmedAddress,
       CustomerStatus.active(),
       now,
       now,
@@ -124,9 +130,9 @@ export class Customer {
   ): Customer {
     const newName = name !== undefined ? name.trim() : this.name;
     const newEmail = email !== undefined ? email.trim() : this.email;
-    const newPhone = phone !== undefined ? (phone?.trim() || null) : this.phone;
-    const newCompany = company !== undefined ? (company?.trim() || null) : this.company;
-    const newAddress = address !== undefined ? (address?.trim() || null) : this.address;
+    const newPhone = phone !== undefined ? phone?.trim() || null : this.phone;
+    const newCompany = company !== undefined ? company?.trim() || null : this.company;
+    const newAddress = address !== undefined ? address?.trim() || null : this.address;
 
     // バリデーション
     Customer.validateName(newName);
@@ -253,4 +259,3 @@ export class Customer {
     }
   }
 }
-

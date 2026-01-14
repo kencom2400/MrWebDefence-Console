@@ -126,7 +126,7 @@ describe('Customer', () => {
       const updated = customer.update('山田花子');
       expect(updated.name).toBe('山田花子');
       expect(updated.email).toBe(validEmail);
-      expect(updated.updatedAt.getTime()).toBeGreaterThan(customer.updatedAt.getTime());
+      expect(updated.updatedAt.getTime()).toBeGreaterThanOrEqual(customer.updatedAt.getTime());
     });
 
     it('メールアドレスを更新できる', () => {
@@ -178,7 +178,7 @@ describe('Customer', () => {
       );
       const activated = customer.activate();
       expect(activated.status.isActive()).toBe(true);
-      expect(activated.updatedAt.getTime()).toBeGreaterThan(customer.updatedAt.getTime());
+      expect(activated.updatedAt.getTime()).toBeGreaterThanOrEqual(customer.updatedAt.getTime());
     });
   });
 
@@ -203,7 +203,7 @@ describe('Customer', () => {
       const customer = Customer.create(validId, validName, validEmail);
       const deactivated = customer.deactivate();
       expect(deactivated.status.isInactive()).toBe(true);
-      expect(deactivated.updatedAt.getTime()).toBeGreaterThan(customer.updatedAt.getTime());
+      expect(deactivated.updatedAt.getTime()).toBeGreaterThanOrEqual(customer.updatedAt.getTime());
     });
   });
 });

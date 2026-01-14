@@ -30,4 +30,3 @@ export class DeleteCustomerUseCase {
     await this.customerRepository.delete(id);
   }
 }
-

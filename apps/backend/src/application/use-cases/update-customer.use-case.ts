@@ -56,4 +56,3 @@ export class UpdateCustomerUseCase {
     return await this.customerRepository.update(updatedCustomer);
   }
 }
-

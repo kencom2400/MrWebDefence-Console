@@ -47,4 +47,3 @@ export class CreateCustomerUseCase {
     return await this.customerRepository.create(customer);
   }
 }
-

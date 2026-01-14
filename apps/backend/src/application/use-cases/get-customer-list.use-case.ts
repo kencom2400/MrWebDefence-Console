@@ -5,7 +5,11 @@
  */
 
 import { Injectable, Inject, BadRequestException } from '@nestjs/common';
-import { ICustomerRepository, CustomerListQuery, CustomerListResult } from '../../domain/repositories/customer.repository.interface';
+import {
+  ICustomerRepository,
+  CustomerListQuery,
+  CustomerListResult,
+} from '../../domain/repositories/customer.repository.interface';
 
 @Injectable()
 export class GetCustomerListUseCase {
@@ -44,4 +48,3 @@ export class GetCustomerListUseCase {
     });
   }
 }
-

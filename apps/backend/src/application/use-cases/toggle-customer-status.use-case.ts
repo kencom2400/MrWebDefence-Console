@@ -7,7 +7,7 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { ICustomerRepository } from '../../domain/repositories/customer.repository.interface';
 import { Customer } from '../../domain/entities/customer.entity';
-import { CustomerStatus, CustomerStatusEnum } from '../../domain/value-objects/customer-status.value-object';
+import { CustomerStatusEnum } from '../../domain/value-objects/customer-status.value-object';
 
 @Injectable()
 export class ToggleCustomerStatusUseCase {
@@ -42,4 +42,3 @@ export class ToggleCustomerStatusUseCase {
     return await this.customerRepository.update(updatedCustomer);
   }
 }
-

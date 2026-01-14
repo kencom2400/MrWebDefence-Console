@@ -31,7 +31,6 @@ import { CustomerListQueryDto } from '../dto/customer-list-query.dto';
 import { CustomerListResponseDto } from '../dto/customer-list-response.dto';
 import { ToggleCustomerStatusDto } from '../dto/toggle-customer-status.dto';
 import { Customer } from '../../domain/entities/customer.entity';
-import { CustomerStatusEnum } from '../../domain/value-objects/customer-status.value-object';
 
 @Controller('api/v1/customers')
 export class CustomerController {
@@ -165,4 +164,3 @@ export class CustomerController {
     };
   }
 }
-
