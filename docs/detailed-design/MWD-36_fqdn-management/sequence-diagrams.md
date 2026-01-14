@@ -27,7 +27,7 @@ sequenceDiagram
         else FQDNが存在しない
             FqdnRepository-->>CreateFqdnUseCase: null
             
-            CreateFqdnUseCase->>Fqdn: create(fqdn, description?)
+            CreateFqdnUseCase->>Fqdn: Fqdn.create(fqdn, description?)
             Fqdn-->>CreateFqdnUseCase: fqdn (status: ACTIVE)
             
             CreateFqdnUseCase->>FqdnRepository: create(fqdn)
