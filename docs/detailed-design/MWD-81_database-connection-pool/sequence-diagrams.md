@@ -91,8 +91,9 @@ sequenceDiagram
         DatabaseConnectionPool->>DatabaseConnectionPool: removeFromActive()
         DatabaseConnectionPool->>Connection: close()
         Connection-->>DatabaseConnectionPool: closed
-        DatabaseConnectionPool->>DatabaseConnectionPool: createConnection() (必要に応じて)
         DatabaseConnectionPool-->>UseCase: released
+        
+        Note over DatabaseConnectionPool: 接続の補充はConnectionPoolMonitorの<br/>ensureMinConnections()で非同期に実行される<br/>（接続プール監視フローを参照）
     end
 ```
 

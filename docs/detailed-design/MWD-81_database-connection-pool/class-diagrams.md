@@ -7,8 +7,8 @@ classDiagram
     %% Domain Layer
     class IConnectionPool {
         <<interface>>
-        +getConnection(): Promise~Connection~
-        +releaseConnection(connection: Connection): Promise~void~
+        +getConnection(): Promise~IConnection~
+        +releaseConnection(connection: IConnection): Promise~void~
         +getStatus(): ConnectionPoolStatus
         +initialize(): Promise~void~
         +destroy(): Promise~void~
@@ -36,6 +36,16 @@ classDiagram
         +isHealthy: boolean
     }
     
+    class IConnection {
+        <<interface>>
+        +id: string
+        +createdAt: Date
+        +lastUsedAt: Date
+        +isActive: boolean
+        +isValid(): Promise~boolean~
+        +close(): Promise~void~
+    }
+    
     %% Infrastructure Layer
     class DatabaseConnectionPool {
         -config: ConnectionPoolConfig
@@ -43,8 +53,8 @@ classDiagram
         -idleConnections: Connection[]
         -waitingQueue: Promise~Connection~[]
         -monitor: ConnectionPoolMonitor
-        +getConnection(): Promise~Connection~
-        +releaseConnection(connection: Connection): Promise~void~
+        +getConnection(): Promise~IConnection~
+        +releaseConnection(connection: IConnection): Promise~void~
         +getStatus(): ConnectionPoolStatus
         +initialize(): Promise~void~
         +destroy(): Promise~void~
@@ -82,10 +92,12 @@ classDiagram
     
     %% Relationships
     IConnectionPool <|.. DatabaseConnectionPool
+    IConnectionPool --> IConnection
     DatabaseConnectionPool *-- ConnectionPoolConfig
     DatabaseConnectionPool *-- Connection
     DatabaseConnectionPool --> ConnectionPoolStatus
     DatabaseConnectionPool *-- ConnectionPoolMonitor
+    IConnection <|.. Connection
     ConnectionPoolFactory ..> DatabaseConnectionPool
     DatabaseModule ..> DatabaseConnectionPool
     DatabaseModule ..> ConnectionPoolConfig
@@ -113,10 +125,10 @@ stateDiagram-v2
     [*] --> Creating: createConnection()
     Creating --> Active: connection established
     Creating --> Failed: connection failed
-    Active --> Idle: releaseConnection()
+    Active --> Idle: releaseConnection() [not expired]
+    Active --> Expired: releaseConnection() [maxLifetime exceeded]
     Idle --> Active: getConnection()
     Idle --> Expired: idleTimeout
-    Active --> Expired: maxLifetime
     Expired --> [*]: cleanup
     Failed --> [*]: cleanup
 ```

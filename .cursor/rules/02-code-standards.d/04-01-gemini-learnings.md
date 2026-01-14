@@ -115,6 +115,48 @@ sequenceDiagram
 - フローの理解を正確にする
 - 実装時の誤解を防ぐ
 
+#### インターフェースと具象クラスのレイヤー分離
+
+**問題**: Domain Layerのインターフェース（例: `IConnectionPool`）が返す型（例: `Connection`）の所属レイヤーが不明確で、Onion Architectureの原則に反している。
+
+**解決策**:
+1. **Domain Layerにインターフェースを定義**: 接続を表すインターフェース（例: `IConnection`）をDomain Layerで定義する。
+2. **Infrastructure Layerに具象クラスを配置**: 具象クラス（例: `Connection`）をInfrastructure Layerに配置する。
+3. **インターフェースはDomain Layerの型に依存**: Domain Layerのインターフェースは、Domain Layerの型（インターフェースや値オブジェクト）にのみ依存する。
+
+**理由**:
+- Onion Architectureの原則に従う（外側のレイヤーが内側のレイヤーに依存）
+- レイヤー間の依存関係が明確になる
+- テスト時のモック化が容易になる
+
+#### 状態遷移図の明確化（接続のライフサイクル）
+
+**問題**: 状態遷移図で、`Active --> Expired: maxLifetime`という遷移が、アクティブな接続が使用中に`maxLifetime`を超過して`Expired`状態に移行するように誤解される可能性がある。
+
+**解決策**:
+1. **遷移条件を明確化**: `maxLifetime`の超過は`releaseConnection`時に評価されることを明確にする。
+2. **状態遷移図を修正**: `Active --> Idle: releaseConnection() [not expired]`と`Active --> Expired: releaseConnection() [maxLifetime exceeded]`のように遷移条件を明確化する。
+3. **シーケンス図との整合性**: 状態遷移図とシーケンス図の挙動を一致させる。
+
+**理由**:
+- 設計の意図を明確にする
+- ドキュメント間の整合性を保つ
+- 実装時の誤解を防ぐ
+
+#### 接続解放処理の軽量化
+
+**問題**: 接続解放フローで、無効な接続を解放する際に`createConnection()`が同期的に呼び出されるように見え、アプリケーションスレッドに不要な待機時間が発生する可能性がある。
+
+**解決策**:
+1. **接続解放処理を軽量化**: `releaseConnection`の役割を、無効な接続を閉じてプールから削除することに限定する。
+2. **接続の補充はバックグラウンド処理に**: 接続の補充は`ConnectionPoolMonitor`の`ensureMinConnections()`で非同期に実行する。
+3. **シーケンス図から同期処理を削除**: `releaseConnection`フローから`createConnection()`のステップを削除し、監視プロセスに任せることを明記する。
+
+**理由**:
+- アプリケーションスレッドの待機時間を削減
+- 処理の軽量化
+- バックグラウンド処理との責務分離
+
 #### 設計書間の整合性確保
 
 **問題**: 詳細設計書（README.md、class-diagrams.md、sequence-diagrams.md、input-output-design.md）の間で不整合が発生していた。例えば、検索機能を統合した後も、README.mdに`SearchCustomersUseCase`が残っていたり、シーケンス図に`PUT`メソッドが残っていたりした。
