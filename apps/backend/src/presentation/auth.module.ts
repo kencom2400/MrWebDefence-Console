@@ -34,16 +34,14 @@ import { QrCodeService } from '../infrastructure/services/qr-code.service';
 import { BackupCodeService } from '../infrastructure/services/backup-code.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { UserModule } from './user.module';
 
 @Module({
+  imports: [UserModule],
   controllers: [AuthController, MfaController, DashboardController, PasswordController],
   providers: [
     LoginUseCase,
     LogoutUseCase,
-    {
-      provide: 'IUserRepository',
-      useClass: UserRepository,
-    },
     {
       provide: 'ITokenBlacklistRepository',
       useClass: RedisTokenBlacklistRepository,
