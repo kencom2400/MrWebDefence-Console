@@ -13,13 +13,13 @@
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
-**必須4ステップ（すべてPASS必須）:**
+**必須4ステップ（すべてPASS必須・コンテナ使用）:**
 
 ```bash
-1. ./scripts/test/lint.sh         # 構文・スタイル
-2. pnpm build                      # ビルド確認 ⭐ 重要
-3. ./scripts/test/test.sh all     # ユニットテスト
-4. ./scripts/test/test-e2e.sh frontend # E2Eテスト
+1. ./scripts/backend/lint.sh         # 構文・スタイル（コンテナ使用）
+2. ./scripts/backend/build.sh        # ビルド確認（コンテナ使用）⭐ 重要
+3. ./scripts/backend/test.sh unit    # ユニットテスト（コンテナ使用）
+4. ./scripts/backend/test.sh e2e     # E2Eテスト（コンテナ使用）
 ```
 
 **実行時間:** 約4-6分
@@ -36,14 +36,14 @@
 - ❌ 一部のテストだけ実行してpushする
 - ❌ テスト結果に「failed」が表示されているのにpushする
 
-**✅ 正しいワークフロー:**
+**✅ 正しいワークフロー（コンテナ使用）:**
 
 ```bash
-# 1. すべてのチェックを実行
-./scripts/test/lint.sh
-pnpm build
-./scripts/test/test.sh all
-./scripts/test/test-e2e.sh frontend
+# 1. すべてのチェックを実行（コンテナ使用）
+./scripts/backend/lint.sh
+./scripts/backend/build.sh
+./scripts/backend/test.sh unit
+./scripts/backend/test.sh e2e
 
 # 2. すべてPASSしたことを確認
 # ✅ Lint: PASS
@@ -59,7 +59,7 @@ git push origin <ブランチ名>
 
 ```bash
 # ❌ テストが失敗
-./scripts/test/test-e2e.sh frontend
+./scripts/backend/test.sh e2e
 # → 2 failed, 35 passed, 26 skipped
 
 # 🚨 push禁止！失敗したテストを必ず修正する
@@ -67,7 +67,7 @@ git push origin <ブランチ名>
 # 例: テストコードの修正、実装の修正、または test.skip() でスキップ
 
 # ✅ 修正後、再度チェック
-./scripts/test/test-e2e.sh frontend
+./scripts/backend/test.sh e2e
 # → 0 failed, 37 passed, 26 skipped  ← failedが0であることを確認
 
 # ✅ failedが0になったらpush
@@ -77,8 +77,8 @@ git push origin <ブランチ名>
 **🚨 テスト結果の確認方法:**
 
 ```bash
-# push前の最終確認
-./scripts/test/test-e2e.sh frontend | grep -E "(failed|passed|skipped)"
+# push前の最終確認（コンテナ使用）
+./scripts/backend/test.sh e2e | grep -E "(failed|passed|skipped)"
 
 # 出力例（push OK）:
 #   37 passed

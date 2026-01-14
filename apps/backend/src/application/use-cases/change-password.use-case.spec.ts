@@ -34,7 +34,11 @@ describe('ChangePasswordUseCase', () => {
     userRepository = {
       findById: jest.fn(),
       findByEmail: jest.fn(),
-      save: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+      findAll: jest.fn(),
+      save: jest.fn(), // 非推奨だが、後方互換性のため残す
     } as any;
 
     passwordHistoryRepository = {
@@ -76,7 +80,8 @@ describe('ChangePasswordUseCase', () => {
         '$2b$10$oldHash2',
       ]);
       passwordService.hash.mockResolvedValue('$2b$10$newHashedPassword');
-      userRepository.save.mockResolvedValue(undefined);
+      const updatedUser = mockUser.updatePassword('$2b$10$newHashedPassword');
+      userRepository.update.mockResolvedValue(updatedUser);
 
       await useCase.execute('user-1', 'CurrentPassword123!', 'NewPassword456@');
 
@@ -101,11 +106,11 @@ describe('ChangePasswordUseCase', () => {
         'user-1',
         mockPolicy.historyCount,
       );
-      // 更新後のUserエンティティが保存されることを確認
-      expect(userRepository.save).toHaveBeenCalled();
-      const savedUser = (userRepository.save as jest.Mock).mock.calls[0][0];
-      expect(savedUser.id).toBe(mockUser.id);
-      expect(savedUser.hashedPassword).toBe('$2b$10$newHashedPassword');
+      // 更新後のUserエンティティが更新されることを確認
+      expect(userRepository.update).toHaveBeenCalled();
+      const updatedUserArg = (userRepository.update as jest.Mock).mock.calls[0][0];
+      expect(updatedUserArg.id).toBe(mockUser.id);
+      expect(updatedUserArg.hashedPassword).toBe('$2b$10$newHashedPassword');
     });
 
     it('異常系: ユーザーが見つからない場合、エラーが発生する', async () => {

@@ -9,14 +9,50 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { UserRole } from '../src/domain/entities/user-role.enum';
+import Redis from 'ioredis';
 
 describe('AuthController (e2e)', () => {
   let app: INestApplication;
+  let testClient: Redis;
   // UserRepository(インメモリ)に初期登録されているユーザーを使用
   const testUserEmail: string = 'user@example.com';
   const testUserPassword: string = 'password123';
 
+  const redisPort = parseInt(process.env.REDIS_PORT || '6379', 10);
+  const redisHost = process.env.REDIS_HOST || 'localhost';
+
   beforeAll(async () => {
+    // Redis接続（リトライロジック付き）
+    let retries = 10;
+    while (retries > 0) {
+      try {
+        testClient = new Redis({
+          host: redisHost,
+          port: redisPort,
+          retryStrategy: () => null, // リトライを無効化（手動でリトライするため）
+        });
+
+        await testClient.ping();
+        break;
+      } catch (error) {
+        retries--;
+        if (retries === 0) {
+          testClient = null as any;
+        } else {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+    }
+
+    // Redisの状態をクリア（テストの独立性を保つため）
+    if (testClient) {
+      try {
+        await testClient.flushdb();
+      } catch (error) {
+        // Redis flushdb失敗時は続行
+      }
+    }
+
     // アプリケーションを起動
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -34,7 +70,12 @@ describe('AuthController (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
+    if (app) {
+      await app.close();
+    }
+    if (testClient) {
+      await testClient.quit();
+    }
   });
 
   describe('POST /api/v1/auth/login', () => {
@@ -159,16 +200,27 @@ describe('AuthController (e2e)', () => {
     });
 
     it('正常系: ログアウトして、その後同じトークンでプロフィールにアクセスできない', async () => {
+      // ログアウト用の新しいトークンを取得
+      const logoutRes = await request(app.getHttpServer())
+        .post('/api/v1/auth/login')
+        .send({
+          email: testUserEmail,
+          password: testUserPassword,
+        })
+        .expect(200);
+
+      const logoutToken = logoutRes.body.accessToken;
+
       // ログアウト
       await request(app.getHttpServer())
         .post('/api/v1/auth/logout')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${logoutToken}`)
         .expect(200);
 
       // ログアウト後に同じトークンでプロフィールにアクセスできないことを確認
       await request(app.getHttpServer())
         .get('/api/v1/auth/profile')
-        .set('Authorization', `Bearer ${accessToken}`)
+        .set('Authorization', `Bearer ${logoutToken}`)
         .expect(401)
         .expect((res: request.Response) => {
           expect(res.body.message).toBe('Token is invalidated');

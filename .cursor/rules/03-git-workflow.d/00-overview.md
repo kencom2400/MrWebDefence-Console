@@ -352,11 +352,11 @@ run_terminal_cmd({
   ```
 - [ ] **Lintエラーがないか確認（必須）**
   ```bash
-  ./scripts/test/lint.sh
+  ./scripts/backend/lint.sh
   ```
 - [ ] **テストがすべてパスするか確認（必須）**
   ```bash
-  ./scripts/test/test.sh all
+  ./scripts/backend/test.sh unit
   ```
 - [ ] 不要なコメントやconsole.logを削除
 - [ ] 変更内容が一貫性を持っているか確認
@@ -419,10 +419,10 @@ run_terminal_cmd({
 ║                                                               ║
 ║  pushする前に必ず以下を順番に実行すること：                   ║
 ║                                                               ║
-║  1. ./scripts/test/lint.sh         （構文・スタイル）         ║
-║  2. pnpm build                      （ビルド確認）⭐ NEW     ║
-║  3. ./scripts/test/test.sh all     （ユニットテスト）         ║
-║  4. ./scripts/test/test-e2e.sh frontend （E2Eテスト）         ║
+║  1. ./scripts/backend/lint.sh         （構文・スタイル・コンテナ使用） ║
+║  2. ./scripts/backend/build.sh        （ビルド確認・コンテナ使用）⭐ NEW ║
+║  3. ./scripts/backend/test.sh unit    （ユニットテスト・コンテナ使用） ║
+║  4. ./scripts/backend/test.sh e2e     （E2Eテスト・コンテナ使用）     ║
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
@@ -456,7 +456,7 @@ run_terminal_cmd({
 
 ```bash
 # テスト実行後、必ず結果を確認
-./scripts/test/test-e2e.sh frontend
+./scripts/backend/test.sh e2e
 
 # 結果の確認ポイント:
 # ✅ "X passed" のみ → push OK
@@ -493,10 +493,10 @@ test.skip('取引データがない場合はメッセージを表示する', asy
 
 ```bash
 # 1. すべてのチェックを実行
-./scripts/test/lint.sh
+./scripts/backend/lint.sh
 pnpm build
-./scripts/test/test.sh all
-./scripts/test/test-e2e.sh frontend
+./scripts/backend/test.sh unit
+./scripts/backend/test.sh e2e
 
 # 2. すべてPASSしたことを確認
 # ✅ Lint: PASS
@@ -512,7 +512,7 @@ git push origin <ブランチ名>
 
 ```bash
 # ❌ テストが失敗
-./scripts/test/test-e2e.sh frontend
+./scripts/backend/test.sh e2e
 # → 2 failed, 35 passed, 26 skipped
 
 # 🚨 push禁止！失敗したテストを修正する
@@ -520,7 +520,7 @@ git push origin <ブランチ名>
 # 例: テストコードの修正、実装の修正、または test.skip() でスキップ
 
 # ✅ 修正後、再度チェック
-./scripts/test/test-e2e.sh frontend
+./scripts/backend/test.sh e2e
 # → 0 failed, 37 passed, 26 skipped  ← failedが0であることを確認
 
 # ✅ failedが0になったらpush
@@ -531,7 +531,7 @@ git push origin <ブランチ名>
 
 ```bash
 # push前の最終確認
-./scripts/test/test-e2e.sh frontend | grep -E "(failed|passed|skipped)"
+./scripts/backend/test.sh e2e | grep -E "(failed|passed|skipped)"
 
 # 出力例（push OK）:
 #   37 passed
@@ -594,7 +594,7 @@ git diff --name-only | grep -v '\.md$' | wc -l
 
 ```bash
 # 1. Lintチェック（必須）
-./scripts/test/lint.sh
+./scripts/backend/lint.sh
 
 # 2. ビルドチェック（必須・最重要）⭐ NEW
 pnpm build
@@ -602,10 +602,10 @@ pnpm build
 npx turbo build
 
 # 3. ユニットテスト（必須）
-./scripts/test/test.sh all
+./scripts/backend/test.sh unit
 
 # 4. E2Eテスト（必須）
-./scripts/test/test-e2e.sh frontend
+./scripts/backend/test.sh e2e
 ```
 
 **実行時間の目安：**
@@ -700,13 +700,13 @@ npx turbo build
 
 ```bash
 # 1. すべてのチェックを実行
-./scripts/test/lint.sh
+./scripts/backend/lint.sh
 pnpm build
-./scripts/test/test.sh all
-./scripts/test/test-e2e.sh frontend
+./scripts/backend/test.sh unit
+./scripts/backend/test.sh e2e
 
 # 2. テスト結果を確認（failedが0であることを確認）
-./scripts/test/test-e2e.sh frontend | grep -E "(failed|passed|skipped)"
+./scripts/backend/test.sh e2e | grep -E "(failed|passed|skipped)"
 
 # 3. 結果の判定
 # ✅ failedが表示されていない → push OK
@@ -945,9 +945,9 @@ query {
 
 ```bash
 # push前に必ずローカルチェックを実行（必須）
-./scripts/test/lint.sh
-./scripts/test/test.sh all
-./scripts/test/test-e2e.sh frontend
+./scripts/backend/lint.sh
+./scripts/backend/test.sh unit
+./scripts/backend/test.sh e2e
 
 # すべてのcommitをまとめてpush
 git push origin <ブランチ名>

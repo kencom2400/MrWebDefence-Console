@@ -2929,3 +2929,136 @@ UpdateFqdnUseCase->>FqdnRepository: findByFqdn(fqdn)
 - 設計の一貫性が保たれる
 
 **参照**: PR #48 - FQDN管理機能の詳細設計書作成（Geminiレビュー指摘 第4弾）
+
+### 23. テストコードの保守性とNestJSモジュールのカプセル化（PR #49）
+
+**学習元**: PR #49 - FQDN管理機能の実装（Geminiレビュー指摘）
+
+#### 23-1. E2Eテストでの重複ロジック削除 🟡 High
+
+**問題**: E2Eテストで、各テストケース内でリポジトリをクリアするロジックが繰り返し記述されており、`beforeEach`フックと重複している。これはテストの可読性と保守性を低下させる。
+
+**解決策**:
+1. **`beforeEach`フックで統一**: 各`describe`ブロックの`beforeEach`でリポジトリをクリアするロジックを定義し、各テストケース内の重複ロジックを削除する。
+2. **リポジトリに`clear`メソッドを追加**: テスト間で状態をリセットできるように、インメモリリポジトリに`clear`メソッドを追加する。
+
+**実装例**:
+```typescript
+// ✅ 良い例: beforeEachで統一
+describe('POST /api/v1/fqdns', () => {
+  beforeEach(async () => {
+    const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
+    if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
+      fqdnRepository.clear();
+    }
+  });
+
+  it('正常系: FQDNを作成できる', async () => {
+    // 重複ロジックなし
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/fqdns')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ fqdn: 'test.com' })
+      .expect(201);
+  });
+});
+
+// ❌ 悪い例: 各テストケース内で重複
+it('正常系: FQDNを作成できる', async () => {
+  // 重複ロジック
+  const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
+  if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
+    fqdnRepository.clear();
+  }
+  // ...
+});
+```
+
+**理由**:
+- テストコードの可読性と保守性が向上する
+- DRY原則に従う
+- テストの意図が明確になる
+
+#### 23-2. 重複チェック条件の簡素化 🟡 Medium
+
+**問題**: `UpdateFqdnUseCase`で、FQDNの重複チェック時に`duplicateFqdn.id !== id`のチェックが不要。外側の`if (normalizedFqdn !== existingFqdn.fqdn)`でFQDNが実際に変更される場合のみこのブロックに入るため、`findByFqdn`で見つかるエンティティは必ず現在のエンティティとは別のものになる。
+
+**解決策**: 不要な条件チェックを削除し、コードを簡素化する。
+
+**実装例**:
+```typescript
+// ✅ 良い例: 簡素化された条件
+if (fqdn) {
+  const normalizedFqdn = fqdn.trim().toLowerCase();
+  if (normalizedFqdn !== existingFqdn.fqdn) {
+    const duplicateFqdn = await this.fqdnRepository.findByFqdn(normalizedFqdn);
+    if (duplicateFqdn) {
+      throw new ConflictException('FQDN already exists');
+    }
+  }
+}
+
+// ❌ 悪い例: 不要な条件チェック
+if (duplicateFqdn && duplicateFqdn.id !== id) {
+  throw new ConflictException('FQDN already exists');
+}
+```
+
+**理由**:
+- コードが簡潔になり、可読性が向上する
+- 不要な条件チェックを削除することで、ロジックが明確になる
+
+#### 23-3. NestJSモジュールのカプセル化 🟡 Medium
+
+**問題**: `FqdnModule`の`exports`配列が`providers`配列のコピーのようになっており、モジュールのカプセル化を損なっている。`FqdnModule`はFQDN機能をカプセル化しており、他のモジュールで明示的に必要とされていない限り、すべてのプロバイダーをエクスポートする必要はない。
+
+**解決策**: 他のモジュールで明示的に必要とされていない限り、`exports`配列を削除する。
+
+**実装例**:
+```typescript
+// ✅ 良い例: カプセル化されたモジュール
+@Module({
+  controllers: [FqdnController],
+  providers: [
+    CreateFqdnUseCase,
+    UpdateFqdnUseCase,
+    // ...
+  ],
+  // exports配列なし（他のモジュールで必要とされていない場合）
+})
+export class FqdnModule {}
+
+// ❌ 悪い例: 不要なexports
+@Module({
+  controllers: [FqdnController],
+  providers: [
+    CreateFqdnUseCase,
+    UpdateFqdnUseCase,
+    // ...
+  ],
+  exports: [
+    // providersのコピー（不要）
+    CreateFqdnUseCase,
+    UpdateFqdnUseCase,
+    // ...
+  ],
+})
+export class FqdnModule {}
+```
+
+**理由**:
+- モジュールのカプセル化が保たれる
+- 不要な依存関係を避けることができる
+- NestJSのベストプラクティスに従う
+
+#### 23-4. 未使用変数の削除 🟡 Medium
+
+**問題**: テストコードで宣言されているが使用されていない変数（例: `createdFqdnId`）が存在する。
+
+**解決策**: 未使用の変数を削除する。
+
+**理由**:
+- コードの可読性が向上する
+- 不要なコードを削除することで、意図が明確になる
+
+**参照**: PR #49 - FQDN管理機能の実装（Geminiレビュー指摘）

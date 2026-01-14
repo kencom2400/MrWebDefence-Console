@@ -9,6 +9,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './presentation/auth.module';
 import { CustomerModule } from './presentation/customer.module';
 import { UserModule } from './presentation/user.module';
+import { FqdnModule } from './presentation/fqdn.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { UserModule } from './presentation/user.module';
     AuthModule,
     CustomerModule,
     UserModule,
+    FqdnModule,
   ],
   controllers: [],
   providers: [],
