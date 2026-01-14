@@ -91,16 +91,18 @@ export class UserRepository implements IUserRepository {
   /**
    * ユーザーを削除する
    * @param id ユーザーID
+   * @returns 削除が成功した場合true、ユーザーが見つからない場合false
    */
-  async delete(id: string): Promise<void> {
+  async delete(id: string): Promise<boolean> {
     const user = this.users.get(id);
     if (!user) {
-      throw new Error(`User with id ${id} not found`);
+      return false;
     }
 
     // メールアドレスのマッピングを削除
     this.emailToIdMap.delete(user.email.toLowerCase());
     this.users.delete(id);
+    return true;
   }
 
   /**

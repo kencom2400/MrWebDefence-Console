@@ -46,8 +46,9 @@ export interface IUserRepository {
   /**
    * ユーザーを削除する
    * @param id ユーザーID
+   * @returns 削除が成功した場合true、ユーザーが見つからない場合false
    */
-  delete(id: string): Promise<void>;
+  delete(id: string): Promise<boolean>;
 
   /**
    * ユーザーIDからユーザーを検索する

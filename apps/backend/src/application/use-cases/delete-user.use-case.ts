@@ -20,13 +20,9 @@ export class DeleteUserUseCase {
    * @throws NotFoundException ユーザーが見つからない場合
    */
   public async execute(id: string): Promise<void> {
-    // ユーザーの存在確認
-    const user = await this.userRepository.findById(id);
-    if (!user) {
+    const wasDeleted = await this.userRepository.delete(id);
+    if (!wasDeleted) {
       throw new NotFoundException('User not found');
     }
-
-    // ユーザーを削除
-    await this.userRepository.delete(id);
   }
 }

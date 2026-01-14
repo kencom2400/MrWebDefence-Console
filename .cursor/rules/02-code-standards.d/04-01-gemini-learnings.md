@@ -2297,3 +2297,102 @@ public async findAll(@Query() query: UserListQueryDto): Promise<UserListResponse
 - コードがクリーンになり、NestJSのベストプラクティスに沿った形になる
 - プロバイダ定義の重複を避けられる
 - メンテナンス性が向上する
+
+### リポジトリの`delete`メソッドの戻り値設計
+
+**問題**: Use Case層で`findById`で存在確認してから`delete`を呼び出すと、リポジトリへのアクセスが2回発生し、非効率。また、実際のデータベース環境では競合状態（Race Condition）を引き起こす可能性がある。
+
+**解決策**: `delete`メソッドの戻り値を`Promise<void>`から`Promise<boolean>`（削除が成功したかどうか）に変更し、Use Case側でその結果をハンドルする。
+
+**例**:
+```typescript
+// ❌ 非効率な実装
+public async execute(id: string): Promise<void> {
+  // ユーザーの存在確認（1回目のアクセス）
+  const user = await this.userRepository.findById(id);
+  if (!user) {
+    throw new NotFoundException('User not found');
+  }
+  // ユーザーを削除（2回目のアクセス）
+  await this.userRepository.delete(id);
+}
+
+// ✅ 効率的な実装
+public async execute(id: string): Promise<void> {
+  const wasDeleted = await this.userRepository.delete(id);
+  if (!wasDeleted) {
+    throw new NotFoundException('User not found');
+  }
+}
+
+// リポジトリインターフェース
+export interface IUserRepository {
+  /**
+   * ユーザーを削除する
+   * @param id ユーザーID
+   * @returns 削除が成功した場合true、ユーザーが見つからない場合false
+   */
+  delete(id: string): Promise<boolean>;
+}
+
+// リポジトリ実装
+async delete(id: string): Promise<boolean> {
+  const user = this.users.get(id);
+  if (!user) {
+    return false;
+  }
+  // 削除処理
+  this.users.delete(id);
+  return true;
+}
+```
+
+**理由**:
+- リポジトリへのアクセスが1回で済み、パフォーマンスが向上する
+- 競合状態のリスクを軽減できる
+- コードがシンプルになり、可読性が向上する
+
+### Use Case層でのバリデーション重複の回避
+
+**問題**: Use Case層でページネーションパラメータなどのバリデーションを行っているが、DTO層（`class-validator`）で既にバリデーションが行われている場合、重複している。
+
+**解決策**: NestJSの`ValidationPipe`がグローバルに適用されている場合、DTOでのバリデーションがコントローラー層で自動的に実行されるため、Use Case層でのバリデーションは不要。バリデーションはプレゼンテーション層の責務とする。
+
+**例**:
+```typescript
+// ❌ 重複したバリデーション
+public async execute(query: UserListQuery): Promise<UserListResult> {
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 10;
+  
+  // DTO層で既にバリデーション済みなのに、再度バリデーション
+  if (page < 1) {
+    throw new BadRequestException('Page must be a positive number');
+  }
+  if (limit < 1 || limit > 100) {
+    throw new BadRequestException('Limit must be between 1 and 100');
+  }
+  
+  return await this.userRepository.findAll({ ... });
+}
+
+// ✅ バリデーションを削除
+public async execute(query: UserListQuery): Promise<UserListResult> {
+  // デフォルト値の設定のみ
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 10;
+  
+  // バリデーションはDTO層（UserListQueryDto）でclass-validatorにより実行される
+  return await this.userRepository.findAll({
+    email: query.email,
+    role: query.role,
+    page,
+    limit,
+  });
+}
+```
+
+**理由**:
+- コードの重複をなくし、保守性が向上する
+- 関心事を分離する（バリデーションはプレゼンテーション層の責務）
+- Use Case層ではバリデーション済みのクリーンなデータが渡されることを期待できる
