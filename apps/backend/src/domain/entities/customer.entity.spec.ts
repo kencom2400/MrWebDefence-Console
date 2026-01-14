@@ -3,7 +3,7 @@
  */
 
 import { Customer } from './customer.entity';
-import { CustomerStatus, CustomerStatusEnum } from '../value-objects/customer-status.value-object';
+import { CustomerStatus } from '../value-objects/customer-status.value-object';
 import { randomUUID } from 'crypto';
 
 describe('Customer', () => {
@@ -29,15 +29,26 @@ describe('Customer', () => {
     });
 
     it('オプションフィールドを含めて顧客を作成できる', () => {
-      const customer = Customer.create(validId, validName, validEmail, validPhone, validCompany, validAddress);
+      const customer = Customer.create(
+        validId,
+        validName,
+        validEmail,
+        validPhone,
+        validCompany,
+        validAddress,
+      );
       expect(customer.phone).toBe(validPhone);
       expect(customer.company).toBe(validCompany);
       expect(customer.address).toBe(validAddress);
     });
 
     it('名前が空の場合エラーを投げる', () => {
-      expect(() => Customer.create(validId, '', validEmail)).toThrow('Customer name cannot be empty');
-      expect(() => Customer.create(validId, '   ', validEmail)).toThrow('Customer name cannot be empty');
+      expect(() => Customer.create(validId, '', validEmail)).toThrow(
+        'Customer name cannot be empty',
+      );
+      expect(() => Customer.create(validId, '   ', validEmail)).toThrow(
+        'Customer name cannot be empty',
+      );
     });
 
     it('名前が100文字を超える場合エラーを投げる', () => {
@@ -48,13 +59,19 @@ describe('Customer', () => {
     });
 
     it('メールアドレスが空の場合エラーを投げる', () => {
-      expect(() => Customer.create(validId, validName, '')).toThrow('Customer email cannot be empty');
+      expect(() => Customer.create(validId, validName, '')).toThrow(
+        'Customer email cannot be empty',
+      );
     });
 
     it('無効なメールアドレスの場合エラーを投げる', () => {
-      expect(() => Customer.create(validId, validName, 'invalid-email')).toThrow('Invalid email format');
+      expect(() => Customer.create(validId, validName, 'invalid-email')).toThrow(
+        'Invalid email format',
+      );
       expect(() => Customer.create(validId, validName, 'invalid@')).toThrow('Invalid email format');
-      expect(() => Customer.create(validId, validName, '@example.com')).toThrow('Invalid email format');
+      expect(() => Customer.create(validId, validName, '@example.com')).toThrow(
+        'Invalid email format',
+      );
     });
 
     it('電話番号が20文字を超える場合エラーを投げる', () => {
@@ -73,9 +90,9 @@ describe('Customer', () => {
 
     it('住所が200文字を超える場合エラーを投げる', () => {
       const longAddress = 'a'.repeat(201);
-      expect(() => Customer.create(validId, validName, validEmail, null, null, longAddress)).toThrow(
-        'Address must be 200 characters or less',
-      );
+      expect(() =>
+        Customer.create(validId, validName, validEmail, null, null, longAddress),
+      ).toThrow('Address must be 200 characters or less');
     });
 
     it('名前とメールアドレスの前後の空白をトリムする', () => {
@@ -119,7 +136,14 @@ describe('Customer', () => {
     let customer: Customer;
 
     beforeEach(() => {
-      customer = Customer.create(validId, validName, validEmail, validPhone, validCompany, validAddress);
+      customer = Customer.create(
+        validId,
+        validName,
+        validEmail,
+        validPhone,
+        validCompany,
+        validAddress,
+      );
     });
 
     it('名前を更新できる', () => {
@@ -207,4 +231,3 @@ describe('Customer', () => {
     });
   });
 });
-
