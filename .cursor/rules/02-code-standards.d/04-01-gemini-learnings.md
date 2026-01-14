@@ -2742,3 +2742,139 @@ sequenceDiagram
 - コントローラー層でのエラーハンドリングがシンプルになる
 
 **参照**: PR #48 - FQDN管理機能の詳細設計書作成（Geminiレビュー指摘 第2弾）
+
+### 22-9. プレゼンテーション層とアプリケーション層の責務分離 🟡 Medium
+
+**問題**: アプリケーション層のUseCaseでドメインのValue Objectを直接受け取る場合、プレゼンテーション層からドメイン層への依存が生じ、責務の分離が曖昧になる。
+
+**解決策**:
+- プレゼンテーション層からアプリケーション層へ渡されるデータはDTOにマッピングされたプリミティブ型（enum）を使用する
+- 既存の実装パターン（例: `CustomerStatusEnum`）に倣う
+- Value Objectとenumの名前が重複しないようにする（例: `FqdnStatus` Value Objectと`FqdnStatusEnum` enum）
+
+**実装例**:
+```typescript
+// ❌ 悪い例: Value Objectを直接受け取る
+class UpdateFqdnStatusUseCase {
+  execute(id: string, status: FqdnStatus): Promise<Fqdn> {
+    // FqdnStatusはValue Object（ドメイン層）
+  }
+}
+
+// ✅ 良い例: enumを使用する
+class UpdateFqdnStatusUseCase {
+  execute(id: string, status: FqdnStatusEnum): Promise<Fqdn> {
+    // FqdnStatusEnumはenum（プリミティブ型）
+  }
+}
+```
+
+**理由**:
+- ドメインオブジェクトがプレゼンテーション層に漏れ出すことを防ぐ
+- 責務の分離がより明確になる
+- 既存の実装パターンとの一貫性が保たれる
+
+### 22-10. クラス図における戻り値の型定義 🟡 Medium
+
+**問題**: クラス図でメソッドの戻り値の型が指定されていない場合、設計の明確さが損なわれる。
+
+**解決策**:
+- クラス図のメソッド定義に戻り値の型を明記する
+- 静的メソッド（ファクトリメソッド）には`<<static>>`を明記する
+
+**実装例**:
+```mermaid
+classDiagram
+    class Fqdn {
+        <<static>> +create(fqdn: string, description?: string): Fqdn
+        <<static>> +reconstruct(id: string, fqdn: string, description?: string, status: FqdnStatus, createdAt: Date, updatedAt: Date): Fqdn
+        +update(fqdn?: string, description?: string): Fqdn
+        +activate(): Fqdn
+        +deactivate(): Fqdn
+    }
+```
+
+**理由**:
+- 設計の明確さが向上する
+- 実装時の混乱を避ける
+
+### 22-11. Value Objectの不変性保証 🟡 Medium
+
+**問題**: Value Objectに公開メソッドとして`validate()`が定義されている場合、不正な状態のオブジェクトが生成される可能性がある。
+
+**解決策**:
+- 静的ファクトリメソッド`create`を定義し、その中で検証を行う
+- コンストラクタは`private`にする（クラス図では明示しないが、実装時に考慮）
+- 既存の実装パターン（例: `CustomerStatus`）に倣う
+
+**実装例**:
+```mermaid
+classDiagram
+    class FqdnStatus {
+        <<ValueObject>>
+        +string value
+        <<static>> +create(value: string): FqdnStatus
+        +isActive(): boolean
+        +isInactive(): boolean
+    }
+```
+
+**理由**:
+- Value Objectの不変性が保証される
+- 不正な状態のオブジェクトが生成されるのを防ぐ
+
+### 22-12. 設計書全体での用語の一貫性 🟡 Medium
+
+**問題**: 設計書内で用語が統一されていない場合（例: 「切り替え」と「更新」が混在）、実装時に混乱を招く。
+
+**解決策**:
+- 設計書全体で用語を統一する
+- タイトル、説明、シーケンス図などすべての箇所で同じ用語を使用する
+- 実際の動作を正確に表す用語を選択する（例: 状態を反転させる場合は「切り替え」、指定された値に設定する場合は「更新」）
+
+**実装例**:
+```markdown
+# ❌ 悪い例: 用語が統一されていない
+## エンドポイント
+### 6. FQDNステータス切り替え
+
+## シーケンス図
+## FQDNステータス切り替えフロー
+
+## ユースケース
+- **UpdateFqdnStatusUseCase**: FQDNステータス更新処理
+
+# ✅ 良い例: 用語が統一されている
+## エンドポイント
+### 6. FQDNステータス更新
+
+## シーケンス図
+## FQDNステータス更新フロー
+
+## ユースケース
+- **UpdateFqdnStatusUseCase**: FQDNステータス更新処理
+```
+
+**理由**:
+- 実装時の混乱を避ける
+- 設計の一貫性が保たれる
+
+### 22-13. シーケンス図における静的メソッド呼び出しの明示 🟡 Medium
+
+**問題**: シーケンス図で静的メソッド（ファクトリメソッド）の呼び出しが通常のメソッド呼び出しと区別されていない場合、実装者が設計意図を誤解する可能性がある。
+
+**解決策**:
+- 静的メソッドの呼び出しは`ClassName.methodName(...)`のように表現する
+- これにより、クラスから直接呼び出していることが分かる
+
+**実装例**:
+```mermaid
+sequenceDiagram
+    CreateFqdnUseCase->>Fqdn: Fqdn.create(fqdn, description?)
+```
+
+**理由**:
+- 実装者が設計意図を誤解するのを防ぐ
+- 静的メソッドであることが明確になる
+
+**参照**: PR #48 - FQDN管理機能の詳細設計書作成（Geminiレビュー指摘 第3弾）
