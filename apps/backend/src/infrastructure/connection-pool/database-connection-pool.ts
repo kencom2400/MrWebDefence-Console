@@ -220,6 +220,8 @@ export class DatabaseConnectionPool implements IConnectionPool, OnModuleInit, On
       if (connectionAge > this.config.maxLifetime) {
         // 最大生存時間を超過している場合は破棄
         await this.removeInvalidConnection(poolConnection);
+        // 待機中のリクエストを処理
+        this.processWaitingQueue();
         return;
       }
 
@@ -414,25 +416,49 @@ export class DatabaseConnectionPool implements IConnectionPool, OnModuleInit, On
    * @private
    */
   private processWaitingQueue(): void {
-    if (this.waitingQueue.length === 0) {
+    if (this.waitingQueue.length === 0 || this.idleConnections.length === 0) {
       return;
     }
 
-    const idleConnection = this.getIdleConnection();
-    if (idleConnection) {
-      const request = this.waitingQueue.shift();
-      if (request) {
-        clearTimeout(request.timeout);
-        // 接続を取得してリクエストを解決
-        this.getConnection()
-          .then((connection) => {
-            request.resolve(connection);
-          })
-          .catch((error) => {
-            request.reject(error);
-          });
-      }
+    const request = this.waitingQueue.shift();
+    if (!request) {
+      return;
     }
+
+    const idleConnection = this.idleConnections.shift();
+    if (!idleConnection) {
+      // アイドル接続がなかったのでリクエストをキューに戻す
+      this.waitingQueue.unshift(request);
+      return;
+    }
+
+    clearTimeout(request.timeout);
+
+    // 非同期で接続の有効性を確認し、リクエストを解決
+    (async (): Promise<void> => {
+      try {
+        if (await idleConnection.isValid()) {
+          this.addToActive(idleConnection);
+          idleConnection.updateLastUsedAt();
+          request.resolve(idleConnection);
+          // 次の待機リクエストを処理するために再帰的に呼び出す
+          this.processWaitingQueue();
+        } else {
+          // 無効な接続だったので破棄し、リクエストをキューに戻して再試行
+          await this.removeInvalidConnection(idleConnection);
+          this.waitingQueue.unshift(request);
+          // 次の待機リクエストを処理するために再帰的に呼び出す
+          this.processWaitingQueue();
+        }
+      } catch (error) {
+        request.reject(error);
+        await this.removeInvalidConnection(idleConnection).catch((e) =>
+          this.logger.error('Failed to remove connection on error', e),
+        );
+        // エラーが発生した場合も、次の待機リクエストを処理するために再帰的に呼び出す
+        this.processWaitingQueue();
+      }
+    })();
   }
 
   /**

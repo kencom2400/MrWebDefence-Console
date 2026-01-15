@@ -3507,3 +3507,89 @@ describe('updateLastUsedAt', () => {
 - テストの実行速度向上（実際の時間を待たない）
 
 **参照**: PR #51 - データベース接続プールのユニットテストとE2Eテスト実装（Geminiレビュー指摘）
+
+#### 24-9. 待機キューの処理ロジックの修正 🟠 Critical
+
+**問題**: `processWaitingQueue`の実装に重大なバグがあります。`processWaitingQueue`は`this.getConnection()`を呼び出しますが、`getConnection`は内部で`waitForConnection`を呼び出す可能性があります。`waitForConnection`は新しい待機リクエストをキューに追加します。しかし、`processWaitingQueue`の先頭で`shift()`された元のリクエストはキューに戻されないため、永久に解決されないままハングしてしまいます。
+
+**解決策**: `processWaitingQueue`が`getConnection`を呼び出すのをやめ、待機中のリクエストにアイドル接続を直接割り当てるロジックに置き換える。
+
+**実装例**:
+```typescript
+// ✅ 良い例: アイドル接続を直接割り当てる
+private processWaitingQueue(): void {
+  if (this.waitingQueue.length === 0 || this.idleConnections.length === 0) {
+    return;
+  }
+
+  const request = this.waitingQueue.shift();
+  if (!request) {
+    return;
+  }
+
+  const idleConnection = this.idleConnections.shift();
+  if (!idleConnection) {
+    // アイドル接続がなかったのでリクエストをキューに戻す
+    this.waitingQueue.unshift(request);
+    return;
+  }
+
+  clearTimeout(request.timeout);
+
+  // 非同期で接続の有効性を確認し、リクエストを解決
+  (async () => {
+    try {
+      if (await idleConnection.isValid()) {
+        this.addToActive(idleConnection);
+        idleConnection.updateLastUsedAt();
+        request.resolve(idleConnection);
+        // 次の待機リクエストを処理するために再帰的に呼び出す
+        this.processWaitingQueue();
+      } else {
+        // 無効な接続だったので破棄し、リクエストをキューに戻して再試行
+        await this.removeInvalidConnection(idleConnection);
+        this.waitingQueue.unshift(request);
+        // 次の待機リクエストを処理するために再帰的に呼び出す
+        this.processWaitingQueue();
+      }
+    } catch (error) {
+      request.reject(error);
+      await this.removeInvalidConnection(idleConnection).catch((e) =>
+        this.logger.error('Failed to remove connection on error', e),
+      );
+      // エラーが発生した場合も、次の待機リクエストを処理するために再帰的に呼び出す
+      this.processWaitingQueue();
+    }
+  })();
+}
+```
+
+**理由**:
+- リクエストのハングを防止
+- 待機キューの処理ロジックが明確になる
+- 接続の直接割り当てにより、パフォーマンスが向上
+
+#### 24-10. 接続破棄時の待機キュー処理 🟠 Critical
+
+**問題**: 最大生存期間を超えた接続を破棄した後に、`processWaitingQueue()`を呼び出す必要があります。現在、この呼び出しが欠落しているため、プールが最大接続数に達している場合に待機中のクライアントは、接続が利用可能になっても通知されません。
+
+**解決策**: 接続を破棄した後、`processWaitingQueue()`を呼び出すように修正する。
+
+**実装例**:
+```typescript
+// ✅ 良い例: 接続破棄後に待機キューを処理
+if (connectionAge > this.config.maxLifetime) {
+  // 最大生存時間を超過している場合は破棄
+  await this.removeInvalidConnection(poolConnection);
+  // 待機中のリクエストを処理
+  this.processWaitingQueue();
+  return;
+}
+```
+
+**理由**:
+- 接続スターベーションの防止
+- 待機中のクライアントへの即座の通知
+- パフォーマンスの向上
+
+**参照**: PR #51 - データベース接続プールのユニットテストとE2Eテスト実装（Geminiレビュー指摘 第2弾）
