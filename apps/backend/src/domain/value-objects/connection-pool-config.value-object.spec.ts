@@ -93,19 +93,25 @@ describe('ConnectionPoolConfig', () => {
   });
 
   describe('fromEnvironment', () => {
+    const originalEnv = process.env;
+
+    beforeEach(() => {
+      process.env = { ...originalEnv };
+    });
+
+    afterAll(() => {
+      process.env = originalEnv;
+    });
+
     it('環境変数から接続プール設定を作成できる', () => {
-      const originalEnv = process.env;
-      process.env = {
-        ...originalEnv,
-        DB_POOL_MAX_CONNECTIONS: '10',
-        DB_POOL_MIN_CONNECTIONS: '2',
-        DB_POOL_CONNECTION_TIMEOUT: '60000',
-        DB_POOL_IDLE_TIMEOUT: '1200000',
-        DB_POOL_MAX_LIFETIME: '7200000',
-        DB_POOL_RETRY_ATTEMPTS: '5',
-        DB_POOL_RETRY_DELAY: '2000',
-        DB_POOL_MONITOR_INTERVAL: '10000',
-      };
+      process.env.DB_POOL_MAX_CONNECTIONS = '10';
+      process.env.DB_POOL_MIN_CONNECTIONS = '2';
+      process.env.DB_POOL_CONNECTION_TIMEOUT = '60000';
+      process.env.DB_POOL_IDLE_TIMEOUT = '1200000';
+      process.env.DB_POOL_MAX_LIFETIME = '7200000';
+      process.env.DB_POOL_RETRY_ATTEMPTS = '5';
+      process.env.DB_POOL_RETRY_DELAY = '2000';
+      process.env.DB_POOL_MONITOR_INTERVAL = '10000';
 
       const config = ConnectionPoolConfig.fromEnvironment();
 
@@ -117,12 +123,9 @@ describe('ConnectionPoolConfig', () => {
       expect(config.retryAttempts).toBe(5);
       expect(config.retryDelay).toBe(2000);
       expect(config.monitorInterval).toBe(10000);
-
-      process.env = originalEnv;
     });
 
     it('環境変数が設定されていない場合、デフォルト値を使用する', () => {
-      const originalEnv = process.env;
       delete process.env.DB_POOL_MAX_CONNECTIONS;
       delete process.env.DB_POOL_MIN_CONNECTIONS;
       delete process.env.DB_POOL_CONNECTION_TIMEOUT;
@@ -141,8 +144,7 @@ describe('ConnectionPoolConfig', () => {
       expect(config.maxLifetime).toBe(3600000);
       expect(config.retryAttempts).toBe(3);
       expect(config.retryDelay).toBe(1000);
-
-      process.env = originalEnv;
+      expect(config.monitorInterval).toBe(5000);
     });
   });
 

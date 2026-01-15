@@ -179,7 +179,6 @@ export class DatabaseConnectionPool implements IConnectionPool, OnModuleInit, On
       try {
         const connection = await this.createConnection();
         this.addToActive(connection);
-        this.connections.push(connection);
         return connection;
       } catch (error) {
         this.logger.error('Failed to create connection', error);
@@ -241,7 +240,7 @@ export class DatabaseConnectionPool implements IConnectionPool, OnModuleInit, On
    * 接続プールの現在の状態を取得します
    */
   getStatus(): ConnectionPoolStatus {
-    const activeConnections = this.connections.filter((c) => this.isActive(c)).length;
+    const activeConnections = this.connections.length - this.idleConnections.length;
     const idleConnections = this.idleConnections.length;
     const waitingRequests = this.waitingQueue.length;
 

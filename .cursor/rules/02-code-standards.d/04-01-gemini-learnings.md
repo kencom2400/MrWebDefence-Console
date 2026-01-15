@@ -3593,3 +3593,95 @@ if (connectionAge > this.config.maxLifetime) {
 - パフォーマンスの向上
 
 **参照**: PR #51 - データベース接続プールのユニットテストとE2Eテスト実装（Geminiレビュー指摘 第2弾）
+
+#### 24-11. 接続の重複追加バグの修正 🟡 High
+
+**問題**: `getConnection()`メソッドで、新しい接続を作成した際に`addToActive(connection)`の後に`this.connections.push(connection)`を実行しているが、`addToActive`メソッドがすでに`connections`配列への接続の追加を処理しているため、接続が重複して登録されてしまいます。これにより、接続数のカウントが不正確になり、プールの動作に予期せぬ問題を引き起こす可能性があります。
+
+**解決策**: `addToActive`メソッドが既に`connections`配列に追加しているため、`this.connections.push(connection)`の行を削除する。
+
+**実装例**:
+```typescript
+// ✅ 良い例: addToActiveのみを使用
+if (this.connections.length < this.config.maxConnections) {
+  try {
+    const connection = await this.createConnection();
+    this.addToActive(connection); // addToActiveが既にconnectionsに追加している
+    return connection;
+  } catch (error) {
+    // ...
+  }
+}
+```
+
+**理由**:
+- 接続の重複登録を防止
+- 接続数のカウントの正確性を保証
+- プールの動作の安定性向上
+
+#### 24-12. 接続ステータス取得のパフォーマンス最適化 🟡 Medium
+
+**問題**: `activeConnections`の計算が非効率です。現在の実装では、`connections`配列の各要素に対して`isActive`メソッドが呼び出され、その中で`idleConnections`配列の線形検索が行われるため、計算量がO(N*M)となってしまいます。
+
+**解決策**: アクティブな接続数は、プール内の総接続数からアイドル接続数を引くことで、より効率的にO(1)で計算できる。
+
+**実装例**:
+```typescript
+// ✅ 良い例: O(1)で計算
+getStatus(): ConnectionPoolStatus {
+  const activeConnections = this.connections.length - this.idleConnections.length;
+  const idleConnections = this.idleConnections.length;
+  const waitingRequests = this.waitingQueue.length;
+  // ...
+}
+```
+
+**理由**:
+- パフォーマンスの向上（O(N*M)からO(1)へ）
+- 計算の簡潔性
+- スケーラビリティの向上
+
+#### 24-13. テストコードのprocess.env操作の改善 🟡 Medium
+
+**問題**: テストの信頼性と保守性を向上させるため、`process.env`の操作方法を改善する必要があります。現在、各`it`ブロック内で`process.env`を直接変更・復元していますが、このアプローチにはテストが途中で失敗した場合に`process.env`が元の状態に復元されないリスクがあります。
+
+**解決策**: `beforeEach`と`afterAll`フックを使用して、環境変数のセットアップとクリーンアップを一元管理する。
+
+**実装例**:
+```typescript
+// ✅ 良い例: beforeEachとafterAllで一元管理
+describe('fromEnvironment', () => {
+  const originalEnv = process.env;
+
+  beforeEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
+  });
+
+  it('環境変数から接続プール設定を作成できる', () => {
+    process.env.DB_POOL_MAX_CONNECTIONS = '10';
+    // ... 他の環境変数の設定
+    
+    const config = ConnectionPoolConfig.fromEnvironment();
+    // ... アサーション
+  });
+
+  it('環境変数が設定されていない場合、デフォルト値を使用する', () => {
+    delete process.env.DB_POOL_MAX_CONNECTIONS;
+    // ... 他に削除する環境変数
+
+    const config = ConnectionPoolConfig.fromEnvironment();
+    // ... アサーション
+  });
+});
+```
+
+**理由**:
+- テストの信頼性向上（テストが途中で失敗しても`process.env`が復元される）
+- コードの可読性向上（環境変数の管理が一元化される）
+- 保守性の向上（環境変数のセットアップとクリーンアップが明確になる）
+
+**参照**: PR #51 - データベース接続プールのユニットテストとE2Eテスト実装（Geminiレビュー指摘 第3弾）
