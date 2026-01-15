@@ -18,6 +18,7 @@ export class ConnectionPoolConfig {
   public readonly maxLifetime: number;
   public readonly retryAttempts: number;
   public readonly retryDelay: number;
+  public readonly monitorInterval: number;
 
   private constructor(
     maxConnections: number,
@@ -27,6 +28,7 @@ export class ConnectionPoolConfig {
     maxLifetime: number,
     retryAttempts: number,
     retryDelay: number,
+    monitorInterval: number,
   ) {
     this.maxConnections = maxConnections;
     this.minConnections = minConnections;
@@ -35,6 +37,7 @@ export class ConnectionPoolConfig {
     this.maxLifetime = maxLifetime;
     this.retryAttempts = retryAttempts;
     this.retryDelay = retryDelay;
+    this.monitorInterval = monitorInterval;
   }
 
   /**
@@ -46,6 +49,7 @@ export class ConnectionPoolConfig {
    * @param maxLifetime 接続の最大生存時間（ミリ秒、1以上、必須）
    * @param retryAttempts リトライ回数（0以上、必須）
    * @param retryDelay リトライ間隔（ミリ秒、1以上、必須）
+   * @param monitorInterval 監視間隔（ミリ秒、1以上、必須）
    * @returns ConnectionPoolConfig Value Object
    * @throws BadRequestException バリデーション失敗時
    */
@@ -57,6 +61,7 @@ export class ConnectionPoolConfig {
     maxLifetime: number,
     retryAttempts: number,
     retryDelay: number,
+    monitorInterval: number,
   ): ConnectionPoolConfig {
     // バリデーション
     if (maxConnections < 1) {
@@ -91,6 +96,10 @@ export class ConnectionPoolConfig {
       throw new BadRequestException('retryDelay must be at least 1');
     }
 
+    if (monitorInterval < 1) {
+      throw new BadRequestException('monitorInterval must be at least 1');
+    }
+
     return new ConnectionPoolConfig(
       maxConnections,
       minConnections,
@@ -99,6 +108,7 @@ export class ConnectionPoolConfig {
       maxLifetime,
       retryAttempts,
       retryDelay,
+      monitorInterval,
     );
   }
 
@@ -114,6 +124,7 @@ export class ConnectionPoolConfig {
     const maxLifetime = parseInt(process.env.DB_POOL_MAX_LIFETIME || '3600000', 10);
     const retryAttempts = parseInt(process.env.DB_POOL_RETRY_ATTEMPTS || '3', 10);
     const retryDelay = parseInt(process.env.DB_POOL_RETRY_DELAY || '1000', 10);
+    const monitorInterval = parseInt(process.env.DB_POOL_MONITOR_INTERVAL || '5000', 10);
 
     return ConnectionPoolConfig.create(
       maxConnections,
@@ -123,6 +134,7 @@ export class ConnectionPoolConfig {
       maxLifetime,
       retryAttempts,
       retryDelay,
+      monitorInterval,
     );
   }
 
@@ -139,7 +151,8 @@ export class ConnectionPoolConfig {
       this.idleTimeout === other.idleTimeout &&
       this.maxLifetime === other.maxLifetime &&
       this.retryAttempts === other.retryAttempts &&
-      this.retryDelay === other.retryDelay
+      this.retryDelay === other.retryDelay &&
+      this.monitorInterval === other.monitorInterval
     );
   }
 }

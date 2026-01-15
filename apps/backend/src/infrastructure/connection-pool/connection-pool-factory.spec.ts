@@ -24,6 +24,7 @@ describe('ConnectionPoolFactory', () => {
         3600000, // maxLifetime
         3, // retryAttempts
         1000, // retryDelay
+        5000, // monitorInterval
       );
 
       const factory = new ConnectionPoolFactory();

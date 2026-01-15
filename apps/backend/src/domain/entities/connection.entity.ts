@@ -22,7 +22,7 @@ export interface IConnection {
   /**
    * 最終使用日時
    */
-  readonly lastUsedAt: Date;
+  lastUsedAt: Date;
 
   /**
    * 接続が有効かどうかを確認します
@@ -34,4 +34,9 @@ export interface IConnection {
    * 接続を閉じます
    */
   close(): Promise<void>;
+
+  /**
+   * 最終使用日時を更新します
+   */
+  updateLastUsedAt(): void;
 }

@@ -19,7 +19,6 @@ export class ConnectionPoolMonitor {
   private readonly pool: DatabaseConnectionPool;
   private readonly config: ConnectionPoolConfig;
   private intervalId: NodeJS.Timeout | null = null;
-  private readonly MONITOR_INTERVAL_MS = 5000; // 5秒ごとに監視
 
   constructor(pool: DatabaseConnectionPool, config: ConnectionPoolConfig) {
     this.pool = pool;
@@ -35,12 +34,13 @@ export class ConnectionPoolMonitor {
       return;
     }
 
-    this.logger.log('Starting connection pool monitor...');
+    const monitorInterval = this.config.monitorInterval;
+    this.logger.log(`Starting connection pool monitor with interval: ${monitorInterval}ms`);
     this.intervalId = setInterval(() => {
       this.monitor().catch((error) => {
         this.logger.error('Error in connection pool monitor', error);
       });
-    }, this.MONITOR_INTERVAL_MS);
+    }, monitorInterval);
   }
 
   /**

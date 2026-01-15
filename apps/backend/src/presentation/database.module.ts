@@ -21,7 +21,7 @@ import { ConnectionPoolFactory } from '../infrastructure/connection-pool/connect
     },
     ConnectionPoolFactory,
     {
-      provide: 'IConnectionPool',
+      provide: DatabaseConnectionPool,
       useFactory: (
         config: ConnectionPoolConfig,
         factory: ConnectionPoolFactory,
@@ -31,14 +31,8 @@ import { ConnectionPoolFactory } from '../infrastructure/connection-pool/connect
       inject: [ConnectionPoolConfig, ConnectionPoolFactory],
     },
     {
-      provide: DatabaseConnectionPool,
-      useFactory: (
-        config: ConnectionPoolConfig,
-        factory: ConnectionPoolFactory,
-      ): DatabaseConnectionPool => {
-        return factory.create(config);
-      },
-      inject: [ConnectionPoolConfig, ConnectionPoolFactory],
+      provide: 'IConnectionPool',
+      useExisting: DatabaseConnectionPool,
     },
   ],
   exports: ['IConnectionPool', ConnectionPoolConfig, DatabaseConnectionPool, ConnectionPoolFactory],

@@ -26,6 +26,7 @@ describe('DatabaseConnectionPool', () => {
       3600000, // maxLifetime (1時間)
       3, // retryAttempts
       100, // retryDelay (100ms)
+      5000, // monitorInterval (5秒)
     );
 
     pool = new DatabaseConnectionPool(config);

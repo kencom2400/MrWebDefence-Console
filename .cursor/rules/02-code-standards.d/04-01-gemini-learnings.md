@@ -3238,3 +3238,272 @@ export class FqdnModule {}
 - 不要なコードを削除することで、意図が明確になる
 
 **参照**: PR #49 - FQDN管理機能の実装（Geminiレビュー指摘）
+
+### 24. データベース接続プール実装における重要な設計原則（PR #51）
+
+**学習元**: PR #51 - データベース接続プールのユニットテストとE2Eテスト実装（Geminiレビュー指摘）
+
+#### 24-1. 接続解放時の待機キュー処理 🟠 Critical
+
+**問題**: `releaseConnection`メソッド内で、接続がアイドルプールに返却された後、`processWaitingQueue()`が呼び出されていない。これにより、接続を待機しているクライアント（`waitingQueue`内）は、新しい接続が利用可能になっても通知されず、不必要にタイムアウトまで待機してしまいます。これは接続スターベーションを引き起こす重大なバグです。
+
+**解決策**: 接続がアイドル状態になった直後に`processWaitingQueue()`を呼び出すように修正する。無効な接続を破棄した後も、待機中のリクエストを処理する。
+
+**実装例**:
+```typescript
+// ✅ 良い例: 接続解放後に待機キューを処理
+async releaseConnection(connection: IConnection): Promise<void> {
+  // ... バリデーション ...
+  
+  const isValid = await connection.isValid();
+  if (isValid) {
+    // 接続の有効期限をチェック
+    const now = Date.now();
+    const connectionAge = now - poolConnection.createdAt.getTime();
+    if (connectionAge > this.config.maxLifetime) {
+      await this.removeInvalidConnection(poolConnection);
+      this.processWaitingQueue(); // 無効な接続を破棄した後も待機キューを処理
+      return;
+    }
+
+    this.addToIdle(poolConnection);
+    poolConnection.updateLastUsedAt();
+    this.processWaitingQueue(); // 接続がアイドル状態になった直後に待機キューを処理
+  } else {
+    await this.removeInvalidConnection(poolConnection);
+    this.processWaitingQueue(); // 無効な接続を破棄した後も待機キューを処理
+  }
+}
+```
+
+**理由**:
+- 接続スターベーションの防止
+- 待機中のクライアントへの即座の通知
+- パフォーマンスの向上
+
+#### 24-2. NestJS DI設定での単一インスタンス保証 🟠 Critical
+
+**問題**: `DatabaseModule`でのDI設定に問題があり、複数の接続プールインスタンスが生成される可能性があります。`DatabaseConnectionPool`と`IConnectionPool`の両方を`useFactory`でプロバイドしているため、それぞれが注入されるたびに新しい`DatabaseConnectionPool`インスタンスが生成されてしまいます。
+
+**解決策**: まず`DatabaseConnectionPool`をプロバイドし、次に`useExisting`を使用して`IConnectionPool`をそのエイリアスとして登録する。
+
+**実装例**:
+```typescript
+// ✅ 良い例: useExistingを使用して単一インスタンスを保証
+@Module({
+  providers: [
+    {
+      provide: ConnectionPoolConfig,
+      useFactory: (): ConnectionPoolConfig => {
+        return ConnectionPoolConfig.fromEnvironment();
+      },
+    },
+    ConnectionPoolFactory,
+    {
+      provide: DatabaseConnectionPool,
+      useFactory: (
+        config: ConnectionPoolConfig,
+        factory: ConnectionPoolFactory,
+      ): DatabaseConnectionPool => {
+        return factory.create(config);
+      },
+      inject: [ConnectionPoolConfig, ConnectionPoolFactory],
+    },
+    {
+      provide: 'IConnectionPool',
+      useExisting: DatabaseConnectionPool, // 既存のインスタンスを参照
+    },
+  ],
+  exports: ['IConnectionPool', ConnectionPoolConfig, DatabaseConnectionPool, ConnectionPoolFactory],
+})
+export class DatabaseModule {}
+```
+
+**理由**:
+- アプリケーション内で単一の接続プールインスタンスを保証
+- リソース管理の問題を回避
+- 予期せぬ動作を防止
+
+#### 24-3. インターフェースと具象クラスの抽象化の維持 🟡 High
+
+**問題**: `ConnectionPool`は`IConnection`インターフェースを介して接続を操作すべきですが、`updateLastUsedAt()`メソッドを呼び出すために具象クラス`Connection`にダウンキャストしています。これは抽象化の原則に違反しており、将来のメンテナンスを困難にします。
+
+**解決策**: `updateLastUsedAt()`メソッドを`IConnection`インターフェースに追加する。また、`lastUsedAt`プロパティの`readonly`指定を削除して、その可変性をインターフェースレベルで明確にする。
+
+**実装例**:
+```typescript
+// ✅ 良い例: インターフェースにメソッドを追加
+export interface IConnection {
+  readonly id: string;
+  readonly createdAt: Date;
+  lastUsedAt: Date; // readonlyを削除
+
+  isValid(): Promise<boolean>;
+  close(): Promise<void>;
+  updateLastUsedAt(): void; // インターフェースに追加
+}
+```
+
+**理由**:
+- 抽象化の原則に従う
+- 将来のメンテナンスが容易になる
+- インターフェースと実装の一貫性を保つ
+
+#### 24-4. 再帰呼び出しのループ化 🟡 High
+
+**問題**: 無効なアイドル接続が見つかった場合に`getConnection()`を再帰的に呼び出していますが、プール内の多数の接続が同時に無効になった場合、スタックオーバーフローを引き起こす危険性があります。
+
+**解決策**: この再帰呼び出しを`while`ループに置き換える。ループ内で有効なアイドル接続が見つかるまで試行し、見つからなければループを抜けて新しい接続を作成するか待機するロジックに移行する。
+
+**実装例**:
+```typescript
+// ✅ 良い例: whileループを使用
+async getConnection(): Promise<IConnection> {
+  // ... バリデーション ...
+
+  // アイドル接続を取得（有効な接続が見つかるまでループ）
+  while (true) {
+    const idleConnection = this.getIdleConnection();
+    if (!idleConnection) {
+      break; // アイドル接続が存在しない場合はループを抜ける
+    }
+
+    const isValid = await idleConnection.isValid();
+    if (isValid) {
+      this.removeFromIdle(idleConnection);
+      this.addToActive(idleConnection);
+      idleConnection.updateLastUsedAt();
+      return idleConnection;
+    } else {
+      // 無効な接続を破棄して次の接続を試す
+      await this.removeInvalidConnection(idleConnection);
+      // ループを継続して次のアイドル接続を確認
+    }
+  }
+
+  // アイドル接続が存在しない場合の処理...
+}
+```
+
+**理由**:
+- スタックオーバーフローのリスクを回避
+- より安全で堅牢な実装
+- パフォーマンスの向上
+
+#### 24-5. テストでの監視処理の検証 🟡 Medium
+
+**問題**: 監視プロセスのテストが、監視処理が実際に実行されたことを検証していません。`expect(pool).toBeDefined()`というアサーションは、テストの動作を保証するには不十分です。
+
+**解決策**: `jest.spyOn`を使用して`pool.cleanupIdleConnections`などのメソッドをスパイし、`jest.advanceTimersByTime`の後にこれらのメソッドが呼び出されたことを`expect(...).toHaveBeenCalled()`で検証する。
+
+**実装例**:
+```typescript
+// ✅ 良い例: スパイを使用して監視処理を検証
+it('正常系: 定期的に監視処理を実行する', async () => {
+  const cleanupIdleSpy = jest.spyOn(pool, 'cleanupIdleConnections' as any);
+  const cleanupExpiredSpy = jest.spyOn(pool, 'cleanupExpiredConnections' as any);
+  const ensureMinSpy = jest.spyOn(pool, 'ensureMinConnections' as any);
+
+  monitor.start();
+
+  // 監視間隔（config.monitorInterval）を進める
+  jest.advanceTimersByTime(config.monitorInterval);
+
+  // 非同期処理の完了を待つ
+  await Promise.resolve();
+  await Promise.resolve();
+
+  // 監視処理が実行されることを確認
+  expect(cleanupIdleSpy).toHaveBeenCalled();
+  expect(cleanupExpiredSpy).toHaveBeenCalled();
+  expect(ensureMinSpy).toHaveBeenCalled();
+});
+```
+
+**理由**:
+- テストの信頼性が大幅に向上
+- 監視処理が実際に実行されることを保証
+- テストの意図が明確になる
+
+#### 24-6. 設定値のハードコーディング回避 🟡 Medium
+
+**問題**: 監視間隔（`MONITOR_INTERVAL_MS`）が5秒にハードコードされています。この値を`ConnectionPoolConfig`の一部として設定可能にすることで、柔軟性が向上し、環境ごとに最適な値に調整できるようになります。
+
+**解決策**: 監視間隔を`ConnectionPoolConfig`の一部として設定可能にする。`ConnectionPoolConfig`に`monitorInterval`プロパティを追加し、環境変数`DB_POOL_MONITOR_INTERVAL`から読み込む。
+
+**実装例**:
+```typescript
+// ✅ 良い例: ConnectionPoolConfigから監視間隔を取得
+export class ConnectionPoolConfig {
+  public readonly monitorInterval: number;
+  
+  // ...
+  
+  public static fromEnvironment(): ConnectionPoolConfig {
+    const monitorInterval = parseInt(process.env.DB_POOL_MONITOR_INTERVAL || '5000', 10);
+    // ...
+  }
+}
+
+// ConnectionPoolMonitor
+start(): void {
+  const monitorInterval = this.config.monitorInterval; // 設定から取得
+  this.intervalId = setInterval(() => {
+    this.monitor().catch((error) => {
+      this.logger.error('Error in connection pool monitor', error);
+    });
+  }, monitorInterval);
+}
+```
+
+**理由**:
+- 環境ごとに最適な値に調整可能
+- 柔軟性の向上
+- 設定の一元管理
+
+#### 24-7. 空のメソッドの削除 🟡 Medium
+
+**問題**: `removeFromActive`メソッドは現在空であり、コメントで「何もしない」と説明されています。メソッド名がその動作を示唆していないため、これは非常に紛らわしいです。
+
+**解決策**: このメソッドは実際には状態を変更しないため、コードの可読性と保守性を向上させるために、このメソッドを削除し、`releaseConnection`からの呼び出しも削除する。接続がアクティブかどうかは`idleConnections`に含まれているかどうかで判断されているため、このメソッドがなくてもロジックは成立する。
+
+**理由**:
+- コードの可読性と保守性の向上
+- 紛らわしいメソッドの削除
+- ロジックの明確化
+
+#### 24-8. テストでのフェイクタイマーの使用 🟡 Medium
+
+**問題**: `updateLastUsedAt`のテストで`setTimeout`を使用していますが、これは実行環境によっては不安定になり、テストが失敗する（flaky test）原因となります。また、現在の実装では`done`コールバックが使われていないため、アサーションが実行される前にテストが終了してしまいます。
+
+**解決策**: `jest.useFakeTimers()`と`jest.advanceTimersByTime()`を使用して時間を正確に制御することで、より信頼性の高いテストに修正する。
+
+**実装例**:
+```typescript
+// ✅ 良い例: フェイクタイマーを使用
+describe('updateLastUsedAt', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('正常系: 最終使用日時を更新できる', () => {
+    const originalLastUsedAt = connection.lastUsedAt;
+
+    jest.advanceTimersByTime(10);
+
+    connection.updateLastUsedAt();
+    expect(connection.lastUsedAt.getTime()).toBeGreaterThan(originalLastUsedAt.getTime());
+  });
+});
+```
+
+**理由**:
+- テストの安定性向上（実行時間に依存しない）
+- テストの再現性向上（時間を制御できる）
+- テストの実行速度向上（実際の時間を待たない）
+
+**参照**: PR #51 - データベース接続プールのユニットテストとE2Eテスト実装（Geminiレビュー指摘）

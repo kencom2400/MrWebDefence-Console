@@ -154,9 +154,13 @@ export class DatabaseConnectionPool implements IConnectionPool, OnModuleInit, On
       throw new ConnectionError('Connection pool is destroyed');
     }
 
-    // アイドル接続を取得
-    const idleConnection = this.getIdleConnection();
-    if (idleConnection) {
+    // アイドル接続を取得（有効な接続が見つかるまでループ）
+    while (true) {
+      const idleConnection = this.getIdleConnection();
+      if (!idleConnection) {
+        break; // アイドル接続が存在しない場合はループを抜ける
+      }
+
       const isValid = await idleConnection.isValid();
       if (isValid) {
         this.removeFromIdle(idleConnection);
@@ -164,10 +168,9 @@ export class DatabaseConnectionPool implements IConnectionPool, OnModuleInit, On
         idleConnection.updateLastUsedAt();
         return idleConnection;
       } else {
-        // 無効な接続を破棄
+        // 無効な接続を破棄して次の接続を試す
         await this.removeInvalidConnection(idleConnection);
-        // 再帰的に接続を取得
-        return this.getConnection();
+        // ループを継続して次のアイドル接続を確認
       }
     }
 
@@ -220,12 +223,15 @@ export class DatabaseConnectionPool implements IConnectionPool, OnModuleInit, On
         return;
       }
 
-      this.removeFromActive(poolConnection);
       this.addToIdle(poolConnection);
       poolConnection.updateLastUsedAt();
+      // 待機中のリクエストを処理
+      this.processWaitingQueue();
     } else {
       // 無効な接続を破棄
       await this.removeInvalidConnection(poolConnection);
+      // 無効な接続を破棄した後も、待機中のリクエストを処理
+      this.processWaitingQueue();
     }
   }
 
@@ -349,15 +355,6 @@ export class DatabaseConnectionPool implements IConnectionPool, OnModuleInit, On
     if (!this.connections.includes(connection)) {
       this.connections.push(connection);
     }
-  }
-
-  /**
-   * アクティブ接続リストから接続を削除します
-   * @private
-   */
-  private removeFromActive(_connection: Connection): void {
-    // 接続はconnectionsから削除しない（アイドルに移動するだけ）
-    // 実際の削除はremoveInvalidConnectionで行う
   }
 
   /**

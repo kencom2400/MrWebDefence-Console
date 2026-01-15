@@ -27,6 +27,7 @@ describe('ConnectionPoolMonitor', () => {
       3600000, // maxLifetime
       3, // retryAttempts
       100, // retryDelay
+      5000, // monitorInterval
     );
 
     pool = new DatabaseConnectionPool(config);
@@ -94,13 +95,23 @@ describe('ConnectionPoolMonitor', () => {
     });
 
     it('正常系: 定期的に監視処理を実行する', async () => {
+      const cleanupIdleSpy = jest.spyOn(pool, 'cleanupIdleConnections' as any);
+      const cleanupExpiredSpy = jest.spyOn(pool, 'cleanupExpiredConnections' as any);
+      const ensureMinSpy = jest.spyOn(pool, 'ensureMinConnections' as any);
+
       monitor.start();
 
-      // 監視間隔（5秒）を進める
-      jest.advanceTimersByTime(5000);
+      // 監視間隔（config.monitorInterval）を進める
+      jest.advanceTimersByTime(config.monitorInterval);
 
-      // 監視処理が実行されることを確認（エラーが発生しない）
-      expect(pool).toBeDefined();
+      // 非同期処理の完了を待つ
+      await Promise.resolve();
+      await Promise.resolve();
+
+      // 監視処理が実行されることを確認
+      expect(cleanupIdleSpy).toHaveBeenCalled();
+      expect(cleanupExpiredSpy).toHaveBeenCalled();
+      expect(ensureMinSpy).toHaveBeenCalled();
     });
   });
 });

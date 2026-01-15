@@ -62,14 +62,21 @@ describe('Connection', () => {
   });
 
   describe('updateLastUsedAt', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
     it('正常系: 最終使用日時を更新できる', () => {
       const originalLastUsedAt = connection.lastUsedAt;
 
-      // 少し待ってから更新
-      setTimeout(() => {
-        connection.updateLastUsedAt();
-        expect(connection.lastUsedAt.getTime()).toBeGreaterThan(originalLastUsedAt.getTime());
-      }, 10);
+      jest.advanceTimersByTime(10);
+
+      connection.updateLastUsedAt();
+      expect(connection.lastUsedAt.getTime()).toBeGreaterThan(originalLastUsedAt.getTime());
     });
   });
 
