@@ -15,8 +15,8 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 source "${SCRIPT_DIR}/common.sh"
 
 # カラー出力用の定義（log_section用）
+# NCはcommon.shで既に定義されているため、ここでは定義しない
 readonly BLUE='\033[0;34m'
-readonly NC='\033[0m' # No Color
 
 log_section() {
     echo -e "\n${BLUE}=== $1 ===${NC}\n"
