@@ -131,10 +131,11 @@ jobs:
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping"
+          --health-cmd="mysqladmin ping -h localhost -u root -ptest-password"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=3
+          --health-retries=10
+          --health-start-period=30s
 
     steps:
       - name: Checkout code
@@ -183,14 +184,16 @@ jobs:
           DB_PASSWORD: test-password
         run: |
           echo "Waiting for MySQL to be ready..."
-          for i in {1..30}; do
+          for i in {1..60}; do
             if MYSQL_PWD="${DB_PASSWORD}" mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -e "SELECT 1;" > /dev/null 2>&1; then
               echo "MySQL is ready!"
-              break
+              exit 0
             fi
-            echo "Waiting for MySQL... ($i/30)"
+            echo "Waiting for MySQL... ($i/60)"
             sleep 2
           done
+          echo "MySQL did not become ready within 120 seconds"
+          exit 1
 
       - name: Run database migrations
         env:
