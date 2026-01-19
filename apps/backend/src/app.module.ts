@@ -11,6 +11,7 @@ import { CustomerModule } from './presentation/customer.module';
 import { UserModule } from './presentation/user.module';
 import { FqdnModule } from './presentation/fqdn.module';
 import { DatabaseModule } from './presentation/database.module';
+import { MigrationModule } from './presentation/migration.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { DatabaseModule } from './presentation/database.module';
       isGlobal: true, // アプリケーション全体でConfigModuleを利用可能にする
     }),
     DatabaseModule,
+    MigrationModule, // マイグレーションモジュールを追加
     AuthModule,
     CustomerModule,
     UserModule,

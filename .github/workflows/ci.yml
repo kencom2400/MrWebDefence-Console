@@ -122,6 +122,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: test-password
+          MYSQL_DATABASE: mrwebdefence_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -u root -ptest-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+          --health-start-period=30s
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -148,6 +163,60 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Install MySQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-mysql-client
+
+      - name: Install Flyway CLI
+        run: |
+          curl -L https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/10.10.0/flyway-commandline-10.10.0-linux-x64.tar.gz | tar xz
+          sudo mv flyway-10.10.0 /opt/flyway
+          echo "/opt/flyway" >> $GITHUB_PATH
+          export PATH="/opt/flyway:$PATH"
+          /opt/flyway/flyway --version
+
+      - name: Wait for MySQL to be ready
+        env:
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: test-password
+        run: |
+          echo "Waiting for MySQL to be ready..."
+          export MYSQL_PWD="${DB_PASSWORD}"
+          for i in {1..60}; do
+            if mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" --protocol=TCP -e "SELECT 1;" 2>&1 | head -5; then
+              if mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" --protocol=TCP -e "SELECT 1;" > /dev/null 2>&1; then
+                echo "MySQL is ready!"
+                exit 0
+              fi
+            fi
+            if [ $i -eq 1 ] || [ $((i % 10)) -eq 0 ]; then
+              echo "Attempt $i/60 - Testing connection..."
+              mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" --protocol=TCP -e "SELECT 1;" 2>&1 || true
+            else
+              echo "Waiting for MySQL... ($i/60)"
+            fi
+            sleep 2
+          done
+          echo "MySQL did not become ready within 120 seconds"
+          echo "Last connection attempt error:"
+          mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" --protocol=TCP -e "SELECT 1;" 2>&1 || true
+          exit 1
+
+      - name: Run database migrations
+        env:
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: test-password
+          DB_NAME: mrwebdefence_test
+        run: |
+          chmod +x scripts/database/migrate.sh
+          ./scripts/database/migrate.sh test
+          ./scripts/database/migrate.sh init --seed
+
       - name: Build Docker image
         run: docker-compose build backend || docker compose build backend
 
@@ -157,6 +226,11 @@ jobs:
           JWT_SECRET: test-jwt-secret-for-ci
           JWT_EXPIRES_IN: 1800
           BCRYPT_SALT_ROUNDS: 10
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: test-password
+          DB_NAME: mrwebdefence_test
         run: |
           chmod +x scripts/backend/test.sh
           ./scripts/backend/test.sh e2e
