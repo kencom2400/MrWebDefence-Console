@@ -31,6 +31,10 @@ check_mysql_connection() {
     local db_user="${3:-${DB_USER:-root}}"
     
     log_info "MySQL接続を確認中..."
+    # MYSQL_PWD環境変数を使用してパスワードを渡す
+    if [ -n "${DB_PASSWORD:-}" ]; then
+        export MYSQL_PWD="${DB_PASSWORD}"
+    fi
     if ! mysql -h"${db_host}" -P"${db_port}" -u"${db_user}" -e "SELECT 1;" > /dev/null 2>&1; then
         log_error "MySQLへの接続に失敗しました"
         return 1
@@ -63,6 +67,10 @@ check_utf8mb4_config() {
     local db_name="${4:-${DB_NAME:-mrwebdefence}}"
     
     log_info "utf8mb4文字コード設定を確認中..."
+    # MYSQL_PWD環境変数を使用してパスワードを渡す
+    if [ -n "${DB_PASSWORD:-}" ]; then
+        export MYSQL_PWD="${DB_PASSWORD}"
+    fi
     local charset
     local collation
     read -r charset collation <<< "$(mysql -h"${db_host}" -P"${db_port}" -u"${db_user}" "${db_name}" -N -e "SELECT @@character_set_database, @@collation_database;")"

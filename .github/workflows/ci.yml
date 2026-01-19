@@ -162,6 +162,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Install MySQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-mysql-client
+
       - name: Install Flyway CLI
         run: |
           curl -L https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/10.10.0/flyway-commandline-10.10.0-linux-x64.tar.gz | tar xz
@@ -169,6 +174,23 @@ jobs:
           echo "/opt/flyway" >> $GITHUB_PATH
           export PATH="/opt/flyway:$PATH"
           /opt/flyway/flyway --version
+
+      - name: Wait for MySQL to be ready
+        env:
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: test-password
+        run: |
+          echo "Waiting for MySQL to be ready..."
+          for i in {1..30}; do
+            if MYSQL_PWD="${DB_PASSWORD}" mysql -h"${DB_HOST}" -P"${DB_PORT}" -u"${DB_USER}" -e "SELECT 1;" > /dev/null 2>&1; then
+              echo "MySQL is ready!"
+              break
+            fi
+            echo "Waiting for MySQL... ($i/30)"
+            sleep 2
+          done
 
       - name: Run database migrations
         env:
