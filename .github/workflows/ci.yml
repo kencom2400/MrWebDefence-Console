@@ -167,7 +167,8 @@ jobs:
           curl -L https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/10.10.0/flyway-commandline-10.10.0-linux-x64.tar.gz | tar xz
           sudo mv flyway-10.10.0 /opt/flyway
           echo "/opt/flyway" >> $GITHUB_PATH
-          flyway -version
+          export PATH="/opt/flyway:$PATH"
+          /opt/flyway/flyway -version
 
       - name: Run database migrations
         env:
