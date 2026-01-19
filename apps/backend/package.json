@@ -17,7 +17,15 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
-    "test:e2e:watch": "jest --config ./test/jest-e2e.json --watch"
+    "test:e2e:watch": "jest --config ./test/jest-e2e.json --watch",
+    "migrate": "bash ../../scripts/database/migrate.sh migrate",
+    "migrate:init": "bash ../../scripts/database/migrate.sh init",
+    "migrate:info": "bash ../../scripts/database/migrate.sh info",
+    "migrate:clean": "bash ../../scripts/database/migrate.sh clean",
+    "migrate:validate": "bash ../../scripts/database/migrate.sh validate",
+    "migrate:baseline": "bash ../../scripts/database/migrate.sh baseline",
+    "migrate:test": "bash ../../scripts/database/migrate.sh test",
+    "db:init": "bash ../../scripts/database/migrate.sh init"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.0",

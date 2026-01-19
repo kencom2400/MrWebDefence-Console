@@ -122,6 +122,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: test-password
+          MYSQL_DATABASE: mrwebdefence_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -148,6 +162,25 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Install Flyway CLI
+        run: |
+          FLYWAY_VERSION=10.0.0
+          wget -qO- https://download.red-gate.com/maven/release/org/flywaydb/flyway-commandline/${FLYWAY_VERSION}/flyway-commandline-${FLYWAY_VERSION}-linux-x64.tar.gz | tar xvz -C /tmp
+          sudo ln -sf /tmp/flyway-${FLYWAY_VERSION}/flyway /usr/local/bin/flyway
+          flyway --version
+
+      - name: Run database migrations
+        working-directory: apps/backend
+        env:
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: test-password
+          DB_NAME: mrwebdefence_test
+        run: |
+          pnpm run migrate:test
+          pnpm run migrate
+
       - name: Build Docker image
         run: docker-compose build backend || docker compose build backend
 
@@ -157,6 +190,11 @@ jobs:
           JWT_SECRET: test-jwt-secret-for-ci
           JWT_EXPIRES_IN: 1800
           BCRYPT_SALT_ROUNDS: 10
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_USER: root
+          DB_PASSWORD: test-password
+          DB_NAME: mrwebdefence_test
         run: |
           chmod +x scripts/backend/test.sh
           ./scripts/backend/test.sh e2e
