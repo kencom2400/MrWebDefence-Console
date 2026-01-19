@@ -3347,6 +3347,119 @@ export interface IConnection {
 **理由**:
 - 抽象化の原則に従う
 - 将来のメンテナンスが容易になる
+
+### 25. スキーマ管理移設におけるセキュリティとコード重複の改善（PR #56）
+
+**学習元**: PR #56 - MWD-106 スキーマ管理の仕組みをMrWebDefence-Designから移設（Geminiレビュー指摘）
+
+#### 25-1. データベースパスワードのセキュリティ 🟠 High
+
+**問題**: `flyway.conf`で`DB_PASSWORD`が未設定の場合、空のパスワードでデータベースに接続しようとします。これは、特にデフォルトユーザーが`root`であるため、セキュリティ上のリスクとなる可能性があります。
+
+**解決策**: `DB_PASSWORD`が未設定の場合にFlywayがエラーを出すように、デフォルト値の指定を削除する。
+
+**実装例**:
+```properties
+# ❌ 悪い例: 空文字列をデフォルト値として設定
+flyway.password=${DB_PASSWORD:-}
+
+# ✅ 良い例: デフォルト値を設定せず、未設定の場合はエラーにする
+# セキュリティのため、DB_PASSWORDが未設定の場合はエラーになります
+flyway.password=${DB_PASSWORD}
+```
+
+**理由**:
+- セキュリティリスクの回避
+- 設定ミスの早期発見
+- 本番環境での誤設定を防止
+
+#### 25-2. 設定値の多重管理の回避 🟡 Medium
+
+**問題**: データベース接続情報のデフォルト値が、`migration.service.ts`、`flyway.conf`、シェルスクリプト内の複数箇所で定義されており、設定の管理が分散している。
+
+**解決策**: デフォルト値の指定をシェルスクリプト側に一元化し、NestJS側では環境変数をそのまま渡す。デフォルト値はシェルスクリプト側でハンドリングされるため、NestJS側では不要。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: デフォルト値をNestJS側で指定
+const env = {
+  ...process.env,
+  DB_HOST: this.configService.get<string>('DB_HOST', 'localhost'),
+  DB_PORT: this.configService.get<string>('DB_PORT', '3306'),
+  DB_USER: this.configService.get<string>('DB_USER', 'root'),
+  DB_PASSWORD: this.configService.get<string>('DB_PASSWORD', ''),
+  DB_NAME: this.configService.get<string>('DB_NAME', 'mrwebdefence'),
+};
+
+// ✅ 良い例: デフォルト値はシェルスクリプト側でハンドリング
+const env = {
+  ...process.env,
+  DB_HOST: this.configService.get<string>('DB_HOST'),
+  DB_PORT: this.configService.get<string>('DB_PORT'),
+  DB_USER: this.configService.get<string>('DB_USER'),
+  DB_PASSWORD: this.configService.get<string>('DB_PASSWORD'),
+  DB_NAME: this.configService.get<string>('DB_NAME'),
+};
+```
+
+**理由**:
+- 設定の一元管理
+- メンテナンス性の向上
+- 設定の不整合を防止
+
+#### 25-3. スクリプト間のコード重複の排除 🟡 Medium
+
+**問題**: `migrate.sh`と`init-database.sh`で、`check_mysql_connection`、`create_database`、`check_utf8mb4_config`などの関数が完全に重複している。また、`test-migration.sh`と`migrate.sh test`の機能も重複している。
+
+**解決策**: 
+1. **共通関数の切り出し**: 共通の関数を`scripts/database/common.sh`に切り出し、各スクリプトから`source`コマンドで読み込む。
+2. **テストスクリプトの統合**: `test-migration.sh`は`migrate.sh test`のラッパーにするか、削除して`migrate.sh test`を直接使用する。
+
+**実装例**:
+```bash
+# ✅ 良い例: 共通関数を別ファイルに切り出し
+# scripts/database/common.sh
+log_info() { ... }
+check_mysql_connection() { ... }
+create_database() { ... }
+check_utf8mb4_config() { ... }
+
+# scripts/database/migrate.sh
+source "${SCRIPT_DIR}/common.sh"
+# 共通関数を使用
+
+# scripts/database/init-database.sh
+source "${SCRIPT_DIR}/common.sh"
+# 共通関数を使用
+
+# scripts/database/test-migration.sh（ラッパー）
+exec "${SCRIPT_DIR}/migrate.sh" test "$@"
+```
+
+**理由**:
+- コードの重複排除
+- メンテナンス性の向上
+- バグ修正の影響範囲の縮小
+
+#### 25-4. ドキュメントの整合性確保 🟡 Medium
+
+**問題**: ドキュメント内で、統合スクリプト`migrate.sh`の使用方法が正しく記載されていない（例: `migrate`コマンドを明示していない）。
+
+**解決策**: すべてのドキュメントで、統合スクリプト`migrate.sh`を使用した実行方法を明示的に記載する。
+
+**実装例**:
+```markdown
+# ❌ 悪い例: コマンドが不明確
+./scripts/database/migrate.sh
+
+# ✅ 良い例: コマンドを明示
+./scripts/database/migrate.sh migrate
+```
+
+**理由**:
+- ドキュメントの正確性
+- ユーザーの混乱を防止
+- 一貫性の確保
 - インターフェースと実装の一貫性を保つ
 
 #### 24-4. 再帰呼び出しのループ化 🟡 High

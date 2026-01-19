@@ -38,11 +38,11 @@ touch apps/backend/src/db/seed/R__insert_initial_roles.sql
 初期データ投入を含むマイグレーションを実行する場合:
 
 ```bash
-# データベース初期化時に初期データ投入を含める
-./scripts/database/init-database.sh -h localhost -u root -p password -d mrwebdefence --seed
+# データベース初期化時に初期データ投入を含める（統合スクリプトを使用）
+./scripts/database/migrate.sh init -h localhost -u root -p password -d mrwebdefence --seed
 
 # または、環境変数を使用
-INCLUDE_SEED=true ./scripts/database/init-database.sh
+INCLUDE_SEED=true ./scripts/database/migrate.sh init
 ```
 
 詳細は [スキーマ管理ドキュメント](../../../../docs/development/schema-management.md) を参照してください。

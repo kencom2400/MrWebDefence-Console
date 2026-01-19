@@ -33,8 +33,8 @@ touch apps/backend/src/db/migration/V3__add_customer_id_to_users.sql
 # マイグレーション実行
 pnpm backend:migrate
 
-# または、スクリプトを直接実行
-./scripts/database/migrate.sh
+# または、統合スクリプトを直接実行
+./scripts/database/migrate.sh migrate
 ```
 
 詳細は [スキーマ管理ドキュメント](../../../../docs/development/schema-management.md) を参照してください。

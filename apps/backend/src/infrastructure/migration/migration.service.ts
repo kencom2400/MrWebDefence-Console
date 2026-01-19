@@ -64,14 +64,14 @@ export class MigrationService implements OnModuleInit {
     const projectRoot = join(__dirname, '../../../../..');
     const migrateScript = join(projectRoot, 'scripts/database/migrate.sh');
 
-    // 環境変数を設定
+    // 環境変数を設定（デフォルト値はシェルスクリプト側でハンドリング）
     const env = {
       ...process.env,
-      DB_HOST: this.configService.get<string>('DB_HOST', 'localhost'),
-      DB_PORT: this.configService.get<string>('DB_PORT', '3306'),
-      DB_USER: this.configService.get<string>('DB_USER', 'root'),
-      DB_PASSWORD: this.configService.get<string>('DB_PASSWORD', ''),
-      DB_NAME: this.configService.get<string>('DB_NAME', 'mrwebdefence'),
+      DB_HOST: this.configService.get<string>('DB_HOST'),
+      DB_PORT: this.configService.get<string>('DB_PORT'),
+      DB_USER: this.configService.get<string>('DB_USER'),
+      DB_PASSWORD: this.configService.get<string>('DB_PASSWORD'),
+      DB_NAME: this.configService.get<string>('DB_NAME'),
     };
 
     try {
@@ -104,13 +104,14 @@ export class MigrationService implements OnModuleInit {
     const projectRoot = join(__dirname, '../../../../..');
     const migrateScript = join(projectRoot, 'scripts/database/migrate.sh');
 
+    // 環境変数を設定（デフォルト値はシェルスクリプト側でハンドリング）
     const env = {
       ...process.env,
-      DB_HOST: this.configService.get<string>('DB_HOST', 'localhost'),
-      DB_PORT: this.configService.get<string>('DB_PORT', '3306'),
-      DB_USER: this.configService.get<string>('DB_USER', 'root'),
-      DB_PASSWORD: this.configService.get<string>('DB_PASSWORD', ''),
-      DB_NAME: this.configService.get<string>('DB_NAME', 'mrwebdefence'),
+      DB_HOST: this.configService.get<string>('DB_HOST'),
+      DB_PORT: this.configService.get<string>('DB_PORT'),
+      DB_USER: this.configService.get<string>('DB_USER'),
+      DB_PASSWORD: this.configService.get<string>('DB_PASSWORD'),
+      DB_NAME: this.configService.get<string>('DB_NAME'),
     };
 
     try {
