@@ -3971,3 +3971,180 @@ describe('fromEnvironment', () => {
 - 保守性の向上（環境変数のセットアップとクリーンアップが明確になる）
 
 **参照**: PR #51 - データベース接続プールのユニットテストとE2Eテスト実装（Geminiレビュー指摘 第3弾）
+
+### 26. データベーススキーマ設計とFlyway設定のベストプラクティス（PR #57）
+
+**学習元**: PR #57 - MWD-107 DBスキーマの作成及び、DB Dockerの実装（Geminiレビュー指摘）
+
+#### 26-1. Flyway設定ファイルのパス指定 🟠 Critical
+
+**問題**: `flyway.conf`の`flyway.locations`パスが実行ディレクトリからの相対パスと一致していない場合、マイグレーションファイルが見つからず失敗する。
+
+**解決策**: Flyway設定ファイルのパスは、実際に`flyway`コマンドを実行するディレクトリからの相対パスで指定する。`migrate.sh`スクリプトがプロジェクトルートから実行される場合は、プロジェクトルートからの相対パスを指定する。
+
+**実装例**:
+```properties
+# ❌ 悪い例: 実行ディレクトリと一致しないパス
+# migrate.shはプロジェクトルートから実行されるが、apps/backendからの相対パスを指定
+flyway.locations=filesystem:src/db/migration,filesystem:src/db/seed
+
+# ✅ 良い例: 実行ディレクトリ（プロジェクトルート）からの相対パス
+flyway.locations=filesystem:apps/backend/src/db/migration,filesystem:apps/backend/src/db/seed
+```
+
+**理由**:
+- マイグレーションファイルの確実な検出
+- 実行環境との一貫性の保証
+- エラーの早期発見
+
+#### 26-2. UNIQUE制約とインデックスの冗長性 🟡 Medium
+
+**問題**: `UNIQUE`制約が設定されているカラムに対して、追加で`INDEX`を作成すると冗長となり、書き込みパフォーマンスにオーバーヘッドをもたらし、ディスクスペースを余分に消費する。
+
+**解決策**: `UNIQUE`制約が設定されているカラムには、追加の`INDEX`を作成しない。`UNIQUE`制約は自動的にインデックスを作成するため、個別のインデックスは不要。
+
+**実装例**:
+```sql
+-- ❌ 悪い例: UNIQUE制約があるのに追加でインデックスを作成
+CREATE TABLE users (
+  email VARCHAR(255) NOT NULL UNIQUE,
+  INDEX idx_users_email (email)  -- 冗長
+);
+
+-- ✅ 良い例: UNIQUE制約のみで十分
+CREATE TABLE users (
+  email VARCHAR(255) NOT NULL UNIQUE
+);
+```
+
+**理由**:
+- 書き込みパフォーマンスの向上（インデックス更新のオーバーヘッド削減）
+- ディスクスペースの節約
+- スキーマの簡素化
+
+#### 26-3. 複合UNIQUE KEYと個別インデックスの冗長性 🟡 Medium
+
+**問題**: 複合`UNIQUE KEY`の先頭カラムに対して、個別の`INDEX`を作成すると冗長となる。MySQLは複合インデックスの先頭カラムに対するクエリでも、その複合インデックスを効率的に利用できる。
+
+**解決策**: 複合`UNIQUE KEY`の先頭カラムに対する個別の`INDEX`は削除する。複合インデックスでカバーできる。
+
+**実装例**:
+```sql
+-- ❌ 悪い例: 複合UNIQUE KEYの先頭カラムに個別インデックスを作成
+CREATE TABLE ip_allowlists (
+  user_id CHAR(36) NOT NULL,
+  ip_address VARCHAR(45) NOT NULL,
+  UNIQUE KEY uk_ip_allowlists_user_ip (user_id, ip_address),
+  INDEX idx_ip_allowlists_user_id (user_id)  -- 冗長
+);
+
+-- ✅ 良い例: 複合UNIQUE KEYのみで十分
+CREATE TABLE ip_allowlists (
+  user_id CHAR(36) NOT NULL,
+  ip_address VARCHAR(45) NOT NULL,
+  UNIQUE KEY uk_ip_allowlists_user_ip (user_id, ip_address)
+);
+```
+
+**理由**:
+- 書き込みパフォーマンスの向上（インデックス更新のオーバーヘッド削減）
+- ディスクスペースの節約
+- スキーマの簡素化
+
+#### 26-4. Docker Composeヘルスチェックでのパスワード管理 🟠 High
+
+**問題**: `docker-compose.yml`のヘルスチェックでパスワードを直接指定すると、`docker inspect`コマンドなどでパスワードが平文で表示されてしまう可能性があり、セキュリティ上のリスクとなる。
+
+**解決策**: `CMD-SHELL`を使用し、コンテナ内の環境変数を参照するように変更する。これにより、パスワードが外部から見えなくなる。
+
+**実装例**:
+```yaml
+# ❌ 悪い例: パスワードを直接指定
+healthcheck:
+  test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-password}"]
+
+# ✅ 良い例: 環境変数を参照
+healthcheck:
+  test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
+```
+
+**理由**:
+- セキュリティリスクの回避（パスワードの平文表示を防止）
+- 環境変数の一元管理
+
+#### 26-5. シードデータのID形式の一貫性 🟡 Medium
+
+**問題**: スキーマ定義でUUID形式（`CHAR(36)`）を想定しているのに、シードデータでUUID形式ではない文字列を使用すると、スキーマ定義との一貫性が失われ、予期せぬ挙動を引き起こす可能性がある。
+
+**解決策**: シードデータのIDもスキーマ定義と一致する形式（UUID形式）を使用する。
+
+**実装例**:
+```sql
+-- ❌ 悪い例: UUID形式ではないIDを使用
+INSERT IGNORE INTO users (id, email, ...)
+VALUES
+  ('test-user-id', 'user@example.com', ...);
+
+-- ✅ 良い例: UUID形式のIDを使用
+INSERT IGNORE INTO users (id, email, ...)
+VALUES
+  ('a1b2c3d4-e5f6-7890-1234-567890abcdef', 'user@example.com', ...);
+```
+
+**理由**:
+- スキーマ定義との一貫性維持
+- 予期せぬ挙動の防止
+- テストデータの信頼性向上
+
+#### 26-6. jqクエリの簡潔化 🟡 Medium
+
+**問題**: 複数の条件で同じデータを検索する際、複数の`if`文と`jq`コマンドの呼び出しが繰り返されると、コードが冗長になる。
+
+**解決策**: 複数の条件を1つの`jq`クエリにまとめることで、コードをより簡潔で保守しやすくする。
+
+**実装例**:
+```bash
+# ❌ 悪い例: 複数のif文とjq呼び出し
+TRANSITION_ID=$(echo "$TRANSITIONS_DATA" | jq -r --arg name "$MAPPED_STATUS_NAME" '.transitions[] | select(.name == $name) | .id')
+if [ -z "$TRANSITION_ID" ] || [ "$TRANSITION_ID" = "null" ]; then
+  TRANSITION_ID=$(echo "$TRANSITIONS_DATA" | jq -r --arg name "$MAPPED_STATUS_NAME" '.transitions[] | select(.to.name == $name) | .id')
+fi
+# ... さらに繰り返し
+
+# ✅ 良い例: 1つのjqクエリにまとめる
+TRANSITION_ID=$(echo "$TRANSITIONS_DATA" | jq -r \
+  --arg mapped_name "$MAPPED_STATUS_NAME" \
+  --arg original_name "$TRANSITION_NAME" \
+  '(.transitions[] | select(.name == $mapped_name or .to.name == $mapped_name or .name == $original_name or .to.name == $original_name) | .id)[0]')
+```
+
+**理由**:
+- コードの可読性向上
+- 保守性の向上
+- パフォーマンスの向上（jqの呼び出し回数削減）
+
+#### 26-7. データ整合性のためのUNIQUE制約 🟠 High
+
+**問題**: ビジネス要件として一意であるべきカラム（例: `customers.email`）に`UNIQUE`制約がない場合、同じ値を持つ複数のレコードを登録できてしまい、データの重複や不整合を引き起こす可能性がある。
+
+**解決策**: ビジネス要件として一意であるべきカラムには`UNIQUE`制約を追加する。
+
+**実装例**:
+```sql
+-- ❌ 悪い例: UNIQUE制約がない
+CREATE TABLE customers (
+  email VARCHAR(255) NOT NULL COMMENT 'メールアドレス'
+);
+
+-- ✅ 良い例: UNIQUE制約を追加
+CREATE TABLE customers (
+  email VARCHAR(255) NOT NULL UNIQUE COMMENT 'メールアドレス'
+);
+```
+
+**理由**:
+- データの整合性を保証
+- データの重複を防止
+- アプリケーションレベルでのチェックを不要にする
+
+**参照**: PR #57 - MWD-107 DBスキーマの作成及び、DB Dockerの実装（Geminiレビュー指摘）

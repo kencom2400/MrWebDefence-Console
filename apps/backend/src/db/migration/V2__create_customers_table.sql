@@ -4,7 +4,7 @@
 CREATE TABLE customers (
   id CHAR(36) PRIMARY KEY COMMENT '顧客ID (UUID)',
   name VARCHAR(255) NOT NULL COMMENT '顧客名',
-  email VARCHAR(255) NOT NULL COMMENT 'メールアドレス',
+  email VARCHAR(255) NOT NULL UNIQUE COMMENT 'メールアドレス',
   phone VARCHAR(50) NULL COMMENT '電話番号',
   company VARCHAR(255) NULL COMMENT '会社名',
   address VARCHAR(500) NULL COMMENT '住所',

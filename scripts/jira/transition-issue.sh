@@ -43,24 +43,11 @@ fi
 # ステータス名をマッピング（英語名 → 日本語名）
 MAPPED_STATUS_NAME=$(map_status_name "$TRANSITION_NAME" "$ISSUE_KEY")
 
-# 遷移IDを取得（複数の方法で検索）
-# 1. マッピング後の名前で遷移名（.name）を検索
-TRANSITION_ID=$(echo "$TRANSITIONS_DATA" | jq -r --arg name "$MAPPED_STATUS_NAME" '.transitions[] | select(.name == $name) | .id')
-
-# 2. マッピング後の名前で遷移先ステータス名（.to.name）を検索
-if [ -z "$TRANSITION_ID" ] || [ "$TRANSITION_ID" = "null" ]; then
-  TRANSITION_ID=$(echo "$TRANSITIONS_DATA" | jq -r --arg name "$MAPPED_STATUS_NAME" '.transitions[] | select(.to.name == $name) | .id')
-fi
-
-# 3. 元の名前で遷移名（.name）を検索
-if [ -z "$TRANSITION_ID" ] || [ "$TRANSITION_ID" = "null" ]; then
-  TRANSITION_ID=$(echo "$TRANSITIONS_DATA" | jq -r --arg name "$TRANSITION_NAME" '.transitions[] | select(.name == $name) | .id')
-fi
-
-# 4. 元の名前で遷移先ステータス名（.to.name）を検索
-if [ -z "$TRANSITION_ID" ] || [ "$TRANSITION_ID" = "null" ]; then
-  TRANSITION_ID=$(echo "$TRANSITIONS_DATA" | jq -r --arg name "$TRANSITION_NAME" '.transitions[] | select(.to.name == $name) | .id')
-fi
+# 遷移IDを取得（複数の方法で検索を1つのjqクエリにまとめる）
+TRANSITION_ID=$(echo "$TRANSITIONS_DATA" | jq -r \
+  --arg mapped_name "$MAPPED_STATUS_NAME" \
+  --arg original_name "$TRANSITION_NAME" \
+  '(.transitions[] | select(.name == $mapped_name or .to.name == $mapped_name or .name == $original_name or .to.name == $original_name) | .id)[0]')
 
 if [ -z "$TRANSITION_ID" ] || [ "$TRANSITION_ID" = "null" ]; then
   echo "❌ エラー: 遷移名 '$TRANSITION_NAME' が見つかりませんでした" >&2

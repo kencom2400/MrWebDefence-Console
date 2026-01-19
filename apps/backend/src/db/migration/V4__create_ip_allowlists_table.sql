@@ -9,6 +9,5 @@ CREATE TABLE ip_allowlists (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '作成日時',
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新日時',
   UNIQUE KEY uk_ip_allowlists_user_ip (user_id, ip_address),
-  CONSTRAINT fk_ip_allowlists_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  INDEX idx_ip_allowlists_user_id (user_id)
+  CONSTRAINT fk_ip_allowlists_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='IP AllowListテーブル';
