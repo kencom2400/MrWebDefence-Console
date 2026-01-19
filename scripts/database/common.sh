@@ -56,7 +56,7 @@ create_database() {
     local db_name="${4:-${DB_NAME:-mrwebdefence}}"
     
     log_info "データベース '${db_name}' を作成中..."
-    mysql -h"${db_host}" -P"${db_port}" -u"${db_user}" <<EOF
+    mysql -h"${db_host}" -P"${db_port}" -u"${db_user}" --protocol=TCP <<EOF
 CREATE DATABASE IF NOT EXISTS \`${db_name}\`
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
