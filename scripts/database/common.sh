@@ -35,8 +35,13 @@ check_mysql_connection() {
     if [ -n "${DB_PASSWORD:-}" ]; then
         export MYSQL_PWD="${DB_PASSWORD}"
     fi
-    if ! mysql -h"${db_host}" -P"${db_port}" -u"${db_user}" -e "SELECT 1;" > /dev/null 2>&1; then
+    # エラーメッセージを一時的に保存
+    local error_output
+    error_output=$(mysql -h"${db_host}" -P"${db_port}" -u"${db_user}" --protocol=TCP -e "SELECT 1;" 2>&1)
+    local exit_code=$?
+    if [ $exit_code -ne 0 ]; then
         log_error "MySQLへの接続に失敗しました"
+        log_error "エラー詳細: ${error_output}"
         return 1
     fi
     log_info "MySQL接続確認完了"
@@ -73,7 +78,7 @@ check_utf8mb4_config() {
     fi
     local charset
     local collation
-    read -r charset collation <<< "$(mysql -h"${db_host}" -P"${db_port}" -u"${db_user}" "${db_name}" -N -e "SELECT @@character_set_database, @@collation_database;")"
+    read -r charset collation <<< "$(mysql -h"${db_host}" -P"${db_port}" -u"${db_user}" "${db_name}" --protocol=TCP -N -e "SELECT @@character_set_database, @@collation_database;")"
     
     if [ "${charset}" != "utf8mb4" ]; then
         log_error "データベースの文字セットがutf8mb4ではありません: ${charset}"
