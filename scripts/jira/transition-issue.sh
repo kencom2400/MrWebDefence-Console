@@ -43,19 +43,30 @@ fi
 # ステータス名をマッピング（英語名 → 日本語名）
 MAPPED_STATUS_NAME=$(map_status_name "$TRANSITION_NAME" "$ISSUE_KEY")
 
-# 遷移IDを取得（マッピング後の名前で検索）
+# 遷移IDを取得（複数の方法で検索）
+# 1. マッピング後の名前で遷移名（.name）を検索
 TRANSITION_ID=$(echo "$TRANSITIONS_DATA" | jq -r --arg name "$MAPPED_STATUS_NAME" '.transitions[] | select(.name == $name) | .id')
 
-# マッピング後の名前で見つからない場合、元の名前で再試行
+# 2. マッピング後の名前で遷移先ステータス名（.to.name）を検索
+if [ -z "$TRANSITION_ID" ] || [ "$TRANSITION_ID" = "null" ]; then
+  TRANSITION_ID=$(echo "$TRANSITIONS_DATA" | jq -r --arg name "$MAPPED_STATUS_NAME" '.transitions[] | select(.to.name == $name) | .id')
+fi
+
+# 3. 元の名前で遷移名（.name）を検索
 if [ -z "$TRANSITION_ID" ] || [ "$TRANSITION_ID" = "null" ]; then
   TRANSITION_ID=$(echo "$TRANSITIONS_DATA" | jq -r --arg name "$TRANSITION_NAME" '.transitions[] | select(.name == $name) | .id')
+fi
+
+# 4. 元の名前で遷移先ステータス名（.to.name）を検索
+if [ -z "$TRANSITION_ID" ] || [ "$TRANSITION_ID" = "null" ]; then
+  TRANSITION_ID=$(echo "$TRANSITIONS_DATA" | jq -r --arg name "$TRANSITION_NAME" '.transitions[] | select(.to.name == $name) | .id')
 fi
 
 if [ -z "$TRANSITION_ID" ] || [ "$TRANSITION_ID" = "null" ]; then
   echo "❌ エラー: 遷移名 '$TRANSITION_NAME' が見つかりませんでした" >&2
   echo "" >&2
-  echo "利用可能な遷移名:" >&2
-  echo "$TRANSITIONS_DATA" | jq -r '.transitions[] | "  - \(.name)"' >&2
+  echo "利用可能な遷移:" >&2
+  echo "$TRANSITIONS_DATA" | jq -r '.transitions[] | "  - 遷移名: \(.name) → 遷移先: \(.to.name)"' >&2
   exit 1
 fi
 

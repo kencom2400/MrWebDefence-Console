@@ -1,0 +1,14 @@
+-- Create users table
+-- ユーザーテーブルを作成します
+
+CREATE TABLE users (
+  id CHAR(36) PRIMARY KEY COMMENT 'ユーザーID (UUID)',
+  email VARCHAR(255) NOT NULL UNIQUE COMMENT 'メールアドレス',
+  hashed_password VARCHAR(255) NOT NULL COMMENT 'ハッシュ化されたパスワード',
+  role ENUM('SERVICE_ADMIN', 'SERVICE_MEMBER') NOT NULL DEFAULT 'SERVICE_MEMBER' COMMENT 'ユーザーロール',
+  mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'MFA有効フラグ',
+  mfa_secret VARCHAR(255) NULL COMMENT 'MFAシークレット',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '作成日時',
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新日時',
+  INDEX idx_users_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='ユーザーテーブル';
