@@ -164,13 +164,12 @@ jobs:
 
       - name: Install Flyway CLI
         run: |
-          FLYWAY_VERSION=10.0.0
-          wget -qO- https://download.red-gate.com/maven/release/org/flywaydb/flyway-commandline/${FLYWAY_VERSION}/flyway-commandline-${FLYWAY_VERSION}-linux-x64.tar.gz | tar xvz -C /tmp
-          sudo ln -sf /tmp/flyway-${FLYWAY_VERSION}/flyway /usr/local/bin/flyway
-          flyway --version
+          curl -L https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/10.10.0/flyway-commandline-10.10.0-linux-x64.tar.gz | tar xz
+          sudo mv flyway-10.10.0 /opt/flyway
+          echo "/opt/flyway" >> $GITHUB_PATH
+          flyway -version
 
       - name: Run database migrations
-        working-directory: apps/backend
         env:
           DB_HOST: localhost
           DB_PORT: 3306
@@ -178,8 +177,9 @@ jobs:
           DB_PASSWORD: test-password
           DB_NAME: mrwebdefence_test
         run: |
-          pnpm run migrate:test
-          pnpm run migrate
+          chmod +x scripts/database/migrate.sh
+          ./scripts/database/migrate.sh test
+          ./scripts/database/migrate.sh init --seed
 
       - name: Build Docker image
         run: docker-compose build backend || docker compose build backend
