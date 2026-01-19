@@ -68,7 +68,7 @@ cp ../MrWebDefence-Design/db-resources/seed/* apps/backend/src/db/seed/
 
 ```bash
 # 動作確認用テストスクリプトを実行
-./scripts/database/test-migration.sh
+./scripts/database/migrate.sh test
 ```
 
 このスクリプトは以下を確認します:

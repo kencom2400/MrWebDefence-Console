@@ -79,3 +79,13 @@ check_utf8mb4_config() {
     log_info "utf8mb4文字コード設定確認完了 (charset: ${charset}, collation: ${collation})"
     return 0
 }
+
+# パスワードの必須チェック
+check_password() {
+    if [ -z "${DB_PASSWORD}" ]; then
+        log_error "データベースパスワードが設定されていません。"
+        log_info "環境変数 DB_PASSWORD を設定してください。"
+        exit 1
+    fi
+    export FLYWAY_PASSWORD="${DB_PASSWORD}"
+}

@@ -3495,6 +3495,144 @@ gh pr comment <PR番号> --body "## レビュー指摘事項への対応完了
 - コミュニケーションの改善
 
 **参照**: PR #56 - MWD-106 スキーマ管理の仕組みをMrWebDefence-Designから移設（Geminiレビュー指摘対応）
+
+#### 25-6. スクリプトの完全な統合とラッパー化 🟠 High
+
+**問題**: `init-database.sh`が`migrate.sh init`とほぼ完全に重複しており、コードの重複が将来のバグ修正や仕様変更の際に修正漏れや不整合を引き起こす原因となる。
+
+**解決策**: `init-database.sh`を`migrate.sh init`のラッパーにリファクタリングする。これにより、ロジックが一元管理され、メンテナンス性が大幅に向上する。
+
+**実装例**:
+```bash
+# ✅ 良い例: ラッパースクリプト
+#!/bin/bash
+# データベース初期化スクリプト（ラッパー）
+# このスクリプトは、統合スクリプト `migrate.sh init` のラッパーです。
+
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec "${SCRIPT_DIR}/migrate.sh" init "$@"
+```
+
+**理由**:
+- コードの重複排除
+- メンテナンス性の向上
+- バグ修正の影響範囲の縮小
+
+#### 25-7. 関数定義の重複排除 🟠 High
+
+**問題**: `log_section`関数が2回連続で定義されている。これはコピー＆ペーストによる誤り。
+
+**解決策**: 重複している定義の一方を削除する。
+
+**理由**:
+- コードの正確性
+- 混乱の防止
+
+#### 25-8. セキュリティ: すべてのコマンドでのパスワードチェック 🟠 High
+
+**問題**: `init`コマンドでは`DB_PASSWORD`が設定されているかチェックしているが、`migrate`、`info`、`clean`、`validate`、`baseline`といった他のデータベース接続を伴うコマンドではチェックが漏れている。これにより、`DB_PASSWORD`が空文字列の場合に、空のパスワードでデータベースへの接続が試みられる可能性がある。
+
+**解決策**: すべてのコマンドで一貫したパスワードチェックを行うために、パスワードをチェックする共通関数を導入し、各コマンドの先頭で呼び出す。
+
+**実装例**:
+```bash
+# ✅ 良い例: 共通関数でパスワードチェック
+check_password() {
+    if [ -z "${DB_PASSWORD}" ]; then
+        log_error "データベースパスワードが設定されていません。"
+        log_info "環境変数 DB_PASSWORD を設定してください。"
+        exit 1
+    fi
+    export FLYWAY_PASSWORD="${DB_PASSWORD}"
+}
+
+# すべてのコマンドで使用
+cmd_migrate() {
+    log_section "マイグレーション実行"
+    check_password  # 最初にチェック
+    check_flyway_cli
+    check_flyway_config
+    # ...
+}
+```
+
+**理由**:
+- セキュリティリスクの回避
+- 一貫性の確保
+- 設定ミスの早期発見
+
+#### 25-9. 設定値の一元管理 🟡 Medium
+
+**問題**: データベース接続情報のデフォルト値が、`flyway.conf`とシェルスクリプトの複数箇所で定義されている。
+
+**解決策**: 設定の単一責任の原則に従い、デフォルト値の管理をシェルスクリプト側に一元化する。`flyway.conf`からはデフォルト値を削除し、環境変数を直接参照するように変更する。
+
+**実装例**:
+```properties
+# ❌ 悪い例: flyway.confでデフォルト値を設定
+flyway.url=jdbc:mysql://${DB_HOST:-localhost}:${DB_PORT:-3306}/${DB_NAME:-mrwebdefence}
+flyway.user=${DB_USER:-root}
+
+# ✅ 良い例: デフォルト値はシェルスクリプト側で管理
+flyway.url=jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}
+flyway.user=${DB_USER}
+```
+
+**理由**:
+- 設定の一元管理
+- メンテナンス性の向上
+- 設定の不整合を防止
+
+#### 25-10. コード重複の排除（TypeScript） 🟡 Medium
+
+**問題**: `runMigrations`メソッドと`getMigrationInfo`メソッド内で、`execAsync`に渡す`env`オブジェクトを作成するロジックが重複している。
+
+**解決策**: このロジックをプライベートヘルパーメソッドとして切り出す。
+
+**実装例**:
+```typescript
+// ✅ 良い例: 共通メソッドで環境変数オブジェクトを取得
+private getDbEnv(): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    DB_HOST: this.configService.get<string>('DB_HOST'),
+    DB_PORT: this.configService.get<string>('DB_PORT'),
+    DB_USER: this.configService.get<string>('DB_USER'),
+    DB_PASSWORD: this.configService.get<string>('DB_PASSWORD'),
+    DB_NAME: this.configService.get<string>('DB_NAME'),
+  };
+}
+
+// 使用
+async runMigrations(): Promise<void> {
+  const env = this.getDbEnv();
+  // ...
+}
+
+async getMigrationInfo(): Promise<string> {
+  const env = this.getDbEnv();
+  // ...
+}
+```
+
+**理由**:
+- コードの重複排除
+- メンテナンス性の向上
+- 一貫性の確保
+
+#### 25-11. ドキュメントの統一 🟡 Medium
+
+**問題**: ドキュメントで`test-migration.sh`を使用するよう案内されているが、このスクリプトは`migrate.sh test`のラッパーであり、スクリプト自体も`migrate.sh test`の使用を推奨している。
+
+**解決策**: ドキュメントの記述を統一し、統合スクリプトである`./scripts/database/migrate.sh test`を直接使用するように案内を修正する。
+
+**理由**:
+- ドキュメントの一貫性
+- ユーザーの混乱を防止
+- 推奨方法の明確化
+
+**参照**: PR #56 - MWD-106 スキーマ管理の仕組みをMrWebDefence-Designから移設（Geminiレビュー指摘対応 第2弾）
 - インターフェースと実装の一貫性を保つ
 
 #### 24-4. 再帰呼び出しのループ化 🟡 High

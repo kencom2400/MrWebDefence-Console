@@ -58,14 +58,10 @@ export class MigrationService implements OnModuleInit {
   }
 
   /**
-   * Flywayマイグレーションを実行
+   * データベース接続情報を含む環境変数オブジェクトを取得
    */
-  async runMigrations(): Promise<void> {
-    const projectRoot = join(__dirname, '../../../../..');
-    const migrateScript = join(projectRoot, 'scripts/database/migrate.sh');
-
-    // 環境変数を設定（デフォルト値はシェルスクリプト側でハンドリング）
-    const env = {
+  private getDbEnv(): NodeJS.ProcessEnv {
+    return {
       ...process.env,
       DB_HOST: this.configService.get<string>('DB_HOST'),
       DB_PORT: this.configService.get<string>('DB_PORT'),
@@ -73,6 +69,16 @@ export class MigrationService implements OnModuleInit {
       DB_PASSWORD: this.configService.get<string>('DB_PASSWORD'),
       DB_NAME: this.configService.get<string>('DB_NAME'),
     };
+  }
+
+  /**
+   * Flywayマイグレーションを実行
+   */
+  async runMigrations(): Promise<void> {
+    const projectRoot = join(__dirname, '../../../../..');
+    const migrateScript = join(projectRoot, 'scripts/database/migrate.sh');
+
+    const env = this.getDbEnv();
 
     try {
       const { stdout, stderr } = await execAsync(
@@ -104,15 +110,7 @@ export class MigrationService implements OnModuleInit {
     const projectRoot = join(__dirname, '../../../../..');
     const migrateScript = join(projectRoot, 'scripts/database/migrate.sh');
 
-    // 環境変数を設定（デフォルト値はシェルスクリプト側でハンドリング）
-    const env = {
-      ...process.env,
-      DB_HOST: this.configService.get<string>('DB_HOST'),
-      DB_PORT: this.configService.get<string>('DB_PORT'),
-      DB_USER: this.configService.get<string>('DB_USER'),
-      DB_PASSWORD: this.configService.get<string>('DB_PASSWORD'),
-      DB_NAME: this.configService.get<string>('DB_NAME'),
-    };
+    const env = this.getDbEnv();
 
     try {
       const { stdout, stderr } = await execAsync(

@@ -107,10 +107,10 @@ cp ../MrWebDefence-Design/db-resources/seed/* apps/backend/src/db/seed/
 
 ```bash
 # 設定の確認
-./scripts/database/test-migration.sh
+./scripts/database/migrate.sh test
 
 # データベース初期化（初回のみ）
-pnpm backend:db:init
+pnpm backend:migrate:init
 
 # マイグレーション実行
 pnpm backend:migrate

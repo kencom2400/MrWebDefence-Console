@@ -22,10 +22,6 @@ log_section() {
     echo -e "\n${BLUE}=== $1 ===${NC}\n"
 }
 
-log_section() {
-    echo -e "\n${BLUE}=== $1 ===${NC}\n"
-}
-
 # プロジェクトルートに移動
 cd "${PROJECT_ROOT}"
 
@@ -236,16 +232,12 @@ parse_init_args() {
 cmd_migrate() {
     log_section "マイグレーション実行"
     
+    check_password
     check_flyway_cli
     check_flyway_config
     
     log_info "Flywayマイグレーションを実行します..."
     log_info "設定ファイル: ${FLYWAY_CONF}"
-    
-    # 環境変数からパスワードを取得
-    if [ -n "${DB_PASSWORD}" ]; then
-        export FLYWAY_PASSWORD="${DB_PASSWORD}"
-    fi
     
     # Flywayの実行
     flyway -configFiles="${FLYWAY_CONF}" migrate
@@ -257,12 +249,9 @@ cmd_migrate() {
 cmd_info() {
     log_section "マイグレーション情報"
     
+    check_password
     check_flyway_cli
     check_flyway_config
-    
-    if [ -n "${DB_PASSWORD}" ]; then
-        export FLYWAY_PASSWORD="${DB_PASSWORD}"
-    fi
     
     flyway -configFiles="${FLYWAY_CONF}" info
 }
@@ -280,12 +269,9 @@ cmd_clean() {
         exit 0
     fi
     
+    check_password
     check_flyway_cli
     check_flyway_config
-    
-    if [ -n "${DB_PASSWORD}" ]; then
-        export FLYWAY_PASSWORD="${DB_PASSWORD}"
-    fi
     
     flyway -configFiles="${FLYWAY_CONF}" clean
     
@@ -296,12 +282,9 @@ cmd_clean() {
 cmd_validate() {
     log_section "マイグレーションファイル検証"
     
+    check_password
     check_flyway_cli
     check_flyway_config
-    
-    if [ -n "${DB_PASSWORD}" ]; then
-        export FLYWAY_PASSWORD="${DB_PASSWORD}"
-    fi
     
     flyway -configFiles="${FLYWAY_CONF}" validate
     
@@ -312,12 +295,9 @@ cmd_validate() {
 cmd_baseline() {
     log_section "ベースライン作成"
     
+    check_password
     check_flyway_cli
     check_flyway_config
-    
-    if [ -n "${DB_PASSWORD}" ]; then
-        export FLYWAY_PASSWORD="${DB_PASSWORD}"
-    fi
     
     flyway -configFiles="${FLYWAY_CONF}" baseline
     
