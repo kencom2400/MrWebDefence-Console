@@ -168,7 +168,7 @@ jobs:
           sudo mv flyway-10.10.0 /opt/flyway
           echo "/opt/flyway" >> $GITHUB_PATH
           export PATH="/opt/flyway:$PATH"
-          /opt/flyway/flyway -version
+          /opt/flyway/flyway --version
 
       - name: Run database migrations
         env:
