@@ -54,7 +54,7 @@ wait_for_mysql() {
       return 0
     fi
     retry=$((retry + 1))
-    sleep 2
+  sleep 2
   done
 
   echo "❌ エラー: MySQLが起動しませんでした (${db_host}:${db_port})"

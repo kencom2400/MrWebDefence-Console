@@ -58,7 +58,7 @@ export class Connection implements IConnection {
       this._isClosed = true;
     } catch (error) {
       // エラーが発生しても閉じたことにする
-      this._isClosed = true;
+    this._isClosed = true;
       throw error;
     }
   }

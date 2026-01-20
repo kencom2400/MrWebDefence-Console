@@ -5,6 +5,8 @@
  * ドメイン層に位置し、外部に依存しない
  */
 
+import { IpAllowList } from '../entities/ip-allowlist.entity';
+
 export interface IIpAllowListRepository {
   /**
    * ユーザーIDに紐づくIP AllowListの数を取得する
@@ -12,4 +14,10 @@ export interface IIpAllowListRepository {
    * @returns IP AllowList数
    */
   countByUserId(userId: string): Promise<number>;
+
+  /**
+   * すべてのIP AllowListを取得する
+   * @returns IP AllowListエンティティの配列
+   */
+  findAll(): Promise<IpAllowList[]>;
 }

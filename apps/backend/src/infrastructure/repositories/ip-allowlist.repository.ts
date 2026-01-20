@@ -8,6 +8,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { IIpAllowListRepository } from '../../domain/repositories/ip-allowlist.repository.interface';
+import { IpAllowList } from '../../domain/entities/ip-allowlist.entity';
 
 @Injectable()
 export class IpAllowListRepository implements IIpAllowListRepository {
@@ -20,5 +21,15 @@ export class IpAllowListRepository implements IIpAllowListRepository {
   public async countByUserId(_userId: string): Promise<number> {
     // スタブ実装: 初期実装では常に0を返す
     return 0;
+  }
+
+  /**
+   * すべてのIP AllowListを取得する（スタブ実装）
+   * 初期実装では空配列を返す
+   * @returns IP AllowListエンティティの配列（常に空配列）
+   */
+  public async findAll(): Promise<IpAllowList[]> {
+    // スタブ実装: 初期実装では空配列を返す
+    return [];
   }
 }
