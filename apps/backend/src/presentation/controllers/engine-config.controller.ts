@@ -6,6 +6,7 @@
  */
 
 import { Controller, Get, HttpCode, HttpStatus, Inject } from '@nestjs/common';
+import { ApiBearerAuth, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { GetEngineConfigUseCase } from '../../application/use-cases/get-engine-config.use-case';
 import { EngineConfigResponseDto } from '../dto/engine-config-response.dto';
 import { FqdnConfig } from '../dto/fqdn-config.dto';
@@ -15,7 +16,9 @@ import { EngineConfig } from '../../domain/value-objects/engine-config.value-obj
 import { Fqdn } from '../../domain/entities/fqdn.entity';
 import { IpAllowList } from '../../domain/entities/ip-allowlist.entity';
 import { Customer } from '../../domain/entities/customer.entity';
+import { Public } from '../decorators/public.decorator';
 
+@ApiTags('Engine')
 @Controller('engine/v1')
 export class EngineConfigController {
   constructor(
@@ -27,8 +30,16 @@ export class EngineConfigController {
    * WAFエンジン向け設定情報を取得する
    * GET /engine/v1/config
    */
+  @Public() // APIキー認証またはJWT認証のどちらでもアクセス可能
   @Get('config')
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'WAFエンジン向け設定情報を取得',
+    type: EngineConfigResponseDto,
+  })
+  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '認証失敗' })
   public async getConfig(): Promise<EngineConfigResponseDto> {
     const engineConfig = await this.getEngineConfigUseCase.execute();
     return this.toResponseDto(engineConfig);
