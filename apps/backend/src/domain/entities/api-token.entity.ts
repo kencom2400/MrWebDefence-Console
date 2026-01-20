@@ -215,7 +215,9 @@ export class ApiToken {
     }
     // bcryptハッシュは60文字
     if (tokenHash.length < 60) {
-      throw new Error('Token hash appears to be invalid (bcrypt hash should be at least 60 characters)');
+      throw new Error(
+        'Token hash appears to be invalid (bcrypt hash should be at least 60 characters)',
+      );
     }
   }
 

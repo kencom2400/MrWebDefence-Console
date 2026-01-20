@@ -4,7 +4,6 @@
 
 import { ApiToken } from './api-token.entity';
 import { randomUUID } from 'crypto';
-import * as bcrypt from 'bcrypt';
 
 describe('ApiToken', () => {
   const validId = randomUUID();
@@ -65,72 +64,160 @@ describe('ApiToken', () => {
 
     it('IDが空の場合エラーを投げる', () => {
       expect(() =>
-        ApiToken.create('', validName, validDescription, validTokenHash, validTokenPrefix, null, validCreatedBy),
+        ApiToken.create(
+          '',
+          validName,
+          validDescription,
+          validTokenHash,
+          validTokenPrefix,
+          null,
+          validCreatedBy,
+        ),
       ).toThrow('API token ID cannot be empty');
     });
 
     it('名前が空の場合エラーを投げる', () => {
       expect(() =>
-        ApiToken.create(validId, '', validDescription, validTokenHash, validTokenPrefix, null, validCreatedBy),
+        ApiToken.create(
+          validId,
+          '',
+          validDescription,
+          validTokenHash,
+          validTokenPrefix,
+          null,
+          validCreatedBy,
+        ),
       ).toThrow('API token name cannot be empty');
     });
 
     it('名前が255文字を超える場合エラーを投げる', () => {
       const longName = 'a'.repeat(256);
       expect(() =>
-        ApiToken.create(validId, longName, validDescription, validTokenHash, validTokenPrefix, null, validCreatedBy),
+        ApiToken.create(
+          validId,
+          longName,
+          validDescription,
+          validTokenHash,
+          validTokenPrefix,
+          null,
+          validCreatedBy,
+        ),
       ).toThrow('API token name must be 255 characters or less');
     });
 
     it('説明が1000文字を超える場合エラーを投げる', () => {
       const longDescription = 'a'.repeat(1001);
       expect(() =>
-        ApiToken.create(validId, validName, longDescription, validTokenHash, validTokenPrefix, null, validCreatedBy),
+        ApiToken.create(
+          validId,
+          validName,
+          longDescription,
+          validTokenHash,
+          validTokenPrefix,
+          null,
+          validCreatedBy,
+        ),
       ).toThrow('Description must be 1000 characters or less');
     });
 
     it('トークンハッシュが空の場合エラーを投げる', () => {
       expect(() =>
-        ApiToken.create(validId, validName, validDescription, '', validTokenPrefix, null, validCreatedBy),
+        ApiToken.create(
+          validId,
+          validName,
+          validDescription,
+          '',
+          validTokenPrefix,
+          null,
+          validCreatedBy,
+        ),
       ).toThrow('Token hash cannot be empty');
     });
 
     it('トークンハッシュが60文字未満の場合エラーを投げる', () => {
       const shortHash = 'a'.repeat(59);
       expect(() =>
-        ApiToken.create(validId, validName, validDescription, shortHash, validTokenPrefix, null, validCreatedBy),
+        ApiToken.create(
+          validId,
+          validName,
+          validDescription,
+          shortHash,
+          validTokenPrefix,
+          null,
+          validCreatedBy,
+        ),
       ).toThrow('Token hash appears to be invalid');
     });
 
     it('トークンプレフィックスが空の場合エラーを投げる', () => {
       expect(() =>
-        ApiToken.create(validId, validName, validDescription, validTokenHash, '', null, validCreatedBy),
+        ApiToken.create(
+          validId,
+          validName,
+          validDescription,
+          validTokenHash,
+          '',
+          null,
+          validCreatedBy,
+        ),
       ).toThrow('Token prefix cannot be empty');
     });
 
     it('トークンプレフィックスが10文字を超える場合エラーを投げる', () => {
       const longPrefix = 'a'.repeat(11);
       expect(() =>
-        ApiToken.create(validId, validName, validDescription, validTokenHash, longPrefix, null, validCreatedBy),
+        ApiToken.create(
+          validId,
+          validName,
+          validDescription,
+          validTokenHash,
+          longPrefix,
+          null,
+          validCreatedBy,
+        ),
       ).toThrow('Token prefix must be 10 characters or less');
     });
 
     it('トークンプレフィックスに無効な文字が含まれる場合エラーを投げる', () => {
       expect(() =>
-        ApiToken.create(validId, validName, validDescription, validTokenHash, 'waf-', null, validCreatedBy),
+        ApiToken.create(
+          validId,
+          validName,
+          validDescription,
+          validTokenHash,
+          'waf-',
+          null,
+          validCreatedBy,
+        ),
       ).toThrow('Token prefix must contain only alphanumeric characters and underscores');
     });
 
     it('有効期限が過去の場合エラーを投げる', () => {
       const pastDate = new Date(Date.now() - 86400000); // 1日前
       expect(() =>
-        ApiToken.create(validId, validName, validDescription, validTokenHash, validTokenPrefix, pastDate, validCreatedBy),
+        ApiToken.create(
+          validId,
+          validName,
+          validDescription,
+          validTokenHash,
+          validTokenPrefix,
+          pastDate,
+          validCreatedBy,
+        ),
       ).toThrow('Expires at must be in the future');
     });
 
     it('作成者IDが空の場合エラーを投げる', () => {
       expect(() =>
-        ApiToken.create(validId, validName, validDescription, validTokenHash, validTokenPrefix, null, ''),
+        ApiToken.create(
+          validId,
+          validName,
+          validDescription,
+          validTokenHash,
+          validTokenPrefix,
+          null,
+          '',
+        ),
       ).toThrow('Created by cannot be empty');
     });
   });
@@ -138,7 +225,6 @@ describe('ApiToken', () => {
   describe('reconstruct', () => {
     it('既存のAPIトークンを再構築できる', () => {
       const createdAt = new Date('2026-01-01T00:00:00.000Z');
-      const updatedAt = new Date('2026-01-02T00:00:00.000Z');
       const revokedAt = new Date('2026-01-03T00:00:00.000Z');
 
       const token = ApiToken.reconstruct(

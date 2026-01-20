@@ -11,6 +11,7 @@ export class ApiTokenResponseDto {
   description: string | null;
   token?: string; // 生成時のみ含まれる
   tokenPreview: string;
+  tokenPrefix: string;
   expiresAt: Date | null;
   revokedAt: Date | null;
   createdAt: Date;

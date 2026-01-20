@@ -68,9 +68,7 @@ export class ApiTokenController {
     }
 
     // expiresAtをDateオブジェクトに変換（nullの場合はnullのまま）
-    const expiresAt = createApiTokenDto.expiresAt
-      ? new Date(createApiTokenDto.expiresAt)
-      : null;
+    const expiresAt = createApiTokenDto.expiresAt ? new Date(createApiTokenDto.expiresAt) : null;
 
     const result = await this.createApiTokenUseCase.execute({
       name: createApiTokenDto.name,
@@ -139,6 +137,7 @@ export class ApiTokenController {
       description: result.description,
       token: result.token, // 生成時のみ含まれる
       tokenPreview: result.tokenPreview,
+      tokenPrefix: result.tokenPrefix,
       expiresAt: result.expiresAt,
       revokedAt: null,
       createdAt: result.createdAt,
@@ -171,6 +170,7 @@ export class ApiTokenController {
       description: token.description,
       // tokenフィールドは生成時のみ含まれるため、ここでは含めない
       tokenPreview,
+      tokenPrefix: token.tokenPrefix,
       expiresAt: token.expiresAt,
       revokedAt: token.revokedAt,
       createdAt: token.createdAt,

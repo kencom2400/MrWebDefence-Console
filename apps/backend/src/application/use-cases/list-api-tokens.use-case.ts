@@ -6,7 +6,6 @@
 
 import { Injectable, Inject } from '@nestjs/common';
 import { IApiTokenRepository } from '../../domain/repositories/api-token.repository.interface';
-import { ApiToken } from '../../domain/entities/api-token.entity';
 
 export interface ApiTokenListItem {
   id: string;

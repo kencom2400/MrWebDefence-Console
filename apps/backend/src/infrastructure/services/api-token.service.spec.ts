@@ -94,7 +94,9 @@ describe('ApiTokenService', () => {
     });
 
     it('異常系: プレフィックスがないフルトークンから抽出しようとするとエラーを投げる', () => {
-      expect(() => apiTokenService.extractPrefix('notoken')).toThrow('Invalid token format: prefix not found');
+      expect(() => apiTokenService.extractPrefix('notoken')).toThrow(
+        'Invalid token format: prefix not found',
+      );
     });
   });
 
@@ -111,7 +113,9 @@ describe('ApiTokenService', () => {
     });
 
     it('異常系: 空のプレフィックスでシークレットを抽出しようとするとエラーを投げる', () => {
-      expect(() => apiTokenService.extractSecret('waf_abc123', '')).toThrow('Prefix cannot be empty');
+      expect(() => apiTokenService.extractSecret('waf_abc123', '')).toThrow(
+        'Prefix cannot be empty',
+      );
     });
 
     it('異常系: プレフィックスが一致しないフルトークンから抽出しようとするとエラーを投げる', () => {
