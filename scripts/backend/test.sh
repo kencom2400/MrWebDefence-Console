@@ -92,24 +92,24 @@ run_test_in_docker() {
   # Redisの起動待機（簡易的なウェイト）
   sleep 2
   
-  # MySQLの起動待機
+  # MySQLの起動待機（ホスト側から接続するためlocalhostを使用）
   local db_password="${DB_PASSWORD:-password}"
   wait_for_mysql "localhost" "${db_port}" "root" "${db_password}"
   
-  # マイグレーション実行
+  # マイグレーション実行（ホスト側から接続するためlocalhostを使用）
   run_migration "localhost" "${db_port}" "root" "${db_password}" "${db_name}"
   
   echo "🏃 テストを実行中..."
   # --no-deps: backendの依存サービス（redis-dev, mysql-dev）を起動しない
   # --rm: 実行後にコンテナを削除
-  # -e REDIS_HOST: 接続先のRedisホストを指定
-  # -e DB_HOST: 接続先のMySQLホストを指定
+  # -e REDIS_HOST: 接続先のRedisホストを指定（Dockerコンテナ内からはサービス名を使用）
+  # -e DB_HOST: 接続先のMySQLホストを指定（Dockerコンテナ内からはサービス名を使用）
   # CI環境変数があればそれを使用、なければデフォルト値を使用
   $DOCKER_COMPOSE run --rm --no-deps \
     -e REDIS_HOST="${redis_service}" \
     -e REDIS_PORT=6379 \
-    -e DB_HOST="localhost" \
-    -e DB_PORT="${db_port}" \
+    -e DB_HOST="${mysql_service}" \
+    -e DB_PORT=3306 \
     -e DB_USER="root" \
     -e DB_PASSWORD="${db_password}" \
     -e DB_NAME="${db_name}" \
