@@ -4378,3 +4378,51 @@ interface EngineConfigResponseDto {
 - 設計書の品質向上
 
 **参照**: PR #60 - MWD-100 WAFエンジン向け設定配信API実装設計書作成（Geminiレビュー指摘）
+
+#### Domain LayerのValue ObjectはDTOに依存しない 🔴 High
+
+**問題**: Domain LayerのValue ObjectがPresentation Layerで定義されているDTOをプロパティとして含んでいると、Onion Architectureの原則（内側のレイヤーは外側のレイヤーに依存してはならない）に違反する。
+
+**解決策**:
+1. **Domain LayerはDomainエンティティを保持**: Value ObjectはDomain Layerのエンティティ（`Fqdn`, `IpAllowList`, `Customer`など）を直接保持する。
+2. **DTOへの変換はPresentation Layerで実施**: DomainオブジェクトからDTOへの変換はPresentation Layer（Controller）で実施する。
+3. **依存関係の明確化**: クラス図でDomain LayerがDTOに依存していないことを明確にする。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: Domain LayerのValue ObjectがDTOに依存
+class EngineConfig {
+  fqdns: FqdnConfig[]; // DTO（Presentation Layer）に依存
+  ipAllowLists: IpAllowListConfig[]; // DTO（Presentation Layer）に依存
+  customers: CustomerConfig[]; // DTO（Presentation Layer）に依存
+}
+
+// ✅ 良い例: Domain LayerのValue ObjectはDomainエンティティを保持
+class EngineConfig {
+  fqdns: Fqdn[]; // Domainエンティティ
+  ipAllowLists: IpAllowList[]; // Domainエンティティ
+  customers: Customer[]; // Domainエンティティ
+  lastUpdated: Date; // Domain Layerの型
+}
+
+// Presentation LayerでDTOに変換
+class EngineConfigController {
+  toResponseDto(engineConfig: EngineConfig): EngineConfigResponseDto {
+    return {
+      fqdns: engineConfig.fqdns.map(fqdn => ({
+        id: fqdn.id,
+        fqdn: fqdn.fqdn,
+        status: fqdn.status.value
+      })),
+      // ...
+    };
+  }
+}
+```
+
+**理由**:
+- Onion Architectureの原則に従う（内側のレイヤーは外側のレイヤーに依存しない）
+- Domain Layerの独立性が保たれる
+- 責務の分離が明確になる
+
+**参照**: PR #60 - MWD-100 WAFエンジン向け設定配信API実装設計書作成（Geminiレビュー指摘 - 第2回）

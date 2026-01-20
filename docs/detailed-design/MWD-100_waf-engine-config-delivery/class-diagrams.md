@@ -45,26 +45,26 @@ classDiagram
     %% Domain Layer
     class EngineConfig {
         <<ValueObject>>
-        +FqdnConfig[] fqdns
-        +IpAllowListConfig[] ipAllowLists
-        +CustomerConfig[] customers
+        +Fqdn[] fqdns
+        +IpAllowList[] ipAllowLists
+        +Customer[] customers
         +Date lastUpdated
         <<static>> +create(fqdns: Fqdn[], ipAllowLists: IpAllowList[], customers: Customer[]): EngineConfig
     }
     
     class IFqdnRepository {
         <<interface>>
-        +findAllActive(): Promise~Fqdn[]~
+        +findAllActive(): Promise<Fqdn[]>
     }
     
     class IIpAllowListRepository {
         <<interface>>
-        +findAll(): Promise~IpAllowList[]~
+        +findAll(): Promise<IpAllowList[]>
     }
     
     class ICustomerRepository {
         <<interface>>
-        +findAllActive(): Promise~Customer[]~
+        +findAllActive(): Promise<Customer[]>
     }
     
     class Fqdn {
@@ -89,15 +89,15 @@ classDiagram
     
     %% Infrastructure Layer
     class FqdnRepository {
-        +findAllActive(): Promise~Fqdn[]~
+        +findAllActive(): Promise<Fqdn[]>
     }
     
     class IpAllowListRepository {
-        +findAll(): Promise~IpAllowList[]~
+        +findAll(): Promise<IpAllowList[]>
     }
     
     class CustomerRepository {
-        +findAllActive(): Promise~Customer[]~
+        +findAllActive(): Promise<Customer[]>
     }
     
     %% Relationships
@@ -149,10 +149,12 @@ WAFエンジン向け設定配信APIのHTTPエンドポイントを提供する�
 #### EngineConfig Value Object
 WAFエンジンに配信する設定情報を表す値オブジェクト。
 
-- `fqdns`: 有効なFQDN設定のリスト
-- `ipAllowLists`: IP AllowList設定のリスト
-- `customers`: 有効な顧客設定のリスト
-- `lastUpdated`: 最終更新日時
+- `fqdns`: 有効なFQDNエンティティのリスト（Domain Layer）
+- `ipAllowLists`: IP AllowListエンティティのリスト（Domain Layer）
+- `customers`: 有効な顧客エンティティのリスト（Domain Layer）
+- `lastUpdated`: 最終更新日時（Date型、Domain Layer）
+
+**注意**: `EngineConfig`はDomain LayerのValue Objectであるため、Domainエンティティ（`Fqdn`, `IpAllowList`, `Customer`）を直接保持します。DTOへの変換はPresentation Layerで実施します。
 
 #### Repository Interfaces
 - **IFqdnRepository**: FQDNリポジトリのインターフェース（既存）
