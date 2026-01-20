@@ -25,6 +25,11 @@ describe('ConnectionPoolFactory', () => {
         3, // retryAttempts
         1000, // retryDelay
         5000, // monitorInterval
+        'localhost', // dbHost
+        3306, // dbPort
+        'root', // dbUser
+        'password', // dbPassword
+        'testdb', // dbName
       );
 
       const factory = new ConnectionPoolFactory();
@@ -46,6 +51,7 @@ describe('ConnectionPoolFactory', () => {
         DB_POOL_MAX_LIFETIME: '7200000',
         DB_POOL_RETRY_ATTEMPTS: '5',
         DB_POOL_RETRY_DELAY: '2000',
+        DB_PASSWORD: 'test-password', // DB_PASSWORDは必須
       };
 
       const factory = new ConnectionPoolFactory();
@@ -66,6 +72,8 @@ describe('ConnectionPoolFactory', () => {
       delete process.env.DB_POOL_MAX_LIFETIME;
       delete process.env.DB_POOL_RETRY_ATTEMPTS;
       delete process.env.DB_POOL_RETRY_DELAY;
+      // DB_PASSWORDは必須のため設定
+      process.env.DB_PASSWORD = 'test-password';
 
       const factory = new ConnectionPoolFactory();
       const config = ConnectionPoolConfig.fromEnvironment();

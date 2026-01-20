@@ -27,6 +27,11 @@ describe('DatabaseConnectionPool', () => {
       3, // retryAttempts
       100, // retryDelay (100ms)
       5000, // monitorInterval (5秒)
+      'localhost', // dbHost
+      3306, // dbPort
+      'root', // dbUser
+      'password', // dbPassword
+      'testdb', // dbName
     );
 
     pool = new DatabaseConnectionPool(config);

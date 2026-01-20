@@ -28,6 +28,11 @@ describe('ConnectionPoolMonitor', () => {
       3, // retryAttempts
       100, // retryDelay
       5000, // monitorInterval
+      'localhost', // dbHost
+      3306, // dbPort
+      'root', // dbUser
+      'password', // dbPassword
+      'testdb', // dbName
     );
 
     pool = new DatabaseConnectionPool(config);
