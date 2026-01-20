@@ -91,14 +91,15 @@ describe('GetEngineConfigUseCase', () => {
       // Assert
       expect(result).toBeInstanceOf(EngineConfig);
       expect(result.fqdns).toHaveLength(2);
-      expect(result.fqdns[0].id).toBe('fqdn-1');
-      expect(result.fqdns[1].id).toBe('fqdn-2');
+      expect(result.fqdns.map((f) => f.id)).toEqual(expect.arrayContaining(['fqdn-1', 'fqdn-2']));
       expect(result.ipAllowLists).toHaveLength(2);
-      expect(result.ipAllowLists[0].id).toBe('ip-allowlist-1');
-      expect(result.ipAllowLists[1].id).toBe('ip-allowlist-2');
+      expect(result.ipAllowLists.map((i) => i.id)).toEqual(
+        expect.arrayContaining(['ip-allowlist-1', 'ip-allowlist-2']),
+      );
       expect(result.customers).toHaveLength(2);
-      expect(result.customers[0].id).toBe('customer-1');
-      expect(result.customers[1].id).toBe('customer-2');
+      expect(result.customers.map((c) => c.id)).toEqual(
+        expect.arrayContaining(['customer-1', 'customer-2']),
+      );
       expect(result.lastUpdated).toBeInstanceOf(Date);
 
       expect(mockFqdnRepository.findAll).toHaveBeenCalledWith({

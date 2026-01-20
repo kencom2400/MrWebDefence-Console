@@ -71,27 +71,29 @@ export class EngineConfig {
       return false;
     }
 
-    // FQDNの等価性チェック（順序不問）
-    const thisFqdnIds = this.fqdns.map((f) => f.id).sort();
-    const otherFqdnIds = other.fqdns.map((f) => f.id).sort();
-    if (JSON.stringify(thisFqdnIds) !== JSON.stringify(otherFqdnIds)) {
+    // 各配列のIDを比較（順序不問）
+    if (!this.compareIds(this.fqdns.map((f) => f.id), other.fqdns.map((f) => f.id))) {
       return false;
     }
-
-    // IP AllowListの等価性チェック（順序不問）
-    const thisIpAllowListIds = this.ipAllowLists.map((i) => i.id).sort();
-    const otherIpAllowListIds = other.ipAllowLists.map((i) => i.id).sort();
-    if (JSON.stringify(thisIpAllowListIds) !== JSON.stringify(otherIpAllowListIds)) {
+    if (!this.compareIds(this.ipAllowLists.map((i) => i.id), other.ipAllowLists.map((i) => i.id))) {
       return false;
     }
-
-    // Customerの等価性チェック（順序不問）
-    const thisCustomerIds = this.customers.map((c) => c.id).sort();
-    const otherCustomerIds = other.customers.map((c) => c.id).sort();
-    if (JSON.stringify(thisCustomerIds) !== JSON.stringify(otherCustomerIds)) {
+    if (!this.compareIds(this.customers.map((c) => c.id), other.customers.map((c) => c.id))) {
       return false;
     }
 
     return this.lastUpdated.getTime() === other.lastUpdated.getTime();
+  }
+
+  /**
+   * ID配列の等価性を比較する（順序不問）
+   * @param ids1 比較対象のID配列1
+   * @param ids2 比較対象のID配列2
+   * @returns 等しい場合true
+   */
+  private compareIds(ids1: string[], ids2: string[]): boolean {
+    const sortedIds1 = [...ids1].sort();
+    const sortedIds2 = [...ids2].sort();
+    return JSON.stringify(sortedIds1) === JSON.stringify(sortedIds2);
   }
 }

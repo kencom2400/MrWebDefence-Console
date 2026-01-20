@@ -121,6 +121,37 @@ describe('EngineConfig', () => {
       jest.useRealTimers();
     });
 
+    it('正常系: 順序が異なっていても等価と判定される', () => {
+      // Arrange
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2024-01-15T10:30:00Z'));
+
+      const fqdn1 = Fqdn.create('fqdn-1', 'example.com');
+      const fqdn2 = Fqdn.create('fqdn-2', 'test.example.com');
+      const fqdns1 = [fqdn1, fqdn2];
+      const fqdns2 = [fqdn2, fqdn1]; // 順序を入れ替え
+
+      const ipAllowList1 = IpAllowList.create('ip-allowlist-1', 'user-1', '192.168.1.1');
+      const ipAllowList2 = IpAllowList.create('ip-allowlist-2', 'user-1', '192.168.1.0/24');
+      const ipAllowLists1 = [ipAllowList1, ipAllowList2];
+      const ipAllowLists2 = [ipAllowList2, ipAllowList1]; // 順序を入れ替え
+
+      const customer1 = Customer.create('customer-1', 'Customer A', 'customer-a@example.com');
+      const customer2 = Customer.create('customer-2', 'Customer B', 'customer-b@example.com');
+      const customers1 = [customer1, customer2];
+      const customers2 = [customer2, customer1]; // 順序を入れ替え
+
+      // 同じ時刻で作成（fake timersを使用）
+      const engineConfig1 = EngineConfig.create(fqdns1, ipAllowLists1, customers1);
+      const engineConfig2 = EngineConfig.create(fqdns2, ipAllowLists2, customers2);
+
+      // Act & Assert
+      expect(engineConfig1.equals(engineConfig2)).toBe(true);
+
+      // クリーンアップ
+      jest.useRealTimers();
+    });
+
     it('正常系: 異なるFQDN数のEngineConfigは等しくないと判定される', () => {
       // Arrange
       const fqdn1 = Fqdn.create('fqdn-1', 'example.com');

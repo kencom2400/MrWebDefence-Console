@@ -104,8 +104,10 @@ export class IpAllowList {
    * @param ipAddress IPアドレス
    * @throws Error バリデーション失敗時
    * @note 現時点では基本的な形式チェックのみ実施。
+   *       この正規表現では、`999.999.999.999`のような不正なIPv4アドレスや、
+   *       `2001:db8::1`のような一般的な形式の圧縮IPv6アドレスを正しく検証できません。
    *       将来的には`IpAddress` Value Objectを分離し、より堅牢なバリデーションを実装する予定。
-   *       IPアドレスのバリデーションは複雑なため、実績のあるライブラリ（例: `is-ip`）の使用を検討する。
+   *       IPアドレスのバリデーションは複雑なため、実績のあるライブラリ（例: `is-ip`, `ip-address`）の使用を検討する。
    */
   private static validateIpAddress(ipAddress: string): void {
     if (!ipAddress || ipAddress.trim().length === 0) {
@@ -114,6 +116,7 @@ export class IpAllowList {
 
     // 基本的な形式チェック（IPv4、IPv6、CIDR記法）
     // 注意: この正規表現は全ての有効なIPアドレス形式をカバーできていない可能性がある
+    // 例: `999.999.999.999`のような不正なIPv4や、`2001:db8::1`のような圧縮IPv6を正しく検証できない
     // 将来的には`IpAddress` Value Objectを分離し、より堅牢なバリデーションを実装する
     const ipv4Pattern = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
     const ipv6Pattern = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(\/\d{1,3})?$/;

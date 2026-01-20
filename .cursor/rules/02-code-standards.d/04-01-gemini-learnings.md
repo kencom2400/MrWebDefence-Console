@@ -4659,3 +4659,160 @@ private toFqdnConfig(fqdn: Fqdn): FqdnConfig {
 - 保守性が向上する
 
 **参照**: PR #61 - MWD-100 WAFエンジン向け設定配信API実装（Geminiレビュー指摘）
+
+### 13-30. テストの堅牢性向上 - 順序非依存のアサーション（PR #61 - 第2回レビュー）
+
+**学習元**: PR #61 - MWD-100 WAFエンジン向け設定配信API実装（Geminiレビュー指摘 - 第2回）
+
+#### テストケースで配列の要素を順序非依存で検証する 🟡 Medium
+
+**問題**: テストケースで返却された配列の要素をインデックスで指定してアサートしていると、`findAll`モックや`Promise.all`の挙動によって要素の順序が変わった場合にテストが失敗する可能性があり、堅牢性に欠ける。
+
+**解決策**: `expect.arrayContaining`や`find`メソッドなどを用いて、順序に依存しない形で配列の要素を検証する。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: インデックスで指定（順序依存）
+expect(result.fqdns[0].id).toBe('fqdn-1');
+expect(result.fqdns[1].id).toBe('fqdn-2');
+
+// ✅ 良い例: expect.arrayContainingを使用（順序非依存）
+expect(result.fqdns.map((f) => f.id)).toEqual(expect.arrayContaining(['fqdn-1', 'fqdn-2']));
+```
+
+**理由**:
+- テストの意図がより明確になる
+- 実装の変更に強くなる
+- 順序に依存しない堅牢なテストになる
+
+#### equalsメソッドの順序非依存性を明示的にテストする 🟡 Medium
+
+**問題**: `equals`メソッドが順序非依存の比較を実装しているにもかかわらず、その動作を保証するテストケースがない。
+
+**解決策**: 配列内の要素の順序を入れ替えた2つのオブジェクトを作成し、それらが`equals`で`true`と判定されることを確認するテストケースを追加する。
+
+**実装例**:
+```typescript
+it('正常系: 順序が異なっていても等価と判定される', () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2024-01-15T10:30:00Z'));
+
+  const fqdn1 = Fqdn.create('fqdn-1', 'example.com');
+  const fqdn2 = Fqdn.create('fqdn-2', 'test.example.com');
+  const fqdns1 = [fqdn1, fqdn2];
+  const fqdns2 = [fqdn2, fqdn1]; // 順序を入れ替え
+
+  const engineConfig1 = EngineConfig.create(fqdns1, ...);
+  const engineConfig2 = EngineConfig.create(fqdns2, ...);
+
+  expect(engineConfig1.equals(engineConfig2)).toBe(true);
+
+  jest.useRealTimers();
+});
+```
+
+**理由**:
+- 順序非依存の動作を明示的に保証できる
+- テストの意図が明確になる
+- 実装の変更を検知できる
+
+#### 繰り返しロジックをヘルパーメソッドに抽出する（DRY原則） 🟡 Medium
+
+**問題**: `equals`メソッド内で、`fqdns`, `ipAllowLists`, `customers`のID配列を比較するロジックが3回繰り返されている。コードが冗長になっており、将来的な変更の際に修正漏れが発生する可能性がある。
+
+**解決策**: この比較ロジックをプライベートヘルパーメソッドとして切り出すことで、コードのDRY原則を守り、可読性と保守性を向上させる。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: ロジックが3回繰り返されている
+public equals(other: EngineConfig): boolean {
+  // FQDNの等価性チェック（順序不問）
+  const thisFqdnIds = this.fqdns.map((f) => f.id).sort();
+  const otherFqdnIds = other.fqdns.map((f) => f.id).sort();
+  if (JSON.stringify(thisFqdnIds) !== JSON.stringify(otherFqdnIds)) {
+    return false;
+  }
+  // IP AllowListの等価性チェック（順序不問）
+  const thisIpAllowListIds = this.ipAllowLists.map((i) => i.id).sort();
+  // ... 同じロジックが繰り返される
+}
+
+// ✅ 良い例: ヘルパーメソッドに抽出
+public equals(other: EngineConfig): boolean {
+  if (!this.compareIds(this.fqdns.map((f) => f.id), other.fqdns.map((f) => f.id))) {
+    return false;
+  }
+  if (!this.compareIds(this.ipAllowLists.map((i) => i.id), other.ipAllowLists.map((i) => i.id))) {
+    return false;
+  }
+  // ...
+}
+
+private compareIds(ids1: string[], ids2: string[]): boolean {
+  const sortedIds1 = [...ids1].sort();
+  const sortedIds2 = [...ids2].sort();
+  return JSON.stringify(sortedIds1) === JSON.stringify(sortedIds2);
+}
+```
+
+**理由**:
+- DRY原則を守る
+- コードの可読性が向上する
+- 保守性が向上する（修正漏れを防ぐ）
+
+#### E2Eテストのアサーションを堅牢化する 🟡 Medium
+
+**問題**: E2Eテストのアサーションが、レスポンス配列の最初の要素のみをチェックしており、全ての要素が期待通りであることを保証していない。また、現在のインメモリリポジトリでは順序が保たれているが、実際のデータベースでは順序が保証されない場合があり、テストが不安定になる要因となる。
+
+**解決策**: `every`で全要素のステータスを確認し、`map`と`expect.arrayContaining`で順序非依存にIDの存在をチェックするなど、より堅牢なアサーションにする。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: 最初の要素のみをチェック
+expect(response.body.fqdns[0]).toHaveProperty('status', 'ACTIVE');
+expect(response.body.customers[0]).toHaveProperty('name');
+
+// ✅ 良い例: 全要素をチェック、順序非依存
+expect(response.body.fqdns.every((f: { status: string }) => f.status === 'ACTIVE')).toBe(true);
+expect(response.body.fqdns.map((f: { id: string }) => f.id)).toEqual(
+  expect.arrayContaining(['fqdn-1', 'fqdn-2']),
+);
+expect(response.body.customers.every((c: { status: string }) => c.status === 'ACTIVE')).toBe(true);
+expect(response.body.customers.map((c: { id: string }) => c.id)).toEqual(
+  expect.arrayContaining(['customer-1', 'customer-2']),
+);
+```
+
+**理由**:
+- 全ての要素が期待通りであることを保証できる
+- 順序に依存しない堅牢なテストになる
+- 実際のデータベース環境でも安定して動作する
+
+#### IPアドレスバリデーションの限界を明記する 🔴 High
+
+**問題**: IPアドレスのバリデーションが不完全で、`999.999.999.999`のような不正なIPv4アドレスや、`2001:db8::1`のような一般的な形式の圧縮IPv6アドレスを正しく検証できない。
+
+**解決策**: コメントでバリデーションの限界を明記し、将来的な改善方針（Value Object分離、ライブラリ使用）を明確にする。
+
+**実装例**:
+```typescript
+/**
+ * IPアドレスをバリデーションする
+ * @note 現時点では基本的な形式チェックのみ実施。
+ *       この正規表現では、`999.999.999.999`のような不正なIPv4アドレスや、
+ *       `2001:db8::1`のような一般的な形式の圧縮IPv6アドレスを正しく検証できません。
+ *       将来的には`IpAddress` Value Objectを分離し、より堅牢なバリデーションを実装する予定。
+ *       IPアドレスのバリデーションは複雑なため、実績のあるライブラリ（例: `is-ip`, `ip-address`）の使用を検討する。
+ */
+private static validateIpAddress(ipAddress: string): void {
+  // 基本的な形式チェック
+  // ...
+}
+```
+
+**理由**:
+- バリデーションの限界を明確にする
+- 将来の改善方針を明確にする
+- 実装の意図を明確にする
+
+**参照**: PR #61 - MWD-100 WAFエンジン向け設定配信API実装（Geminiレビュー指摘 - 第2回）

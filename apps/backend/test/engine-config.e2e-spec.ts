@@ -204,9 +204,12 @@ describe('Engine Config E2E Tests', () => {
 
       // 有効なFQDNのみが返却される
       expect(response.body.fqdns).toHaveLength(2);
-      expect(response.body.fqdns[0]).toHaveProperty('id');
-      expect(response.body.fqdns[0]).toHaveProperty('fqdn');
-      expect(response.body.fqdns[0]).toHaveProperty('status', 'ACTIVE');
+      expect(response.body.fqdns.every((f: { status: string }) => f.status === 'ACTIVE')).toBe(
+        true,
+      );
+      expect(response.body.fqdns.map((f: { id: string }) => f.id)).toEqual(
+        expect.arrayContaining(['fqdn-1', 'fqdn-2']),
+      );
       expect(response.body.fqdns.some((f: { id: string }) => f.id === 'fqdn-inactive')).toBe(
         false,
       );
@@ -216,9 +219,12 @@ describe('Engine Config E2E Tests', () => {
 
       // 有効な顧客のみが返却される
       expect(response.body.customers).toHaveLength(2);
-      expect(response.body.customers[0]).toHaveProperty('id');
-      expect(response.body.customers[0]).toHaveProperty('name');
-      expect(response.body.customers[0]).toHaveProperty('status', 'ACTIVE');
+      expect(response.body.customers.every((c: { status: string }) => c.status === 'ACTIVE')).toBe(
+        true,
+      );
+      expect(response.body.customers.map((c: { id: string }) => c.id)).toEqual(
+        expect.arrayContaining(['customer-1', 'customer-2']),
+      );
       expect(
         response.body.customers.some((c: { id: string }) => c.id === 'customer-inactive'),
       ).toBe(false);
