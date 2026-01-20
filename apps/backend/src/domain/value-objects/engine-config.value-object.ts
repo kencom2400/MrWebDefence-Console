@@ -92,7 +92,8 @@ export class EngineConfig {
       return false;
     }
 
-    return this.lastUpdated.getTime() === other.lastUpdated.getTime();
+    // lastUpdatedは値オブジェクトの本質的な値ではないため、等価性比較から除外
+    return true;
   }
 
   /**

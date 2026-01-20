@@ -4816,3 +4816,62 @@ private static validateIpAddress(ipAddress: string): void {
 - 実装の意図を明確にする
 
 **参照**: PR #61 - MWD-100 WAFエンジン向け設定配信API実装（Geminiレビュー指摘 - 第2回）
+
+#### Value Objectの等価性比較からメタ情報を除外する 🟡 Medium
+
+**問題**: `equals`メソッドで`lastUpdated`のようなメタ情報（オブジェクトがいつ作成されたか）を比較していると、全く同じ内容の値オブジェクトであっても、作成されたタイミングが1ミリ秒でも異なれば`equals`が`false`を返してしまう。これは値オブジェクトの意図とは異なる動作を引き起こす可能性がある。
+
+**解決策**: 値オブジェクトの等価性比較は、そのオブジェクトが持つ「値」が等しいかどうかを判断するために行われる。メタ情報（`lastUpdated`など）は比較から除外する。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: メタ情報を比較している
+public equals(other: EngineConfig): boolean {
+  // ... 本質的な値の比較 ...
+  return this.lastUpdated.getTime() === other.lastUpdated.getTime(); // メタ情報を比較
+}
+
+// ✅ 良い例: メタ情報を除外
+public equals(other: EngineConfig): boolean {
+  // ... 本質的な値の比較 ...
+  // lastUpdatedは値オブジェクトの本質的な値ではないため、等価性比較から除外
+  return true;
+}
+```
+
+**理由**:
+- 値オブジェクトの本質的な値のみを比較できる
+- 作成タイミングに依存しない等価性チェックが可能
+- 値オブジェクトの意図に合致する
+
+**参照**: PR #61 - MWD-100 WAFエンジン向け設定配信API実装（Geminiレビュー指摘 - 第3回）
+
+#### テストケースのインデックス依存を避ける 🟡 Medium
+
+**問題**: テストケースで配列の要素をインデックス（`[0]`, `[1]`）で指定してアサートしていると、テスト対象のコードの実装（例: `create`メソッド内での配列の扱い方）に依存してしまい、将来のリファクタリングでテストが意図せず失敗する原因となる（brittle test）。
+
+**解決策**: `expect.arrayContaining`を用いて、順序に依存しない形でアサーションを行う。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: インデックスに依存
+expect(engineConfig.fqdns[0].id).toBe('fqdn-1');
+expect(engineConfig.fqdns[1].id).toBe('fqdn-2');
+expect(engineConfig.ipAllowLists[0].id).toBe('ip-allowlist-1');
+expect(engineConfig.ipAllowLists[1].id).toBe('ip-allowlist-2');
+
+// ✅ 良い例: 順序非依存のアサーション
+expect(engineConfig.fqdns.map((f) => f.id)).toEqual(
+  expect.arrayContaining(['fqdn-1', 'fqdn-2']),
+);
+expect(engineConfig.ipAllowLists.map((i) => i.id)).toEqual(
+  expect.arrayContaining(['ip-allowlist-1', 'ip-allowlist-2']),
+);
+```
+
+**理由**:
+- テストの意図がより明確になる
+- 実装の変更に強くなる（brittle testを防ぐ）
+- 順序に依存しない堅牢なテストになる
+
+**参照**: PR #61 - MWD-100 WAFエンジン向け設定配信API実装（Geminiレビュー指摘 - 第3回）
