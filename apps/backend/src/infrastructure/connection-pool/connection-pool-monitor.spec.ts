@@ -9,16 +9,44 @@ jest.mock('uuid', () => ({
   v4: jest.fn(() => 'mock-uuid-123'),
 }));
 
+// mysql2/promiseのcreatePoolをモック
+const mockGetConnection = jest.fn();
+const mockEnd = jest.fn();
+const mockPool = {
+  getConnection: mockGetConnection,
+  end: mockEnd,
+} as unknown as any;
+
+jest.mock('mysql2/promise', () => ({
+  createPool: jest.fn(() => mockPool),
+}));
+
 import { ConnectionPoolMonitor } from './connection-pool-monitor';
 import { DatabaseConnectionPool } from './database-connection-pool';
 import { ConnectionPoolConfig } from '../../domain/value-objects/connection-pool-config.value-object';
+import { PoolConnection } from 'mysql2/promise';
 
 describe('ConnectionPoolMonitor', () => {
   let monitor: ConnectionPoolMonitor;
   let pool: DatabaseConnectionPool;
   let config: ConnectionPoolConfig;
+  let mockConnection: PoolConnection;
 
   beforeEach(() => {
+    // モックをリセット
+    jest.clearAllMocks();
+    mockGetConnection.mockReset();
+    mockEnd.mockReset();
+
+    // モック接続を作成
+    mockConnection = {
+      ping: jest.fn().mockResolvedValue(undefined),
+      release: jest.fn().mockResolvedValue(undefined),
+    } as unknown as PoolConnection;
+
+    // getConnectionをモック
+    mockGetConnection.mockResolvedValue(mockConnection);
+
     config = ConnectionPoolConfig.create(
       5, // maxConnections
       1, // minConnections
@@ -93,6 +121,10 @@ describe('ConnectionPoolMonitor', () => {
     beforeEach(async () => {
       jest.useFakeTimers();
       await pool.initialize();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
     });
 
     afterEach(() => {
