@@ -5,7 +5,7 @@
  * ドメイン層の最内層に位置し、外部に依存しない
  */
 
-import * as isIp from 'is-ip';
+import isIp from 'is-ip';
 
 export class IpAllowList {
   public readonly id: string;

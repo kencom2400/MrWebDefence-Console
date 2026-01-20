@@ -85,8 +85,11 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "transformIgnorePatterns": [
-      "node_modules/(?!uuid|.*is-ip|.*ip-regex)"
+      "node_modules/(?!uuid)"
     ],
+    "moduleNameMapper": {
+      "^is-ip$": "<rootDir>/__mocks__/is-ip.ts"
+    },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
     ],
