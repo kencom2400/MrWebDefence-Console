@@ -70,11 +70,25 @@ run_migration() {
 
   echo "🔄 データベースマイグレーションを実行中..."
   # Dockerコンテナ内でマイグレーションを実行
-  # backendコンテナを使用してマイグレーションを実行
+  # MySQLイメージから一時コンテナを作成してマイグレーションを実行（MySQL公式クライアントが利用可能）
   # プロジェクトルートを/appにマウント
   # migrate.shはbash構文を使用しているため、bashを明示的に指定
-  # Flyway CLIとMySQLクライアントをインストールしてからマイグレーションを実行
-  $DOCKER_COMPOSE run --rm --no-deps \
+  # Flyway CLIをインストールしてからマイグレーションを実行
+  # 既存のMySQLコンテナと同じネットワークに接続
+  local network_name
+  network_name=$($DOCKER_COMPOSE ps -q "${mysql_service}" 2>/dev/null | xargs -I {} docker inspect --format='{{range $net, $v := .NetworkSettings.Networks}}{{$net}}{{end}}' {} 2>/dev/null | head -1)
+  if [ -z "${network_name}" ]; then
+    # フォールバック: デフォルトのネットワーク名を使用
+    network_name="mrwebdefence-console_mrwebdefence-network"
+  fi
+  # MySQL 8.4イメージはOracle Linuxベースなので、yumまたはmicrodnfを使用
+  # ARMアーキテクチャ（Apple Silicon）ではx86_64プラットフォームを指定
+  local platform_flag=""
+  if [ "$(uname -m)" = "arm64" ]; then
+    platform_flag="--platform linux/amd64"
+  fi
+  if ! docker run --rm ${platform_flag} \
+    --name="migration-${mysql_service}-$$" \
     -e DB_HOST="${mysql_service}" \
     -e DB_PORT=3306 \
     -e DB_USER="${db_user}" \
@@ -82,10 +96,16 @@ run_migration() {
     -e DB_NAME="${db_name}" \
     --volume="${PROJECT_ROOT}:/app:ro" \
     --workdir="/app/scripts/database" \
-    backend sh -c "apk add --no-cache bash curl openjdk17-jre mysql-client > /dev/null 2>&1 && \
-      (curl -L https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/10.10.0/flyway-commandline-10.10.0-linux-x64.tar.gz 2>/dev/null | tar xz -C /tmp 2>/dev/null || true) && \
+    --network="${network_name}" \
+    mysql:8.4 bash -c "microdnf install -y curl java-17-openjdk-headless tar gzip || \
+      (yum install -y curl java-17-openjdk-headless tar gzip || \
+       apt-get update && apt-get install -y curl openjdk-17-jre-headless) && \
+      (curl -L https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/10.10.0/flyway-commandline-10.10.0-linux-x64.tar.gz | tar xz -C /tmp || true) && \
       export PATH=\"/tmp/flyway-10.10.0:\$PATH\" && \
-      bash migrate.sh init --seed"
+      bash migrate.sh init --seed"; then
+    echo "❌ エラー: マイグレーションの実行に失敗しました"
+    return 1
+  fi
 }
 
 # テスト実行関数
