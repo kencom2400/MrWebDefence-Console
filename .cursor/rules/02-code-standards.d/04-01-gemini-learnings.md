@@ -4258,3 +4258,123 @@ it('DB_PASSWORD環境変数が設定されていない場合にエラーを投�
 - テストの信頼性が向上する
 
 **参照**: PR #58 - MWD-108 DBへの接続部分の修正（Geminiレビュー指摘）
+
+### 13-28. Onion ArchitectureにおけるDTO変換の責務分離（PR #60）
+
+**学習元**: PR #60 - MWD-100 WAFエンジン向け設定配信API実装設計書作成（Geminiレビュー指摘）
+
+#### Application LayerはDTOに変換しない 🔴 High
+
+**問題**: Application LayerのユースケースがDTOへの変換を行うと、Onion Architectureの原則に反する。Application LayerはDomain Layerのオブジェクトを扱い、Presentation LayerがDTOへの変換を行うべきである。
+
+**解決策**:
+1. **Application LayerはDomainオブジェクトを返す**: ユースケースの`execute()`メソッドはDomain Layerのオブジェクト（Value ObjectやEntity）を返す。
+2. **Presentation LayerでDTOに変換**: コントローラーでDomainオブジェクトをDTOに変換する。
+3. **責務の明確化**: 各レイヤーの責務を明確に分離する。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: Application LayerでDTOに変換
+class GetEngineConfigUseCase {
+  async execute(): Promise<EngineConfigResponseDto> {
+    const fqdns = await this.fqdnRepository.findAllActive();
+    const engineConfig = EngineConfig.create(fqdns, ...);
+    return this.toResponseDto(engineConfig); // Application LayerでDTO変換
+  }
+}
+
+// ✅ 良い例: Application LayerはDomainオブジェクトを返す
+class GetEngineConfigUseCase {
+  async execute(): Promise<EngineConfig> {
+    const fqdns = await this.fqdnRepository.findAllActive();
+    return EngineConfig.create(fqdns, ...); // Domainオブジェクトを返す
+  }
+}
+
+// Presentation LayerでDTOに変換
+class EngineConfigController {
+  async getConfig(): Promise<EngineConfigResponseDto> {
+    const engineConfig = await this.getEngineConfigUseCase.execute();
+    return this.toResponseDto(engineConfig); // Presentation LayerでDTO変換
+  }
+}
+```
+
+**理由**:
+- Onion Architectureの原則に従う（内側のレイヤーは外側のレイヤーに依存しない）
+- 責務の分離が明確になる
+- Domain Layerの独立性が保たれる
+
+#### Mermaid図の記法の統一 🟡 Medium
+
+**問題**: Mermaid図でジェネリック型を表現する際に、チルダ（`~`）と山括弧（`< >`）が混在している。また、改行に`<br/>`と`\n`が混在している。
+
+**解決策**:
+1. **ジェネリック型は山括弧を使用**: TypeScriptなどの言語の慣習に合わせて`Promise<Type>`形式を使用する。
+2. **改行は`\n`を使用**: Mermaidの標準的な記法に合わせて`\n`を使用する。
+
+**実装例**:
+```mermaid
+// ❌ 悪い例: チルダと<br/>を使用
+class Controller {
+    +getConfig(): Promise~ResponseDto~
+}
+Client->>Controller: GET /api\n<br/>Authorization: Bearer token
+
+// ✅ 良い例: 山括弧と\nを使用
+class Controller {
+    +getConfig(): Promise<ResponseDto>
+}
+Client->>Controller: GET /api\nAuthorization: Bearer token
+```
+
+**理由**:
+- TypeScriptなどの言語の慣習に合わせる
+- Mermaidの標準的な記法に従う
+- 視認性の向上
+
+#### JSONレスポンスの型定義の明確化 🟡 Medium
+
+**問題**: TypeScriptのDTO定義で`Date`型を使用しているが、JSONレスポンスではISO 8601形式の文字列として表現される。型定義と実際のJSON形式が一致していない。
+
+**解決策**: JSONレスポンスのDTO定義では、シリアライズ後の形式に合わせて`string`型を使用する。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: Date型を使用
+interface EngineConfigResponseDto {
+  lastUpdated: Date; // JSONでは文字列になる
+}
+
+// ✅ 良い例: string型を使用
+interface EngineConfigResponseDto {
+  lastUpdated: string; // ISO 8601形式の文字列
+}
+```
+
+**理由**:
+- 型定義と実際のJSON形式が一致する
+- 実装時の混乱を防ぐ
+- より正確な型定義になる
+
+#### 設計書における説明の明確化 🟡 Medium
+
+**問題**: 設計書で「現在の日時」という表現が曖昧で、APIがリクエストを受け取った時点の時刻なのか、設定がデータベースで最後に更新された時刻なのか不明確。
+
+**解決策**: 説明を具体化し、どの時点の時刻を指すのかを明確にする。
+
+**実装例**:
+```markdown
+<!-- ❌ 悪い例: 曖昧な説明 -->
+- **lastUpdated**: 現在の日時（ISO 8601形式）
+
+<!-- ✅ 良い例: 明確な説明 -->
+- **lastUpdated**: 設定データが最後に更新された日時（ISO 8601形式の文字列）
+```
+
+**理由**:
+- 設計の意図が明確になる
+- 実装時の誤解を防ぐ
+- 設計書の品質向上
+
+**参照**: PR #60 - MWD-100 WAFエンジン向け設定配信API実装設計書作成（Geminiレビュー指摘）
