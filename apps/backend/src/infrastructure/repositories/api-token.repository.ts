@@ -60,6 +60,15 @@ export class ApiTokenRepository implements IApiTokenRepository {
   }
 
   /**
+   * プレフィックスでAPIトークンを検索する
+   * @param prefix トークンプレフィックス（例: "waf_"）
+   * @returns APIトークンエンティティの配列
+   */
+  async findByPrefix(prefix: string): Promise<ApiToken[]> {
+    return Array.from(this.tokens.values()).filter((token) => token.tokenPrefix === prefix);
+  }
+
+  /**
    * APIトークンを削除する
    * @param id APIトークンID
    * @returns 削除が成功した場合true、トークンが見つからない場合false

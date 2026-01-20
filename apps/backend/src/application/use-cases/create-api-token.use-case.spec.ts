@@ -51,23 +51,11 @@ describe('CreateApiTokenUseCase', () => {
       const tokenHash = '$2b$10$he31Fy7fUPv9rO2E2coIA.z/3/AStVeVgDSlJMCwNDqLOaw0R/67O'; // bcryptハッシュ（60文字以上）
       const prefix = 'waf_';
       const fullToken = 'waf_random-secret-string';
-      const tokenPreview = 'waf_random-secret...';
 
       mockApiTokenService.getDefaultPrefix.mockReturnValue(prefix);
       mockApiTokenService.generateSecret.mockReturnValue(secret);
       mockApiTokenService.hashToken.mockResolvedValue(tokenHash);
       mockApiTokenService.buildFullToken.mockReturnValue(fullToken);
-
-      const tokenId = randomUUID();
-      const savedToken = ApiToken.create(
-        tokenId,
-        command.name,
-        command.description,
-        tokenHash,
-        prefix,
-        command.expiresAt,
-        command.createdBy,
-      );
 
       mockApiTokenRepository.save.mockImplementation(async (token) => {
         // UseCase内で生成されたIDを使用してトークンを作成

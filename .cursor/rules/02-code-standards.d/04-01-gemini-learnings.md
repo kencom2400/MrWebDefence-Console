@@ -5074,3 +5074,94 @@ interface ApiTokenResponseDto {
 - 設計書の理解しやすさが向上する
 
 **参照**: PR #62 - MWD-101 WAFエンジン向けAPIトークン管理機能の詳細設計書作成（Geminiレビュー指摘 - 第2回）
+
+---
+
+## 13-22. APIトークン認証ガードにおける検索効率化とテストコードの品質向上（PR #63）
+
+### 問題点
+
+1. **テストコード内の未使用変数**
+   - テストコードに未使用の変数（`tokenPreview`、`savedToken`など）が残っている
+   - コードの可読性と保守性に影響する
+
+2. **APIトークン認証ガードの検索効率**
+   - すべてのトークンを取得してからフィルタリングしていた
+   - 将来的にデータベース実装に移行する際、パフォーマンス上のボトルネックとなる可能性
+
+### 解決策
+
+#### 1. テストコードの未使用変数の削除
+
+**❌ 悪い例**:
+```typescript
+const tokenPreview = 'waf_random-secret...'; // 未使用
+const savedToken = ApiToken.create(...); // 未使用
+```
+
+**✅ 良い例**:
+```typescript
+// 未使用の変数を削除
+const secret = 'random-secret-string';
+const tokenHash = '$2b$10$...';
+const prefix = 'waf_';
+const fullToken = 'waf_random-secret-string';
+```
+
+#### 2. リポジトリインターフェースにfindByPrefixメソッドを追加
+
+**✅ 良い例**:
+```typescript
+export interface IApiTokenRepository {
+  // ... 既存のメソッド ...
+  
+  /**
+   * プレフィックスでAPIトークンを検索する
+   * @param prefix トークンプレフィックス（例: "waf_"）
+   * @returns APIトークンエンティティの配列
+   * @note 将来的にデータベース実装に移行する際、このメソッドを使用して検索効率を向上させる
+   */
+  findByPrefix(prefix: string): Promise<ApiToken[]>;
+}
+```
+
+#### 3. 認証ガードの検索ロジックの最適化
+
+**❌ 悪い例**:
+```typescript
+// すべてのトークンを取得してからフィルタリング
+const allTokens = await this.apiTokenRepository.findAll();
+const matchingTokens = allTokens.filter((token) => token.tokenPrefix === tokenPrefix);
+```
+
+**✅ 良い例**:
+```typescript
+// プレフィックスで絞り込んでから検証
+// bcryptは毎回異なるハッシュを生成するため、token_hashで直接検索することはできない
+// そのため、プレフィックスで絞り込んでからverifyTokenで検証する必要がある
+const matchingTokens = await this.apiTokenRepository.findByPrefix(tokenPrefix);
+```
+
+### ルール
+
+1. **テストコードの品質**
+   - 未使用の変数は削除する
+   - テストコードも本番コードと同様にクリーンに保つ
+
+2. **リポジトリインターフェースの設計**
+   - 検索条件に基づいたメソッドを提供する（例: `findByPrefix`）
+   - 将来的なデータベース実装を考慮した設計にする
+   - メソッドの目的と将来の最適化についてコメントを追加する
+
+3. **認証ガードのパフォーマンス**
+   - 可能な限り検索対象を絞り込んでから検証する
+   - bcryptの特性（毎回異なるハッシュを生成）を考慮した実装にする
+   - 将来的なデータベース実装への移行を考慮した設計にする
+
+**理由**:
+- テストコードの可読性と保守性が向上する
+- 認証ガードのパフォーマンスが向上する
+- 将来的なデータベース実装への移行が容易になる
+- コードの意図が明確になる
+
+**参照**: PR #63 - MWD-101 WAFエンジン向けAPIトークン管理機能の実装（Geminiレビュー指摘）

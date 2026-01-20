@@ -36,6 +36,14 @@ export interface IApiTokenRepository {
   findAll(): Promise<ApiToken[]>;
 
   /**
+   * プレフィックスでAPIトークンを検索する
+   * @param prefix トークンプレフィックス（例: "waf_"）
+   * @returns APIトークンエンティティの配列
+   * @note 将来的にデータベース実装に移行する際、このメソッドを使用して検索効率を向上させる
+   */
+  findByPrefix(prefix: string): Promise<ApiToken[]>;
+
+  /**
    * APIトークンを削除する
    * @param id APIトークンID
    * @returns 削除が成功した場合true、トークンが見つからない場合false

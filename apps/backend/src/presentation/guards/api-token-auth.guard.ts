@@ -48,12 +48,10 @@ export class ApiTokenAuthGuard implements CanActivate {
       const secret = this.apiTokenService.extractSecret(fullToken, tokenPrefix);
 
       // プレフィックスで検索対象を絞り込み（将来の拡張性のため）
-      // 現時点では、token_hashのUNIQUE制約により直接検索が可能だが、
-      // 将来複数のトークンタイプをサポートする可能性を考慮してプレフィックスを分離している
-
-      // すべてのトークンを取得して検証（将来的にはプレフィックスで絞り込みを最適化）
-      const allTokens = await this.apiTokenRepository.findAll();
-      const matchingTokens = allTokens.filter((token) => token.tokenPrefix === tokenPrefix);
+      // bcryptは毎回異なるハッシュを生成するため、token_hashで直接検索することはできない
+      // そのため、プレフィックスで絞り込んでからverifyTokenで検証する必要がある
+      // 将来的にデータベース実装に移行する際、findByPrefixメソッドを使用して検索効率を向上させる
+      const matchingTokens = await this.apiTokenRepository.findByPrefix(tokenPrefix);
 
       // シークレットを検証
       let apiToken = null;
