@@ -125,6 +125,8 @@ ISSUE_TYPE_ID=$(get_issue_type_id_from_api "$PROJECT_KEY" "$ISSUE_TYPE")
 - **In Progress**: 進行中（作業中）
 - **Done**: 完了
 
+**注意**: 実際のJiraでは日本語名（「バックログ」「To Do」「進行中」「完了」）が使用されます。スクリプトでは英語名（「Done」など）を指定しても、自動的に日本語名にマッピングされます（`map_status_name`関数による）。
+
 ### ステータス遷移フロー
 
 ```
