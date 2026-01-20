@@ -70,8 +70,10 @@ run_migration() {
 
   echo "🔄 データベースマイグレーションを実行中..."
   # Dockerコンテナ内でマイグレーションを実行
-  # backendコンテナを使用してマイグレーションを実行（mysqlコマンドが利用可能）
+  # backendコンテナを使用してマイグレーションを実行
   # プロジェクトルートを/appにマウント
+  # migrate.shはbash構文を使用しているため、bashを明示的に指定
+  # Flyway CLIとMySQLクライアントをインストールしてからマイグレーションを実行
   $DOCKER_COMPOSE run --rm --no-deps \
     -e DB_HOST="${mysql_service}" \
     -e DB_PORT=3306 \
@@ -80,7 +82,10 @@ run_migration() {
     -e DB_NAME="${db_name}" \
     --volume="${PROJECT_ROOT}:/app:ro" \
     --workdir="/app/scripts/database" \
-    backend sh migrate.sh init --seed
+    backend sh -c "apk add --no-cache bash curl openjdk17-jre mysql-client > /dev/null 2>&1 && \
+      (curl -L https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/10.10.0/flyway-commandline-10.10.0-linux-x64.tar.gz 2>/dev/null | tar xz -C /tmp 2>/dev/null || true) && \
+      export PATH=\"/tmp/flyway-10.10.0:\$PATH\" && \
+      bash migrate.sh init --seed"
 }
 
 # テスト実行関数
