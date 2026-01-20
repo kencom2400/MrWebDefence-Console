@@ -85,7 +85,7 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "transformIgnorePatterns": [
-      "node_modules/(?!uuid|is-ip|ip-regex)"
+      "node_modules/(?!uuid|.*/is-ip|.*/ip-regex)"
     ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
