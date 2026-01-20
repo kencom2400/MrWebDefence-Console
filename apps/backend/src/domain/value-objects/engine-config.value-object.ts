@@ -47,12 +47,7 @@ export class EngineConfig {
     // lastUpdatedは現在時刻を使用
     const lastUpdated = new Date();
 
-    return new EngineConfig(
-      readonlyFqdns,
-      readonlyIpAllowLists,
-      readonlyCustomers,
-      lastUpdated,
-    );
+    return new EngineConfig(readonlyFqdns, readonlyIpAllowLists, readonlyCustomers, lastUpdated);
   }
 
   /**
@@ -72,13 +67,28 @@ export class EngineConfig {
     }
 
     // 各配列のIDを比較（順序不問）
-    if (!this.compareIds(this.fqdns.map((f) => f.id), other.fqdns.map((f) => f.id))) {
+    if (
+      !this.compareIds(
+        this.fqdns.map((f) => f.id),
+        other.fqdns.map((f) => f.id),
+      )
+    ) {
       return false;
     }
-    if (!this.compareIds(this.ipAllowLists.map((i) => i.id), other.ipAllowLists.map((i) => i.id))) {
+    if (
+      !this.compareIds(
+        this.ipAllowLists.map((i) => i.id),
+        other.ipAllowLists.map((i) => i.id),
+      )
+    ) {
       return false;
     }
-    if (!this.compareIds(this.customers.map((c) => c.id), other.customers.map((c) => c.id))) {
+    if (
+      !this.compareIds(
+        this.customers.map((c) => c.id),
+        other.customers.map((c) => c.id),
+      )
+    ) {
       return false;
     }
 

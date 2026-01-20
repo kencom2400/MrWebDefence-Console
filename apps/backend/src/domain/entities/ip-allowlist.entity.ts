@@ -120,9 +120,14 @@ export class IpAllowList {
     // 将来的には`IpAddress` Value Objectを分離し、より堅牢なバリデーションを実装する
     const ipv4Pattern = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
     const ipv6Pattern = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(\/\d{1,3})?$/;
-    const ipv6CompressedPattern = /^::1$|^::$|^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}(\/\d{1,3})?$/;
+    const ipv6CompressedPattern =
+      /^::1$|^::$|^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}(\/\d{1,3})?$/;
 
-    if (!ipv4Pattern.test(ipAddress) && !ipv6Pattern.test(ipAddress) && !ipv6CompressedPattern.test(ipAddress)) {
+    if (
+      !ipv4Pattern.test(ipAddress) &&
+      !ipv6Pattern.test(ipAddress) &&
+      !ipv6CompressedPattern.test(ipAddress)
+    ) {
       throw new Error(`Invalid IP address format: ${ipAddress}`);
     }
   }

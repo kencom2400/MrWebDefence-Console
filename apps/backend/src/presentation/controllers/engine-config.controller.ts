@@ -47,9 +47,7 @@ export class EngineConfigController {
       ipAllowLists: engineConfig.ipAllowLists.map((ipAllowList) =>
         this.toIpAllowListConfig(ipAllowList),
       ),
-      customers: engineConfig.customers.map((customer) =>
-        this.toCustomerConfig(customer),
-      ),
+      customers: engineConfig.customers.map((customer) => this.toCustomerConfig(customer)),
       lastUpdated: engineConfig.lastUpdated.toISOString(),
     };
   }

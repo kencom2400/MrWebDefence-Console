@@ -54,10 +54,6 @@ export class GetEngineConfigUseCase {
     ]);
 
     // EngineConfig Value Objectを作成
-    return EngineConfig.create(
-      fqdnResult.fqdns,
-      ipAllowLists,
-      customerResult.customers,
-    );
+    return EngineConfig.create(fqdnResult.fqdns, ipAllowLists, customerResult.customers);
   }
 }

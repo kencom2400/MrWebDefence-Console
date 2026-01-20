@@ -8,8 +8,6 @@ import { EngineConfig } from './engine-config.value-object';
 import { Fqdn } from '../entities/fqdn.entity';
 import { IpAllowList } from '../entities/ip-allowlist.entity';
 import { Customer } from '../entities/customer.entity';
-import { FqdnStatus } from './fqdn-status.value-object';
-import { CustomerStatus } from './customer-status.value-object';
 
 describe('EngineConfig', () => {
   afterEach(() => {
@@ -32,16 +30,8 @@ describe('EngineConfig', () => {
       const ipAllowList2 = IpAllowList.create('ip-allowlist-2', 'user-1', '192.168.1.0/24');
       const ipAllowLists = [ipAllowList1, ipAllowList2];
 
-      const customer1 = Customer.create(
-        'customer-1',
-        'Customer A',
-        'customer-a@example.com',
-      );
-      const customer2 = Customer.create(
-        'customer-2',
-        'Customer B',
-        'customer-b@example.com',
-      );
+      const customer1 = Customer.create('customer-1', 'Customer A', 'customer-a@example.com');
+      const customer2 = Customer.create('customer-2', 'Customer B', 'customer-b@example.com');
       const customers = [customer1, customer2];
 
       // Act
