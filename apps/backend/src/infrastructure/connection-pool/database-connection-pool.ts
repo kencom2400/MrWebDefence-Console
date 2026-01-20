@@ -12,6 +12,7 @@ import { ConnectionPoolConfig } from '../../domain/value-objects/connection-pool
 import { ConnectionPoolStatus } from '../../domain/value-objects/connection-pool-status.value-object';
 import { Connection } from '../connections/connection';
 import { ConnectionPoolMonitor } from './connection-pool-monitor';
+import { createPool, Pool } from 'mysql2/promise';
 
 /**
  * 接続取得タイムアウトエラー
@@ -89,6 +90,7 @@ export class DatabaseConnectionPool implements IConnectionPool, OnModuleInit, On
   private monitor: ConnectionPoolMonitor | null = null;
   private _isInitialized: boolean = false;
   private _isDestroyed: boolean = false;
+  private mysqlPool: Pool | null = null;
 
   constructor(config: ConnectionPoolConfig) {
     this.config = config;
@@ -119,6 +121,20 @@ export class DatabaseConnectionPool implements IConnectionPool, OnModuleInit, On
 
     try {
       this.logger.log('Initializing connection pool...');
+
+      // MySQL接続プールを作成
+      this.mysqlPool = createPool({
+        host: this.config.dbHost,
+        port: this.config.dbPort,
+        user: this.config.dbUser,
+        password: this.config.dbPassword,
+        database: this.config.dbName,
+        connectionLimit: this.config.maxConnections,
+        waitForConnections: true,
+        queueLimit: 0,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 0,
+      });
 
       // 最小接続数分の接続を作成
       for (let i = 0; i < this.config.minConnections; i++) {
@@ -285,6 +301,12 @@ export class DatabaseConnectionPool implements IConnectionPool, OnModuleInit, On
       this.connections.length = 0;
       this.idleConnections.length = 0;
 
+      // MySQL接続プールを終了
+      if (this.mysqlPool) {
+        await this.mysqlPool.end();
+        this.mysqlPool = null;
+      }
+
       this._isDestroyed = true;
       this.logger.log('Connection pool destroyed');
     } catch (error) {
@@ -301,6 +323,10 @@ export class DatabaseConnectionPool implements IConnectionPool, OnModuleInit, On
    * @private
    */
   private async createConnection(): Promise<Connection> {
+    if (!this.mysqlPool) {
+      throw new ConnectionError('MySQL pool is not initialized');
+    }
+
     // リトライロジック
     let lastError: Error | undefined;
     for (let attempt = 0; attempt <= this.config.retryAttempts; attempt++) {
@@ -309,9 +335,9 @@ export class DatabaseConnectionPool implements IConnectionPool, OnModuleInit, On
           await this.delay(this.config.retryDelay);
         }
 
-        // スタブ実装: 新しい接続を作成
-        // 将来的に実際のデータベース接続を作成する実装に置き換える
-        const connection = new Connection();
+        // MySQL接続プールから接続を取得
+        const mysqlConnection = await this.mysqlPool.getConnection();
+        const connection = new Connection(mysqlConnection);
         return connection;
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
