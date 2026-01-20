@@ -131,7 +131,7 @@ export class DatabaseConnectionPool implements IConnectionPool, OnModuleInit, On
         database: this.config.dbName,
         connectionLimit: this.config.maxConnections,
         waitForConnections: true,
-        queueLimit: 0,
+        queueLimit: 50, // 無制限を避けるため、適切な有限値を設定（高負荷時のメモリ枯渇を防止）
         enableKeepAlive: true,
         keepAliveInitialDelay: 0,
       });
