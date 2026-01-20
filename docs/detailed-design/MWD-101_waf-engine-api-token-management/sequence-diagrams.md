@@ -19,14 +19,14 @@ sequenceDiagram
     else 認証成功
         ApiTokenController->>CreateApiTokenUseCase: execute(dto)
         
-        CreateApiTokenUseCase->>ApiTokenService: generateToken()
-        ApiTokenService-->>CreateApiTokenUseCase: token (plain text)
+        CreateApiTokenUseCase->>ApiTokenService: generateSecret()
+        ApiTokenService-->>CreateApiTokenUseCase: secret (plain text, random string)
         
-        CreateApiTokenUseCase->>ApiTokenService: hashToken(token)
+        CreateApiTokenUseCase->>ApiTokenService: hashToken(secret)
         ApiTokenService-->>CreateApiTokenUseCase: tokenHash
         
-        CreateApiTokenUseCase->>ApiTokenService: extractPrefix(token)
-        ApiTokenService-->>CreateApiTokenUseCase: tokenPrefix (e.g., "waf_xxxxx")
+        CreateApiTokenUseCase->>ApiTokenService: buildFullToken(prefix, secret)
+        ApiTokenService-->>CreateApiTokenUseCase: fullToken (e.g., "waf_xxxxx...")
         
         CreateApiTokenUseCase->>ApiToken: ApiToken.create(name, description, tokenHash, tokenPrefix, expiresAt, createdBy)
         ApiToken-->>CreateApiTokenUseCase: apiToken
@@ -158,10 +158,13 @@ sequenceDiagram
     EngineConfigController->>ApiTokenAuthGuard: canActivate()
     
     ApiTokenAuthGuard->>ApiTokenAuthGuard: extractTokenFromHeader()
-    ApiTokenAuthGuard->>ApiTokenService: extractPrefix(token)
+    ApiTokenAuthGuard->>ApiTokenService: extractPrefix(fullToken)
     ApiTokenService-->>ApiTokenAuthGuard: tokenPrefix (e.g., "waf_")
     
-    ApiTokenAuthGuard->>ApiTokenService: hashToken(token)
+    ApiTokenAuthGuard->>ApiTokenService: extractSecret(fullToken, tokenPrefix)
+    ApiTokenService-->>ApiTokenAuthGuard: secret (extracted from fullToken)
+    
+    ApiTokenAuthGuard->>ApiTokenService: hashToken(secret)
     ApiTokenService-->>ApiTokenAuthGuard: tokenHash
     
     ApiTokenAuthGuard->>ApiTokenRepository: findByTokenHash(tokenHash)

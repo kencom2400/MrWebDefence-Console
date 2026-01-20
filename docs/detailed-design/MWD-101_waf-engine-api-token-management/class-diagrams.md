@@ -22,7 +22,7 @@ classDiagram
         +string id
         +string name
         +string? description
-        +string tokenPrefix
+        +string tokenPreview
         +Date? expiresAt
         +Date? revokedAt
         +Date createdAt
@@ -155,7 +155,7 @@ APIトークン管理APIのHTTPエンドポイントを提供するコントロ�
   - `id`: トークンID
   - `name`: トークン名
   - `description`: 説明
-  - `tokenPrefix`: トークンのプレフィックス（表示用、実際のトークンは生成時のみ表示）
+  - `tokenPreview`: トークンのプレビュー表示（例: `waf_abc123...`、実際のトークンは生成時のみ表示）
   - `expiresAt`: 有効期限
   - `revokedAt`: 無効化日時
   - `createdAt`: 作成日時
@@ -214,10 +214,12 @@ APIトークンリポジトリのインターフェース。
 #### ApiTokenService
 APIトークンの生成・検証ロジックを提供するドメインサービス。
 
-- `generateToken()`: ランダムなトークンを生成（例: 64文字のランダム文字列）
-- `hashToken(token: string)`: トークンをハッシュ化（bcrypt）
-- `verifyToken(token: string, tokenHash: string)`: トークンを検証
-- `extractPrefix(token: string)`: トークンからプレフィックスを抽出（例: `waf_`）
+- `generateSecret()`: ランダムなシークレットを生成（例: 64文字のランダム文字列）
+- `hashToken(secret: string)`: シークレットをハッシュ化（bcrypt）
+- `verifyToken(secret: string, tokenHash: string)`: シークレットを検証
+- `extractPrefix(fullToken: string)`: フルトークンからプレフィックスを抽出（例: `waf_`）
+- `extractSecret(fullToken: string, prefix: string)`: フルトークンからシークレット部分を抽出
+- `buildFullToken(prefix: string, secret: string)`: プレフィックスとシークレットを結合してフルトークンを作成
 
 ### Infrastructure Layer
 

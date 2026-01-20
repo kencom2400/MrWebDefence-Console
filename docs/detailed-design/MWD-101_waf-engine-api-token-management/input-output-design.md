@@ -30,7 +30,7 @@ Content-Type: application/json
   "name": "WAF Engine Production Token",
   "description": "Production環境のWAFエンジン用トークン",
   "token": "waf_abc123def456ghi789jkl012mno345pqr678stu901vwx234yz",
-  "tokenPrefix": "waf_abc123...",
+  "tokenPreview": "waf_abc123...",
   "expiresAt": "2026-12-31T23:59:59.000Z",
   "revokedAt": null,
   "createdAt": "2026-01-20T12:00:00.000Z",
@@ -88,7 +88,7 @@ Authorization: Bearer <JWT_TOKEN>
       "id": "550e8400-e29b-41d4-a716-446655440000",
       "name": "WAF Engine Production Token",
       "description": "Production環境のWAFエンジン用トークン",
-      "tokenPrefix": "waf_abc123...",
+      "tokenPreview": "waf_abc123...",
       "expiresAt": "2026-12-31T23:59:59.000Z",
       "revokedAt": null,
       "createdAt": "2026-01-20T12:00:00.000Z",
@@ -109,7 +109,7 @@ Authorization: Bearer <JWT_TOKEN>
 }
 ```
 
-**注意**: 実際のトークン（`token`フィールド）は含まれません。`tokenPrefix`のみが表示されます。
+**注意**: 実際のトークン（`token`フィールド）は含まれません。`tokenPreview`のみが表示されます。
 
 **エラー** (401 Unauthorized):
 ```json
@@ -195,7 +195,7 @@ Authorization: Bearer <JWT_TOKEN>
   "id": "550e8400-e29b-41d4-a716-446655440000",
   "name": "WAF Engine Production Token",
   "description": "Production環境のWAFエンジン用トークン",
-  "tokenPrefix": "waf_abc123...",
+  "tokenPreview": "waf_abc123...",
   "expiresAt": "2026-12-31T23:59:59.000Z",
   "revokedAt": "2026-01-20T12:30:00.000Z",
   "createdAt": "2026-01-20T12:00:00.000Z",
@@ -248,7 +248,7 @@ interface ApiTokenResponseDto {
   name: string;              // トークン名
   description?: string;      // 説明
   token?: string;            // トークン（生成時のみ、プレフィックス付き）
-  tokenPrefix: string;       // トークンのプレフィックス（表示用）
+  tokenPreview: string;      // トークンのプレビュー表示（例: "waf_abc123..."）
   expiresAt?: string;        // 有効期限（ISO 8601形式、nullの場合は無期限）
   revokedAt?: string;        // 無効化日時（ISO 8601形式、nullの場合は有効）
   createdAt: string;         // 作成日時（ISO 8601形式）
@@ -294,7 +294,7 @@ interface ListApiTokensResponseDto {
 2. **トークンの表示**
    - トークンは生成時のみ1回だけ表示される
    - 以降のリクエストでは`token`フィールドは返却されない
-   - `tokenPrefix`のみが表示される（例: `waf_abc123...`）
+   - `tokenPreview`のみが表示される（例: `waf_abc123...`）
 
 3. **トークンのハッシュ化**
    - トークンは平文で保存せず、bcryptでハッシュ化して保存

@@ -117,19 +117,25 @@ Onion Architecture（オニオンアーキテクチャ）に従い、レイヤ�
 1. 管理者が`POST /api/v1/api-tokens`を呼び出し
 2. ApiTokenControllerがリクエストを受信し、認証・認可を確認（管理者権限必須）
 3. CreateApiTokenUseCaseが実行される
-4. ApiTokenServiceがランダムなトークンを生成
-5. トークンをハッシュ化してApiTokenエンティティを作成
-6. ApiTokenRepositoryに保存
-7. プレフィックス付きトークン（例: `waf_xxxxx...`）をレスポンスとして返却（この時点でしか表示されない）
+4. ApiTokenServiceがランダムなシークレットを生成（例: 64文字のランダム文字列）
+5. シークレット部分のみをハッシュ化（プレフィックスは含めない）
+6. プレフィックス（例: `waf_`）とシークレットを結合してフルトークン文字列を作成（例: `waf_xxxxx...`）
+7. ハッシュ値とプレフィックスをApiTokenエンティティに保存
+8. ApiTokenRepositoryに保存
+9. フルトークン（例: `waf_xxxxx...`）をレスポンスとして返却（この時点でしか表示されない）
 
 ### APIトークン認証フロー（MWD-100で使用）
 
 1. WAFエンジンが`GET /engine/v1/config`を呼び出し、`Authorization: Bearer <API_TOKEN>`ヘッダーを送信
-2. ApiTokenAuthGuardがトークンを検証
-3. トークンのプレフィックスから検索対象を絞り込み
-4. トークンをハッシュ化してApiTokenRepositoryで検索
-5. トークンが存在し、有効期限が切れておらず、無効化されていない場合、認証成功
-6. 認証成功後、GetEngineConfigUseCaseが実行される
+2. ApiTokenAuthGuardがフルトークン（例: `waf_xxxxx...`）を取得
+3. フルトークンからプレフィックス（例: `waf_`）を抽出
+4. フルトークンからシークレット部分を抽出（プレフィックス以降の部分、例: `xxxxx...`）
+5. シークレット部分のみをハッシュ化
+6. ハッシュ化された値をApiTokenRepositoryで検索（`token_hash`カラムはUNIQUE制約により高速検索可能）
+7. トークンが存在し、有効期限が切れておらず、無効化されていない場合、認証成功
+8. 認証成功後、GetEngineConfigUseCaseが実行される
+
+**注意**: プレフィックスによる絞り込みは、複数のトークンタイプ（将来的に`waf_`以外のプレフィックスも追加される可能性）をサポートするための設計です。現時点では`token_hash`のUNIQUE制約により直接検索が可能ですが、将来の拡張性を考慮してプレフィックスを分離しています。
 
 ## セキュリティ考慮事項
 
@@ -163,7 +169,6 @@ CREATE TABLE api_tokens (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(36) NOT NULL,
     INDEX idx_token_prefix (token_prefix),
-    INDEX idx_token_hash (token_hash),
     INDEX idx_revoked_at (revoked_at),
     INDEX idx_expires_at (expires_at)
 );
