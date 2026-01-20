@@ -12,6 +12,10 @@ import { FqdnStatus } from './fqdn-status.value-object';
 import { CustomerStatus } from './customer-status.value-object';
 
 describe('EngineConfig', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   describe('create', () => {
     it('正常系: EngineConfigを作成できる', () => {
       // Arrange
@@ -93,6 +97,9 @@ describe('EngineConfig', () => {
   describe('equals', () => {
     it('正常系: 同じ値のEngineConfigは等しいと判定される', () => {
       // Arrange
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2024-01-15T10:30:00Z'));
+
       const fqdn1 = Fqdn.create('fqdn-1', 'example.com');
       const fqdn2 = Fqdn.create('fqdn-2', 'test.example.com');
       const fqdns = [fqdn1, fqdn2];
@@ -103,17 +110,15 @@ describe('EngineConfig', () => {
       const customer1 = Customer.create('customer-1', 'Customer A', 'customer-a@example.com');
       const customers = [customer1];
 
-      // 同じ時刻で作成するため、少し待機
+      // 同じ時刻で作成（fake timersを使用）
       const engineConfig1 = EngineConfig.create(fqdns, ipAllowLists, customers);
       const engineConfig2 = EngineConfig.create(fqdns, ipAllowLists, customers);
 
-      // lastUpdatedを同じ時刻に設定するため、手動で設定
-      // ただし、equalsメソッドはlastUpdatedも比較するため、同じ時刻で作成する必要がある
-      // 実際の使用では、同じデータから作成されるため、lastUpdatedは異なる可能性がある
-      // このテストでは、fqdns、ipAllowLists、customersが同じであれば等しいと判定されることを確認
-      expect(engineConfig1.fqdns.length).toBe(engineConfig2.fqdns.length);
-      expect(engineConfig1.ipAllowLists.length).toBe(engineConfig2.ipAllowLists.length);
-      expect(engineConfig1.customers.length).toBe(engineConfig2.customers.length);
+      // Act & Assert
+      expect(engineConfig1.equals(engineConfig2)).toBe(true);
+
+      // クリーンアップ
+      jest.useRealTimers();
     });
 
     it('正常系: 異なるFQDN数のEngineConfigは等しくないと判定される', () => {

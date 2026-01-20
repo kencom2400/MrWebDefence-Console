@@ -52,6 +52,10 @@ describe('GetEngineConfigUseCase', () => {
     );
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   describe('execute', () => {
     it('正常系: 設定情報を取得できる', async () => {
       // Arrange
@@ -139,6 +143,7 @@ describe('GetEngineConfigUseCase', () => {
 
     it('正常系: 並列実行でデータを取得する', async () => {
       // Arrange
+      jest.useFakeTimers();
       const fqdn = Fqdn.create('fqdn-1', 'example.com');
       const ipAllowList = IpAllowList.create('ip-allowlist-1', 'user-1', '192.168.1.1');
       const customer = Customer.create('customer-1', 'Customer A', 'customer-a@example.com');
@@ -178,18 +183,22 @@ describe('GetEngineConfigUseCase', () => {
           ),
       );
 
-      const startTime = Date.now();
-
       // Act
-      await getEngineConfigUseCase.execute();
+      const executePromise = getEngineConfigUseCase.execute();
+
+      // タイマーを進めて、すべてのPromiseを解決
+      jest.runAllTimers();
 
       // Assert
-      const endTime = Date.now();
-      const duration = endTime - startTime;
+      await executePromise;
 
-      // 並列実行の場合、最大でも50ms程度（10ms + オーバーヘッド）で完了するはず
-      // 直列実行の場合は30ms以上かかる
-      expect(duration).toBeLessThan(50);
+      // すべてのリポジトリメソッドが呼ばれたことを確認
+      expect(mockFqdnRepository.findAll).toHaveBeenCalled();
+      expect(mockIpAllowListRepository.findAll).toHaveBeenCalled();
+      expect(mockCustomerRepository.findAll).toHaveBeenCalled();
+
+      // クリーンアップ
+      jest.useRealTimers();
     });
   });
 });

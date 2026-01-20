@@ -4457,3 +4457,205 @@ interface FqdnConfig {
 - IDEの補完機能が有効に働く
 
 **参照**: PR #60 - MWD-100 WAFエンジン向け設定配信API実装設計書作成（Geminiレビュー指摘 - 第3回）
+
+### 13-29. 値オブジェクトの等価性チェックにおける順序非依存性（PR #61）
+
+**学習元**: PR #61 - MWD-100 WAFエンジン向け設定配信API実装（Geminiレビュー指摘）
+
+#### 配列の等価性チェックは順序非依存にする 🔴 High
+
+**問題**: 配列の等価性チェックでインデックス順に比較すると、リポジトリから取得されるデータの順序が保証されていない場合、同じ要素が含まれていても順序が違うだけで`false`と判定されてしまい、バグの原因となる。
+
+**解決策**: 比較を行う前に、各配列をIDでソートするステップを追加することで、順序に依存しない堅牢な等価性チェックを実現する。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: インデックス順に比較（順序に依存）
+public equals(other: EngineConfig): boolean {
+  for (let i = 0; i < this.fqdns.length; i++) {
+    if (this.fqdns[i].id !== other.fqdns[i].id) {
+      return false;
+    }
+  }
+  // ...
+}
+
+// ✅ 良い例: IDでソートしてから比較（順序非依存）
+public equals(other: EngineConfig): boolean {
+  // FQDNの等価性チェック（順序不問）
+  const thisFqdnIds = this.fqdns.map((f) => f.id).sort();
+  const otherFqdnIds = other.fqdns.map((f) => f.id).sort();
+  if (JSON.stringify(thisFqdnIds) !== JSON.stringify(otherFqdnIds)) {
+    return false;
+  }
+  // ...
+}
+```
+
+**理由**:
+- リポジトリから取得されるデータの順序は保証されない
+- 順序に依存しない比較により、バグを防ぐ
+- より堅牢な等価性チェックが実現できる
+
+#### ドメインエンティティのバリデーションはドメイン層で完結させる 🔴 High
+
+**問題**: ドメインエンティティのバリデーションがInfrastructure層のサービスに依存していると、Onion Architectureの原則に反する。ドメインエンティティはそれ自体で整合性を保つべきである。
+
+**解決策**: ドメインエンティティのバリデーションは、ドメイン層内で完結させる。複雑なバリデーション（例: IPアドレス）については、将来的にValue Objectとして分離することを検討する。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: Infrastructure層に依存するコメント
+// 詳細なバリデーションはInfrastructure層のIpAddressServiceで実施
+
+// ✅ 良い例: ドメイン層内で完結、将来の改善を明記
+/**
+ * @note 現時点では基本的な形式チェックのみ実施。
+ *       将来的には`IpAddress` Value Objectを分離し、より堅牢なバリデーションを実装する予定。
+ *       IPアドレスのバリデーションは複雑なため、実績のあるライブラリ（例: `is-ip`）の使用を検討する。
+ */
+private static validateIpAddress(ipAddress: string): void {
+  // 基本的な形式チェック
+  // ...
+}
+```
+
+**理由**:
+- Onion Architectureの原則に従う（内側のレイヤーは外側のレイヤーに依存しない）
+- ドメインエンティティの整合性を保つ
+- 将来の改善方針を明確にする
+
+#### テストの安定性向上 🟡 Medium
+
+**問題**: `setTimeout`と`Date.now()`を使った並列実行のテストは、実行環境の負荷によって結果が不安定になる（flaky test）可能性がある。
+
+**解決策**: `jest.useFakeTimers()`を使ってタイマーをモックすることで、実行時間に依存しない、より信頼性が高く高速なテストに改善する。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: 実行時間に依存するテスト
+it('正常系: 並列実行でデータを取得する', async () => {
+  const startTime = Date.now();
+  await useCase.execute();
+  const endTime = Date.now();
+  expect(endTime - startTime).toBeLessThan(50); // 不安定になる可能性
+});
+
+// ✅ 良い例: jest.useFakeTimers()を使用
+it('正常系: 並列実行でデータを取得する', async () => {
+  jest.useFakeTimers();
+  
+  const executePromise = useCase.execute();
+  jest.runAllTimers(); // タイマーを即座に実行
+  
+  await executePromise;
+  // 並列実行が正しく行われたことを確認
+  
+  jest.useRealTimers(); // クリーンアップ
+});
+```
+
+**理由**:
+- テストの安定性が向上する
+- 実行時間に依存しない
+- テストの実行速度が向上する
+
+#### マジックナンバーの定数化 🟡 Medium
+
+**問題**: マジックナンバーがハードコードされていると、コードの可読性と保守性が低下する。
+
+**解決策**: 意味のある名前を持つ定数として定義し、ファイルの先頭で参照する。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: マジックナンバーがハードコード
+this.fqdnRepository.findAll({
+  status: FqdnStatusEnum.ACTIVE,
+  page: 1,
+  limit: 10000, // マジックナンバー
+});
+
+// ✅ 良い例: 定数として定義
+const MAX_FETCH_LIMIT = 10000;
+
+this.fqdnRepository.findAll({
+  status: FqdnStatusEnum.ACTIVE,
+  page: 1,
+  limit: MAX_FETCH_LIMIT,
+});
+```
+
+**理由**:
+- コードの可読性が向上する
+- 保守性が向上する（値の変更が容易）
+- 意図が明確になる
+
+#### テストでequalsメソッドを正しく検証する 🟡 Medium
+
+**問題**: テストケースで`equals`メソッドの動作を検証する際、実際に`equals`メソッドを呼び出していない場合、テストが正しく動作を検証できていない。
+
+**解決策**: `equals`メソッドを実際に呼び出してアサートする。`lastUpdated`などの時刻に依存する値がある場合は、`jest.useFakeTimers()`を使ってDateをモックし、固定値にする。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: equalsメソッドを呼び出していない
+it('正常系: 同じ値のEngineConfigは等しいと判定される', () => {
+  const config1 = EngineConfig.create(...);
+  const config2 = EngineConfig.create(...);
+  expect(config1.fqdns.length).toBe(config2.fqdns.length); // equalsを呼び出していない
+});
+
+// ✅ 良い例: equalsメソッドを実際に呼び出す
+it('正常系: 同じ値のEngineConfigは等しいと判定される', () => {
+  jest.useFakeTimers();
+  jest.setSystemTime(new Date('2024-01-15T10:30:00Z'));
+  
+  const config1 = EngineConfig.create(...);
+  const config2 = EngineConfig.create(...);
+  
+  expect(config1.equals(config2)).toBe(true); // equalsメソッドを呼び出す
+  
+  jest.useRealTimers();
+});
+```
+
+**理由**:
+- テストが正しく動作を検証できる
+- 時刻に依存する値も適切にテストできる
+- テストの信頼性が向上する
+
+#### 変換メソッドの引数型を具体的なドメインエンティティ型にする 🟡 Medium
+
+**問題**: 変換メソッドの引数型が構造的部分型（`{ id: string; ... }`）になっていると、将来ドメインエンティティの構造が変更された場合に型エラーとして検知できず、バグの原因となり得る。
+
+**解決策**: 引数の型を具体的なドメインエンティティ型（`Fqdn`, `IpAllowList`, `Customer`）にする。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: 構造的部分型を使用
+private toFqdnConfig(fqdn: { id: string; fqdn: string; status: { getValue(): string } }): FqdnConfig {
+  return {
+    id: fqdn.id,
+    fqdn: fqdn.fqdn,
+    status: fqdn.status.getValue() as 'ACTIVE' | 'INACTIVE',
+  };
+}
+
+// ✅ 良い例: 具体的なドメインエンティティ型を使用
+import { Fqdn } from '../../domain/entities/fqdn.entity';
+
+private toFqdnConfig(fqdn: Fqdn): FqdnConfig {
+  return {
+    id: fqdn.id,
+    fqdn: fqdn.fqdn,
+    status: fqdn.status.getValue() as 'ACTIVE' | 'INACTIVE',
+  };
+}
+```
+
+**理由**:
+- 型安全性が向上する
+- ドメインエンティティの変更を型エラーとして検知できる
+- 保守性が向上する
+
+**参照**: PR #61 - MWD-100 WAFエンジン向け設定配信API実装（Geminiレビュー指摘）

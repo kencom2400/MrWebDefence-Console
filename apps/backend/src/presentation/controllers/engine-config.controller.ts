@@ -12,6 +12,9 @@ import { FqdnConfig } from '../dto/fqdn-config.dto';
 import { IpAllowListConfig } from '../dto/ip-allowlist-config.dto';
 import { CustomerConfig } from '../dto/customer-config.dto';
 import { EngineConfig } from '../../domain/value-objects/engine-config.value-object';
+import { Fqdn } from '../../domain/entities/fqdn.entity';
+import { IpAllowList } from '../../domain/entities/ip-allowlist.entity';
+import { Customer } from '../../domain/entities/customer.entity';
 
 @Controller('engine/v1')
 export class EngineConfigController {
@@ -54,7 +57,7 @@ export class EngineConfigController {
    * @param fqdn Fqdnエンティティ
    * @returns FqdnConfig
    */
-  private toFqdnConfig(fqdn: { id: string; fqdn: string; status: { getValue(): string } }): FqdnConfig {
+  private toFqdnConfig(fqdn: Fqdn): FqdnConfig {
     return {
       id: fqdn.id,
       fqdn: fqdn.fqdn,
@@ -67,11 +70,7 @@ export class EngineConfigController {
    * @param ipAllowList IpAllowListエンティティ
    * @returns IpAllowListConfig
    */
-  private toIpAllowListConfig(ipAllowList: {
-    id: string;
-    userId: string;
-    ipAddress: string;
-  }): IpAllowListConfig {
+  private toIpAllowListConfig(ipAllowList: IpAllowList): IpAllowListConfig {
     return {
       id: ipAllowList.id,
       userId: ipAllowList.userId,
@@ -84,11 +83,7 @@ export class EngineConfigController {
    * @param customer Customerエンティティ
    * @returns CustomerConfig
    */
-  private toCustomerConfig(customer: {
-    id: string;
-    name: string;
-    status: { getValue(): string };
-  }): CustomerConfig {
+  private toCustomerConfig(customer: Customer): CustomerConfig {
     return {
       id: customer.id,
       name: customer.name,

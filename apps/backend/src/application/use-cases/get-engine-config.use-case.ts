@@ -13,6 +13,12 @@ import { EngineConfig } from '../../domain/value-objects/engine-config.value-obj
 import { FqdnStatusEnum } from '../../domain/value-objects/fqdn-status.value-object';
 import { CustomerStatusEnum } from '../../domain/value-objects/customer-status.value-object';
 
+/**
+ * データ取得の上限値（実用的な上限値）
+ * 将来的にはカーソルベースのページネーションに移行する予定
+ */
+const MAX_FETCH_LIMIT = 10000;
+
 @Injectable()
 export class GetEngineConfigUseCase {
   constructor(
@@ -35,7 +41,7 @@ export class GetEngineConfigUseCase {
       this.fqdnRepository.findAll({
         status: FqdnStatusEnum.ACTIVE,
         page: 1,
-        limit: 10000, // 実用的な上限値（将来はページネーション対応）
+        limit: MAX_FETCH_LIMIT,
       }),
       // すべてのIP AllowListを取得
       this.ipAllowListRepository.findAll(),
@@ -43,7 +49,7 @@ export class GetEngineConfigUseCase {
       this.customerRepository.findAll({
         status: CustomerStatusEnum.ACTIVE,
         page: 1,
-        limit: 10000, // 実用的な上限値（将来はページネーション対応）
+        limit: MAX_FETCH_LIMIT,
       }),
     ]);
 
