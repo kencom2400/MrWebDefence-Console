@@ -137,11 +137,31 @@ describe('Engine Config E2E Tests', () => {
       const fqdnRepository = app.get<IFqdnRepository>('IFqdnRepository') as any;
       if (fqdnRepository && typeof fqdnRepository.clear === 'function') {
         fqdnRepository.clear();
+      } else if (fqdnRepository && typeof fqdnRepository.findAll === 'function') {
+        // clear()メソッドがない場合は、findAll()で取得して削除
+        const result = await fqdnRepository.findAll({ page: 1, limit: 10000 });
+        for (const fqdn of result.fqdns) {
+          try {
+            await fqdnRepository.delete(fqdn.id);
+          } catch (error) {
+            // 削除に失敗した場合は無視
+          }
+        }
       }
 
       const customerRepository = app.get<ICustomerRepository>('ICustomerRepository') as any;
       if (customerRepository && typeof customerRepository.clear === 'function') {
         customerRepository.clear();
+      } else if (customerRepository && typeof customerRepository.findAll === 'function') {
+        // clear()メソッドがない場合は、findAll()で取得して削除
+        const result = await customerRepository.findAll({ page: 1, limit: 10000 });
+        for (const customer of result.customers) {
+          try {
+            await customerRepository.delete(customer.id);
+          } catch (error) {
+            // 削除に失敗した場合は無視
+          }
+        }
       }
 
       // このdescribeブロック内で共有するトークンを取得
