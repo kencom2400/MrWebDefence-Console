@@ -4426,3 +4426,34 @@ class EngineConfigController {
 - 責務の分離が明確になる
 
 **参照**: PR #60 - MWD-100 WAFエンジン向け設定配信API実装設計書作成（Geminiレビュー指摘 - 第2回）
+
+#### DTOの型定義をより厳密にする 🟡 Medium
+
+**問題**: DTOの型定義で、可能な値が限られているプロパティ（例: `status: 'ACTIVE' | 'INACTIVE'`）を`string`型として定義していると、設計の意図が不明確になり、実装時の型安全性が低下する。
+
+**解決策**: 可能な値が限られているプロパティは、リテラル型ユニオンを使用して型定義を厳密にする。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: string型を使用
+interface FqdnConfig {
+  id: string;
+  fqdn: string;
+  status: string; // "ACTIVE" | "INACTIVE" とコメントで示されているが、型定義では不明確
+}
+
+// ✅ 良い例: リテラル型ユニオンを使用
+interface FqdnConfig {
+  id: string;
+  fqdn: string;
+  status: 'ACTIVE' | 'INACTIVE'; // 型定義で可能な値を明確に示す
+}
+```
+
+**理由**:
+- 設計の意図が明確になる
+- 実装時の型安全性が向上する
+- TypeScriptの型チェックで誤った値の代入を防げる
+- IDEの補完機能が有効に働く
+
+**参照**: PR #60 - MWD-100 WAFエンジン向け設定配信API実装設計書作成（Geminiレビュー指摘 - 第3回）

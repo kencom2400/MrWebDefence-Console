@@ -93,7 +93,7 @@ interface EngineConfigResponseDto {
 interface FqdnConfig {
   id: string;              // UUID
   fqdn: string;           // FQDN文字列
-  status: string;         // "ACTIVE" | "INACTIVE"
+  status: 'ACTIVE' | 'INACTIVE';
 }
 ```
 
@@ -111,7 +111,7 @@ interface IpAllowListConfig {
 interface CustomerConfig {
   id: string;              // UUID
   name: string;           // 顧客名
-  status: string;         // "ACTIVE" | "INACTIVE"
+  status: 'ACTIVE' | 'INACTIVE';
 }
 ```
 
