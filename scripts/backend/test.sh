@@ -138,7 +138,7 @@ case "${TEST_TYPE}" in
     $DOCKER_COMPOSE up -d "redis-test" "mysql-test"
     sleep 2
     echo "🏃 テストを実行中..."
-    local db_password="${DB_PASSWORD:-password}"
+    db_password="${DB_PASSWORD:-password}"
     $DOCKER_COMPOSE run --rm --no-deps \
       -e REDIS_HOST="redis-test" \
       -e REDIS_PORT=6379 \
