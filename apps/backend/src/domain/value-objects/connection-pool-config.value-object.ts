@@ -165,6 +165,7 @@ export class ConnectionPoolConfig {
   /**
    * 環境変数から接続プール設定を作成する
    * @returns ConnectionPoolConfig Value Object
+   * @throws BadRequestException DB_PASSWORDが設定されていない場合
    */
   public static fromEnvironment(): ConnectionPoolConfig {
     const maxConnections = parseInt(process.env.DB_POOL_MAX_CONNECTIONS || '5', 10);
@@ -178,8 +179,15 @@ export class ConnectionPoolConfig {
     const dbHost = process.env.DB_HOST || 'localhost';
     const dbPort = parseInt(process.env.DB_PORT || '3306', 10);
     const dbUser = process.env.DB_USER || 'root';
-    const dbPassword = process.env.DB_PASSWORD || '';
     const dbName = process.env.DB_NAME || 'mrwebdefence';
+
+    // DB_PASSWORDは必須のため、設定されていない場合は明確にエラーをスロー
+    if (!process.env.DB_PASSWORD || process.env.DB_PASSWORD.trim().length === 0) {
+      throw new BadRequestException(
+        'DB_PASSWORD environment variable is required. Please set DB_PASSWORD in your environment.',
+      );
+    }
+    const dbPassword = process.env.DB_PASSWORD;
 
     return ConnectionPoolConfig.create(
       maxConnections,
