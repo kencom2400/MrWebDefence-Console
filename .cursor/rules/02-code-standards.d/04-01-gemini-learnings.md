@@ -4875,3 +4875,65 @@ expect(engineConfig.ipAllowLists.map((i) => i.id)).toEqual(
 - 順序に依存しない堅牢なテストになる
 
 **参照**: PR #61 - MWD-100 WAFエンジン向け設定配信API実装（Geminiレビュー指摘 - 第3回）
+
+#### IPアドレスバリデーションに実績のあるライブラリを使用する 🔴 High
+
+**問題**: IPアドレスのバリデーションは複雑で、自作の正規表現では`999.999.999.999`のような不正なIPv4アドレスや、`2001:db8::1`のような一般的な形式の圧縮IPv6アドレスを正しく検証できない。IP許可リストのようなセキュリティ関連機能では、不正な値が設定されると予期せぬ動作を引き起こす可能性があるため、より厳密なバリデーションが不可欠。
+
+**解決策**: `is-ip`のような実績のあるライブラリを使用して、IPv4/IPv6およびCIDR記法を堅牢に検証する。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: 自作の正規表現（不完全）
+private static validateIpAddress(ipAddress: string): void {
+  const ipv4Pattern = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
+  const ipv6Pattern = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(\/\d{1,3})?$/;
+  // 999.999.999.999や2001:db8::1を正しく検証できない
+  if (!ipv4Pattern.test(ipAddress) && !ipv6Pattern.test(ipAddress)) {
+    throw new Error(`Invalid IP address format: ${ipAddress}`);
+  }
+}
+
+// ✅ 良い例: is-ipライブラリを使用
+import * as isIp from 'is-ip';
+
+private static validateIpAddress(ipAddress: string): void {
+  if (!ipAddress || ipAddress.trim().length === 0) {
+    throw new Error('IP address cannot be empty');
+  }
+
+  // CIDR記法を考慮し、IPアドレス部分とプレフィックスを分離
+  const parts = ipAddress.split('/');
+  const ip = parts[0];
+
+  // is-ipライブラリでIPアドレスの妥当性を検証
+  if (!isIp.isIP(ip)) {
+    throw new Error(`Invalid IP address format: ${ipAddress}`);
+  }
+
+  // CIDRプレフィックスのバリデーション
+  if (parts.length > 1) {
+    if (parts.length > 2) {
+      throw new Error(`Invalid CIDR format: ${ipAddress}`);
+    }
+    const prefix = parseInt(parts[1], 10);
+    const maxPrefix = isIp.isIPv6(ip) ? 128 : 32;
+    if (isNaN(prefix) || prefix < 0 || prefix > maxPrefix) {
+      throw new Error(`Invalid CIDR prefix in ${ipAddress}`);
+    }
+  }
+}
+```
+
+**理由**:
+- バリデーションの正確性と信頼性が向上する
+- エッジケースを網羅できる
+- セキュリティ関連機能の堅牢性が向上する
+- メンテナンスコストが削減される
+
+**注意事項**:
+- `is-ip`ライブラリは`import * as isIp from 'is-ip'`の形式でインポートする
+- `isIp.isIP()`, `isIp.isIPv4()`, `isIp.isIPv6()`などのメソッドを使用する
+- CIDR記法のプレフィックスは手動でバリデーションする必要がある
+
+**参照**: PR #61 - MWD-100 WAFエンジン向け設定配信API実装（Geminiレビュー指摘 - 第4回）
