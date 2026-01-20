@@ -168,18 +168,18 @@ export class ConnectionPoolConfig {
    * @throws BadRequestException DB_PASSWORDが設定されていない場合
    */
   public static fromEnvironment(): ConnectionPoolConfig {
-    const maxConnections = parseInt(process.env.DB_POOL_MAX_CONNECTIONS || '5', 10);
-    const minConnections = parseInt(process.env.DB_POOL_MIN_CONNECTIONS || '1', 10);
-    const connectionTimeout = parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '30000', 10);
-    const idleTimeout = parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '600000', 10);
-    const maxLifetime = parseInt(process.env.DB_POOL_MAX_LIFETIME || '3600000', 10);
-    const retryAttempts = parseInt(process.env.DB_POOL_RETRY_ATTEMPTS || '3', 10);
-    const retryDelay = parseInt(process.env.DB_POOL_RETRY_DELAY || '1000', 10);
-    const monitorInterval = parseInt(process.env.DB_POOL_MONITOR_INTERVAL || '5000', 10);
-    const dbHost = process.env.DB_HOST || 'localhost';
-    const dbPort = parseInt(process.env.DB_PORT || '3306', 10);
-    const dbUser = process.env.DB_USER || 'root';
-    const dbName = process.env.DB_NAME || 'mrwebdefence';
+    const maxConnections = parseInt(process.env.DB_POOL_MAX_CONNECTIONS ?? '5', 10);
+    const minConnections = parseInt(process.env.DB_POOL_MIN_CONNECTIONS ?? '1', 10);
+    const connectionTimeout = parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT ?? '30000', 10);
+    const idleTimeout = parseInt(process.env.DB_POOL_IDLE_TIMEOUT ?? '600000', 10);
+    const maxLifetime = parseInt(process.env.DB_POOL_MAX_LIFETIME ?? '3600000', 10);
+    const retryAttempts = parseInt(process.env.DB_POOL_RETRY_ATTEMPTS ?? '3', 10);
+    const retryDelay = parseInt(process.env.DB_POOL_RETRY_DELAY ?? '1000', 10);
+    const monitorInterval = parseInt(process.env.DB_POOL_MONITOR_INTERVAL ?? '5000', 10);
+    const dbHost = process.env.DB_HOST ?? 'localhost';
+    const dbPort = parseInt(process.env.DB_PORT ?? '3306', 10);
+    const dbUser = process.env.DB_USER ?? 'root';
+    const dbName = process.env.DB_NAME ?? 'mrwebdefence';
 
     // DB_PASSWORDは必須のため、設定されていない場合は明確にエラーをスロー
     if (!process.env.DB_PASSWORD || process.env.DB_PASSWORD.trim().length === 0) {

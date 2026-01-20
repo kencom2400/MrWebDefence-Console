@@ -4206,3 +4206,55 @@ this.mysqlPool = createPool({
 - アプリケーションの安定性向上
 
 **参照**: PR #58 - MWD-108 DBへの接続部分の修正（Geminiレビュー指摘）
+
+#### 27-3. 環境変数の読み込みでnull合体演算子を使用 🟡 Medium
+
+**問題**: 環境変数から設定を読み込む際に`||`演算子を使用すると、環境変数に空文字列（`''`）が設定された場合に意図せずデフォルト値が使用されてしまい、設定ミスに気づきにくくなる可能性がある。
+
+**解決策**: `||`演算子の代わりにnull合体演算子（`??`）を使用する。`??`を使用すると、`null`と`undefined`の場合にのみデフォルト値が適用され、空文字列はそのまま値として扱われる。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: ||演算子を使用
+const dbHost = process.env.DB_HOST || 'localhost';
+// 空文字列が設定されている場合、デフォルト値が使用されてしまう
+
+// ✅ 良い例: ??演算子を使用
+const dbHost = process.env.DB_HOST ?? 'localhost';
+// 空文字列が設定されている場合、空文字列がそのまま値として扱われ、バリデーションでエラーとして検知できる
+```
+
+**理由**:
+- 空文字列の設定ミスを早期に発見できる
+- バリデーションで空文字列をエラーとして検知できる
+- より堅牢な実装になる
+
+#### 27-4. 必須環境変数のバリデーションテスト 🟡 Medium
+
+**問題**: 必須環境変数が設定されていない場合にエラーをスローする実装があるが、その動作を確認するテストケースがない場合、バリデーションの網羅性が不十分になる可能性がある。
+
+**解決策**: 必須環境変数が設定されていない場合にエラーをスローすることを確認するテストケースを追加する。
+
+**実装例**:
+```typescript
+it('DB_PASSWORD環境変数が設定されていない場合にエラーを投げる', () => {
+  const originalPassword = process.env.DB_PASSWORD;
+  delete process.env.DB_PASSWORD;
+
+  expect(() => ConnectionPoolConfig.fromEnvironment()).toThrow(
+    'DB_PASSWORD environment variable is required. Please set DB_PASSWORD in your environment.',
+  );
+
+  // 環境変数を復元
+  if (originalPassword) {
+    process.env.DB_PASSWORD = originalPassword;
+  }
+});
+```
+
+**理由**:
+- バリデーションの網羅性が向上する
+- エラーメッセージの正確性を確認できる
+- テストの信頼性が向上する
+
+**参照**: PR #58 - MWD-108 DBへの接続部分の修正（Geminiレビュー指摘）

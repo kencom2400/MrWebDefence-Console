@@ -478,6 +478,20 @@ describe('ConnectionPoolConfig', () => {
       expect(config.dbPassword).toBe('default-password');
       expect(config.dbName).toBe('mrwebdefence');
     });
+
+    it('DB_PASSWORD環境変数が設定されていない場合にエラーを投げる', () => {
+      const originalPassword = process.env.DB_PASSWORD;
+      delete process.env.DB_PASSWORD;
+
+      expect(() => ConnectionPoolConfig.fromEnvironment()).toThrow(
+        'DB_PASSWORD environment variable is required. Please set DB_PASSWORD in your environment.',
+      );
+
+      // 環境変数を復元
+      if (originalPassword) {
+        process.env.DB_PASSWORD = originalPassword;
+      }
+    });
   });
 
   describe('equals', () => {
