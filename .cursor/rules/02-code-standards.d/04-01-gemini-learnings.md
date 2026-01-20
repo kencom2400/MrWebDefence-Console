@@ -4148,3 +4148,61 @@ CREATE TABLE customers (
 - アプリケーションレベルでのチェックを不要にする
 
 **参照**: PR #57 - MWD-107 DBスキーマの作成及び、DB Dockerの実装（Geminiレビュー指摘）
+
+### 27. 環境変数のデフォルト値とバリデーションの一貫性（PR #58）
+
+**学習元**: PR #58 - MWD-108 DBへの接続部分の修正（Geminiレビュー指摘）
+
+#### 27-1. 必須環境変数の明確なエラーハンドリング 🟠 High
+
+**問題**: `fromEnvironment`メソッドで、必須の環境変数（例: `DB_PASSWORD`）にデフォルト値を設定すると、バリデーションエラーが発生するまで問題が発見されず、開発者を混乱させる可能性がある。
+
+**解決策**: 必須の環境変数については、デフォルト値を設定せず、`fromEnvironment`メソッド内で存在チェックを行い、設定されていない場合は明確なエラーメッセージをスローする。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: デフォルト値を空文字列に設定
+const dbPassword = process.env.DB_PASSWORD || '';
+// 後でcreateメソッドでバリデーションエラーが発生
+
+// ✅ 良い例: 必須環境変数の存在チェックを明示的に行う
+if (!process.env.DB_PASSWORD || process.env.DB_PASSWORD.trim().length === 0) {
+  throw new BadRequestException(
+    'DB_PASSWORD environment variable is required. Please set DB_PASSWORD in your environment.',
+  );
+}
+const dbPassword = process.env.DB_PASSWORD;
+```
+
+**理由**:
+- 起動時に問題を早期発見できる
+- エラーメッセージが明確で、開発者が問題を理解しやすい
+- 他の設定項目との一貫性を保つ
+
+#### 27-2. データベース接続プールのリソース制限 🟠 High
+
+**問題**: `mysql2`の接続プールで`queueLimit: 0`を設定すると、待機キューの長さが無制限になり、高負荷時にメモリを消費し、プロセスがクラッシュする可能性がある。
+
+**解決策**: `queueLimit`に適切な有限値を設定し、キューが満杯になった際にfail-fastするようにする。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: 無制限のキュー
+this.mysqlPool = createPool({
+  // ...
+  queueLimit: 0, // 無制限
+});
+
+// ✅ 良い例: 適切な有限値を設定
+this.mysqlPool = createPool({
+  // ...
+  queueLimit: 50, // 無制限を避けるため、適切な有限値を設定（高負荷時のメモリ枯渇を防止）
+});
+```
+
+**理由**:
+- 高負荷時のメモリ枯渇リスクを軽減
+- キューが満杯になった際にfail-fastし、問題を早期発見できる
+- アプリケーションの安定性向上
+
+**参照**: PR #58 - MWD-108 DBへの接続部分の修正（Geminiレビュー指摘）
