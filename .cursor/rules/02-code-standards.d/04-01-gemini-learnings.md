@@ -4937,3 +4937,140 @@ private static validateIpAddress(ipAddress: string): void {
 - CIDR記法のプレフィックスは手動でバリデーションする必要がある
 
 **参照**: PR #61 - MWD-100 WAFエンジン向け設定配信API実装（Geminiレビュー指摘 - 第4回）
+
+---
+
+## 13-21. APIトークン管理機能の設計におけるセキュリティとロジックの明確化（PR #62）
+
+### 問題点
+
+1. **トークンのハッシュ化対象の曖昧さ**
+   - フルトークン（プレフィックス + シークレット）全体をハッシュ化していた
+   - プレフィックスは検索効率化のためのものであり、ハッシュ化する必要はない
+   - シークレット部分のみをハッシュ化すべき
+
+2. **トークン生成フローのロジック問題**
+   - トークンを生成した後にプレフィックスを抽出していた
+   - プレフィックスは既知の値であり、トークンを組み立てるために使用すべき
+
+3. **認証フローの曖昧さ**
+   - フルトークンからシークレット部分を抽出するステップが明確でなかった
+   - シークレット部分の抽出ロジックが明記されていなかった
+
+4. **データベース設計の冗長性**
+   - `UNIQUE`制約を持つカラムには自動的にインデックスが作成される
+   - 明示的なインデックス定義は冗長
+
+5. **命名の混乱**
+   - `tokenPrefix`というプロパティ名が、実際の意味（プレビュー表示）と異なる
+   - データベースの`token_prefix`カラムとの混同を招く
+
+### 解決策
+
+#### 1. トークン生成フローの修正
+
+**❌ 悪い例**:
+```typescript
+// フルトークンを生成してからハッシュ化
+const fullToken = generateToken(); // "waf_xxxxx..."
+const tokenHash = hashToken(fullToken);
+const tokenPrefix = extractPrefix(fullToken);
+```
+
+**✅ 良い例**:
+```typescript
+// シークレットを生成してからハッシュ化
+const secret = generateSecret(); // "xxxxx..." (ランダム文字列)
+const tokenHash = hashToken(secret);
+const prefix = "waf_";
+const fullToken = buildFullToken(prefix, secret); // "waf_xxxxx..."
+```
+
+#### 2. 認証フローの明確化
+
+**✅ 良い例**:
+```typescript
+// フルトークンからシークレット部分を抽出
+const fullToken = extractTokenFromHeader(); // "waf_xxxxx..."
+const prefix = extractPrefix(fullToken); // "waf_"
+const secret = extractSecret(fullToken, prefix); // "xxxxx..."
+const tokenHash = hashToken(secret);
+const apiToken = await repository.findByTokenHash(tokenHash);
+```
+
+#### 3. データベース設計の最適化
+
+**❌ 悪い例**:
+```sql
+CREATE TABLE api_tokens (
+    token_hash VARCHAR(255) NOT NULL UNIQUE,
+    INDEX idx_token_hash (token_hash),  -- 冗長
+    ...
+);
+```
+
+**✅ 良い例**:
+```sql
+CREATE TABLE api_tokens (
+    token_hash VARCHAR(255) NOT NULL UNIQUE,  -- UNIQUE制約により自動的にインデックスが作成される
+    INDEX idx_token_prefix (token_prefix),    -- プレフィックスによる検索用
+    ...
+);
+```
+
+#### 4. 命名の明確化
+
+**❌ 悪い例**:
+```typescript
+interface ApiTokenResponseDto {
+  tokenPrefix: string; // 実際は "waf_abc123..." のようなプレビュー表示
+}
+```
+
+**✅ 良い例**:
+```typescript
+interface ApiTokenResponseDto {
+  tokenPreview: string; // "waf_abc123..." のようなプレビュー表示
+}
+```
+
+### ルール
+
+1. **APIトークンのハッシュ化**
+   - フルトークン全体ではなく、シークレット部分のみをハッシュ化する
+   - プレフィックスは検索効率化のためのものであり、ハッシュ化しない
+
+2. **トークン生成フロー**
+   - シークレットを生成
+   - シークレットをハッシュ化
+   - プレフィックスとシークレットを結合してフルトークンを作成
+   - ハッシュ値とプレフィックスをデータベースに保存
+
+3. **認証フロー**
+   - フルトークンからプレフィックスを抽出
+   - フルトークンからシークレット部分を抽出
+   - シークレット部分のみをハッシュ化
+   - ハッシュ値でデータベースを検索
+
+4. **データベース設計**
+   - `UNIQUE`制約を持つカラムには明示的なインデックス定義は不要
+   - 検索効率化のために必要なカラムのみにインデックスを定義
+
+5. **命名規則**
+   - データベースカラム名とDTOプロパティ名を明確に区別する
+   - 実際の意味に即した名前を使用する（例: `tokenPreview` vs `tokenPrefix`）
+
+6. **設計書の用語の一貫性**
+   - 設計書全体で用語の定義を統一する
+   - 用語集を用意し、各用語の意味を明確に定義する
+   - データベースカラム名、エンティティプロパティ名、DTOプロパティ名を区別して使用する
+   - クラス図、シーケンス図、入出力設計、READMEで用語の使い方が一貫していることを確認する
+
+**理由**:
+- セキュリティの堅牢性が向上する
+- ロジックの明確性が向上する
+- データベース設計の最適化が図れる
+- 命名の混乱を避けられる
+- 設計書の理解しやすさが向上する
+
+**参照**: PR #62 - MWD-101 WAFエンジン向けAPIトークン管理機能の詳細設計書作成（Geminiレビュー指摘 - 第2回）
