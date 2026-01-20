@@ -30,6 +30,7 @@ describe('GetDashboardDataUseCase', () => {
 
     mockIpAllowListRepository = {
       countByUserId: jest.fn(),
+      findAll: jest.fn(),
     } as jest.Mocked<IIpAllowListRepository>;
 
     getDashboardDataUseCase = new GetDashboardDataUseCase(
