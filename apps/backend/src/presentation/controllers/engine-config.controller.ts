@@ -15,6 +15,9 @@ import { EngineConfig } from '../../domain/value-objects/engine-config.value-obj
 import { Fqdn } from '../../domain/entities/fqdn.entity';
 import { IpAllowList } from '../../domain/entities/ip-allowlist.entity';
 import { Customer } from '../../domain/entities/customer.entity';
+import { Roles } from '../decorators/roles.decorator';
+import { UserRole } from '../../domain/entities/user-role.enum';
+
 @Controller('engine/v1')
 export class EngineConfigController {
   constructor(
@@ -26,7 +29,9 @@ export class EngineConfigController {
    * WAFエンジン向け設定情報を取得する
    * GET /engine/v1/config
    * 認証: 必須（APIキーまたはJWTトークン）
+   * 認可: すべての認証済みユーザーがアクセス可能
    */
+  @Roles(UserRole.SERVICE_MEMBER, UserRole.SERVICE_ADMIN)
   @Get('config')
   @HttpCode(HttpStatus.OK)
   public async getConfig(): Promise<EngineConfigResponseDto> {
