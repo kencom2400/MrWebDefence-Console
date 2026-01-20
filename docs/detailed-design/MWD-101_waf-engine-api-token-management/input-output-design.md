@@ -98,7 +98,7 @@ Authorization: Bearer <JWT_TOKEN>
       "id": "660e8400-e29b-41d4-a716-446655440001",
       "name": "WAF Engine Development Token",
       "description": "Development環境のWAFエンジン用トークン",
-      "tokenPrefix": "waf_def456...",
+      "tokenPreview": "waf_def456...",
       "expiresAt": null,
       "revokedAt": "2026-01-19T10:00:00.000Z",
       "createdAt": "2026-01-15T08:00:00.000Z",

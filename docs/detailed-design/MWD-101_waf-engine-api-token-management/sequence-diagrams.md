@@ -68,7 +68,7 @@ sequenceDiagram
         ApiTokenController->>ApiTokenController: toResponseDto(apiTokens)
         ApiTokenController-->>Admin: 200 OK { tokens: [...], total: N }
         
-        Note over Admin: 実際のトークンは含まれない（tokenPrefixのみ）
+        Note over Admin: 実際のトークンは含まれない（tokenPreviewのみ）
     end
 ```
 

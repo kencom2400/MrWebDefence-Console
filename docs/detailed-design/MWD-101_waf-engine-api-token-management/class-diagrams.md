@@ -86,10 +86,12 @@ classDiagram
     
     class ApiTokenService {
         <<DomainService>>
-        +generateToken(): string
-        +hashToken(token: string): Promise<string>
-        +verifyToken(token: string, tokenHash: string): Promise<boolean>
-        +extractPrefix(token: string): string
+        +generateSecret(): string
+        +hashToken(secret: string): Promise<string>
+        +verifyToken(secret: string, tokenHash: string): Promise<boolean>
+        +extractPrefix(fullToken: string): string
+        +extractSecret(fullToken: string, prefix: string): string
+        +buildFullToken(prefix: string, secret: string): string
     }
     
     %% Infrastructure Layer
@@ -191,7 +193,8 @@ APIトークンのドメインエンティティ。
 - `name`: トークン名（識別用）
 - `description`: 説明（オプション）
 - `tokenHash`: トークンのハッシュ値（保存用）
-- `tokenPrefix`: トークンのプレフィックス（表示用、例: `waf_xxxxx`）
+- `tokenPrefix`: トークンのプレフィックス（データベース保存用、例: `waf_`）
+  - 注意: DTOでは`tokenPreview`（例: `waf_abc123...`）として表示される
 - `expiresAt`: 有効期限（オプション、nullの場合は無期限）
 - `revokedAt`: 無効化日時（nullの場合は有効）
 - `createdAt`: 作成日時
