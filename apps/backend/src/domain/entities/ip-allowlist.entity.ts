@@ -5,6 +5,8 @@
  * ドメイン層の最内層に位置し、外部に依存しない
  */
 
+import isIp from 'is-ip';
+
 export class IpAllowList {
   public readonly id: string;
   public readonly userId: string;
@@ -103,20 +105,32 @@ export class IpAllowList {
    * IPアドレスをバリデーションする
    * @param ipAddress IPアドレス
    * @throws Error バリデーション失敗時
+   * @note is-ipライブラリを使用して、IPv4/IPv6およびCIDR記法を堅牢に検証します。
    */
   private static validateIpAddress(ipAddress: string): void {
     if (!ipAddress || ipAddress.trim().length === 0) {
       throw new Error('IP address cannot be empty');
     }
 
-    // 基本的な形式チェック（IPv4、IPv6、CIDR記法）
-    // 詳細なバリデーションはInfrastructure層のIpAddressServiceで実施
-    const ipv4Pattern = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
-    const ipv6Pattern = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}(\/\d{1,3})?$/;
-    const ipv6CompressedPattern = /^::1$|^::$|^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}(\/\d{1,3})?$/;
+    // CIDR記法を考慮し、IPアドレス部分とプレフィックスを分離
+    const parts = ipAddress.split('/');
+    const ip = parts[0];
 
-    if (!ipv4Pattern.test(ipAddress) && !ipv6Pattern.test(ipAddress) && !ipv6CompressedPattern.test(ipAddress)) {
+    // is-ipライブラリでIPアドレスの妥当性を検証
+    if (!isIp.isIP(ip)) {
       throw new Error(`Invalid IP address format: ${ipAddress}`);
+    }
+
+    // CIDRプレフィックスのバリデーション
+    if (parts.length > 1) {
+      if (parts.length > 2) {
+        throw new Error(`Invalid CIDR format: ${ipAddress}`);
+      }
+      const prefix = parseInt(parts[1], 10);
+      const maxPrefix = isIp.isIPv6(ip) ? 128 : 32;
+      if (isNaN(prefix) || prefix < 0 || prefix > maxPrefix) {
+        throw new Error(`Invalid CIDR prefix in ${ipAddress}`);
+      }
     }
   }
 
