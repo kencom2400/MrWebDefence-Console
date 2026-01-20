@@ -47,7 +47,7 @@ MAPPED_STATUS_NAME=$(map_status_name "$TRANSITION_NAME" "$ISSUE_KEY")
 TRANSITION_ID=$(echo "$TRANSITIONS_DATA" | jq -r \
   --arg mapped_name "$MAPPED_STATUS_NAME" \
   --arg original_name "$TRANSITION_NAME" \
-  '(.transitions[] | select(.name == $mapped_name or .to.name == $mapped_name or .name == $original_name or .to.name == $original_name) | .id)[0]')
+  '[.transitions[] | select(.name == $mapped_name or .to.name == $mapped_name or .name == $original_name or .to.name == $original_name) | .id][0]')
 
 if [ -z "$TRANSITION_ID" ] || [ "$TRANSITION_ID" = "null" ]; then
   echo "❌ エラー: 遷移名 '$TRANSITION_NAME' が見つかりませんでした" >&2
