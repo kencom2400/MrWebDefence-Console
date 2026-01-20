@@ -25,8 +25,7 @@ export class MigrationService implements OnModuleInit {
   constructor(configService: ConfigService) {
     this.configService = configService;
     // 環境変数でマイグレーション実行を制御（デフォルト: false）
-    this.shouldRunMigrations =
-      this.configService.get<string>('AUTO_MIGRATE', 'false') === 'true';
+    this.shouldRunMigrations = this.configService.get<string>('AUTO_MIGRATE', 'false') === 'true';
   }
 
   /**
@@ -34,9 +33,7 @@ export class MigrationService implements OnModuleInit {
    */
   async onModuleInit(): Promise<void> {
     if (!this.shouldRunMigrations) {
-      this.logger.log(
-        'Auto-migration is disabled. Set AUTO_MIGRATE=true to enable.',
-      );
+      this.logger.log('Auto-migration is disabled. Set AUTO_MIGRATE=true to enable.');
       return;
     }
 
@@ -81,13 +78,10 @@ export class MigrationService implements OnModuleInit {
     const env = this.getDbEnv();
 
     try {
-      const { stdout, stderr } = await execAsync(
-        `bash ${migrateScript} migrate`,
-        {
-          env,
-          cwd: projectRoot,
-        },
-      );
+      const { stdout, stderr } = await execAsync(`bash ${migrateScript} migrate`, {
+        env,
+        cwd: projectRoot,
+      });
 
       if (stdout) {
         this.logger.log(stdout);
@@ -96,8 +90,7 @@ export class MigrationService implements OnModuleInit {
         this.logger.warn(stderr);
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Migration execution failed: ${errorMessage}`, error);
       throw new Error(`Migration failed: ${errorMessage}`);
     }
@@ -113,13 +106,10 @@ export class MigrationService implements OnModuleInit {
     const env = this.getDbEnv();
 
     try {
-      const { stdout, stderr } = await execAsync(
-        `bash ${migrateScript} info`,
-        {
-          env,
-          cwd: projectRoot,
-        },
-      );
+      const { stdout, stderr } = await execAsync(`bash ${migrateScript} info`, {
+        env,
+        cwd: projectRoot,
+      });
 
       if (stderr) {
         this.logger.warn(stderr);
@@ -127,8 +117,7 @@ export class MigrationService implements OnModuleInit {
 
       return stdout;
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Failed to get migration info: ${errorMessage}`, error);
       throw new Error(`Failed to get migration info: ${errorMessage}`);
     }

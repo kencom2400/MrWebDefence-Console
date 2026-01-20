@@ -7,21 +7,24 @@
 
 import { IConnection } from '../../domain/entities/connection.entity';
 import { v4 as uuidv4 } from 'uuid';
+import { PoolConnection } from 'mysql2/promise';
 
 /**
  * データベース接続の具象クラス
- * 注: 現時点ではスタブ実装。将来的に実際のデータベース接続（PostgreSQL等）を実装予定
+ * MySQL接続をラップしてIConnectionインターフェースを実装
  */
 export class Connection implements IConnection {
   public readonly id: string;
   public readonly createdAt: Date;
   public lastUsedAt: Date;
+  private readonly mysqlConnection: PoolConnection;
   private _isClosed: boolean = false;
 
-  constructor() {
+  constructor(mysqlConnection: PoolConnection) {
     this.id = uuidv4();
     this.createdAt = new Date();
     this.lastUsedAt = new Date();
+    this.mysqlConnection = mysqlConnection;
   }
 
   /**
@@ -29,18 +32,35 @@ export class Connection implements IConnection {
    * @returns 接続が有効な場合true、無効な場合false
    */
   async isValid(): Promise<boolean> {
-    // スタブ実装: 常にtrueを返す
-    // 将来的に実際のデータベース接続の有効性を確認する実装に置き換える
-    return !this._isClosed;
+    if (this._isClosed) {
+      return false;
+    }
+
+    try {
+      // 簡単なクエリを実行して接続の有効性を確認
+      await this.mysqlConnection.ping();
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
   /**
    * 接続を閉じます
    */
   async close(): Promise<void> {
-    // スタブ実装: 接続を閉じたことを記録
-    // 将来的に実際のデータベース接続を閉じる実装に置き換える
-    this._isClosed = true;
+    if (this._isClosed) {
+      return;
+    }
+
+    try {
+      await this.mysqlConnection.release();
+      this._isClosed = true;
+    } catch (error) {
+      // エラーが発生しても閉じたことにする
+      this._isClosed = true;
+      throw error;
+    }
   }
 
   /**
@@ -56,5 +76,13 @@ export class Connection implements IConnection {
    */
   isClosed(): boolean {
     return this._isClosed;
+  }
+
+  /**
+   * 内部のMySQL接続を取得します（テスト用）
+   * @returns MySQL接続
+   */
+  getMysqlConnection(): PoolConnection {
+    return this.mysqlConnection;
   }
 }

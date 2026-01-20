@@ -19,6 +19,11 @@ export class ConnectionPoolConfig {
   public readonly retryAttempts: number;
   public readonly retryDelay: number;
   public readonly monitorInterval: number;
+  public readonly dbHost: string;
+  public readonly dbPort: number;
+  public readonly dbUser: string;
+  public readonly dbPassword: string;
+  public readonly dbName: string;
 
   private constructor(
     maxConnections: number,
@@ -29,6 +34,11 @@ export class ConnectionPoolConfig {
     retryAttempts: number,
     retryDelay: number,
     monitorInterval: number,
+    dbHost: string,
+    dbPort: number,
+    dbUser: string,
+    dbPassword: string,
+    dbName: string,
   ) {
     this.maxConnections = maxConnections;
     this.minConnections = minConnections;
@@ -38,6 +48,11 @@ export class ConnectionPoolConfig {
     this.retryAttempts = retryAttempts;
     this.retryDelay = retryDelay;
     this.monitorInterval = monitorInterval;
+    this.dbHost = dbHost;
+    this.dbPort = dbPort;
+    this.dbUser = dbUser;
+    this.dbPassword = dbPassword;
+    this.dbName = dbName;
   }
 
   /**
@@ -50,6 +65,11 @@ export class ConnectionPoolConfig {
    * @param retryAttempts リトライ回数（0以上、必須）
    * @param retryDelay リトライ間隔（ミリ秒、1以上、必須）
    * @param monitorInterval 監視間隔（ミリ秒、1以上、必須）
+   * @param dbHost データベースホスト（必須）
+   * @param dbPort データベースポート（1以上65535以下、必須）
+   * @param dbUser データベースユーザー（必須）
+   * @param dbPassword データベースパスワード（必須）
+   * @param dbName データベース名（必須）
    * @returns ConnectionPoolConfig Value Object
    * @throws BadRequestException バリデーション失敗時
    */
@@ -62,6 +82,11 @@ export class ConnectionPoolConfig {
     retryAttempts: number,
     retryDelay: number,
     monitorInterval: number,
+    dbHost: string,
+    dbPort: number,
+    dbUser: string,
+    dbPassword: string,
+    dbName: string,
   ): ConnectionPoolConfig {
     // バリデーション
     if (maxConnections < 1) {
@@ -100,6 +125,26 @@ export class ConnectionPoolConfig {
       throw new BadRequestException('monitorInterval must be at least 1');
     }
 
+    if (!dbHost || dbHost.trim().length === 0) {
+      throw new BadRequestException('dbHost is required');
+    }
+
+    if (dbPort < 1 || dbPort > 65535) {
+      throw new BadRequestException('dbPort must be between 1 and 65535');
+    }
+
+    if (!dbUser || dbUser.trim().length === 0) {
+      throw new BadRequestException('dbUser is required');
+    }
+
+    if (!dbPassword || dbPassword.trim().length === 0) {
+      throw new BadRequestException('dbPassword is required');
+    }
+
+    if (!dbName || dbName.trim().length === 0) {
+      throw new BadRequestException('dbName is required');
+    }
+
     return new ConnectionPoolConfig(
       maxConnections,
       minConnections,
@@ -109,22 +154,40 @@ export class ConnectionPoolConfig {
       retryAttempts,
       retryDelay,
       monitorInterval,
+      dbHost,
+      dbPort,
+      dbUser,
+      dbPassword,
+      dbName,
     );
   }
 
   /**
    * 環境変数から接続プール設定を作成する
    * @returns ConnectionPoolConfig Value Object
+   * @throws BadRequestException DB_PASSWORDが設定されていない場合
    */
   public static fromEnvironment(): ConnectionPoolConfig {
-    const maxConnections = parseInt(process.env.DB_POOL_MAX_CONNECTIONS || '5', 10);
-    const minConnections = parseInt(process.env.DB_POOL_MIN_CONNECTIONS || '1', 10);
-    const connectionTimeout = parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT || '30000', 10);
-    const idleTimeout = parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '600000', 10);
-    const maxLifetime = parseInt(process.env.DB_POOL_MAX_LIFETIME || '3600000', 10);
-    const retryAttempts = parseInt(process.env.DB_POOL_RETRY_ATTEMPTS || '3', 10);
-    const retryDelay = parseInt(process.env.DB_POOL_RETRY_DELAY || '1000', 10);
-    const monitorInterval = parseInt(process.env.DB_POOL_MONITOR_INTERVAL || '5000', 10);
+    const maxConnections = parseInt(process.env.DB_POOL_MAX_CONNECTIONS ?? '5', 10);
+    const minConnections = parseInt(process.env.DB_POOL_MIN_CONNECTIONS ?? '1', 10);
+    const connectionTimeout = parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT ?? '30000', 10);
+    const idleTimeout = parseInt(process.env.DB_POOL_IDLE_TIMEOUT ?? '600000', 10);
+    const maxLifetime = parseInt(process.env.DB_POOL_MAX_LIFETIME ?? '3600000', 10);
+    const retryAttempts = parseInt(process.env.DB_POOL_RETRY_ATTEMPTS ?? '3', 10);
+    const retryDelay = parseInt(process.env.DB_POOL_RETRY_DELAY ?? '1000', 10);
+    const monitorInterval = parseInt(process.env.DB_POOL_MONITOR_INTERVAL ?? '5000', 10);
+    const dbHost = process.env.DB_HOST ?? 'localhost';
+    const dbPort = parseInt(process.env.DB_PORT ?? '3306', 10);
+    const dbUser = process.env.DB_USER ?? 'root';
+    const dbName = process.env.DB_NAME ?? 'mrwebdefence';
+
+    // DB_PASSWORDは必須のため、設定されていない場合は明確にエラーをスロー
+    if (!process.env.DB_PASSWORD || process.env.DB_PASSWORD.trim().length === 0) {
+      throw new BadRequestException(
+        'DB_PASSWORD environment variable is required. Please set DB_PASSWORD in your environment.',
+      );
+    }
+    const dbPassword = process.env.DB_PASSWORD;
 
     return ConnectionPoolConfig.create(
       maxConnections,
@@ -135,6 +198,11 @@ export class ConnectionPoolConfig {
       retryAttempts,
       retryDelay,
       monitorInterval,
+      dbHost,
+      dbPort,
+      dbUser,
+      dbPassword,
+      dbName,
     );
   }
 
@@ -152,7 +220,12 @@ export class ConnectionPoolConfig {
       this.maxLifetime === other.maxLifetime &&
       this.retryAttempts === other.retryAttempts &&
       this.retryDelay === other.retryDelay &&
-      this.monitorInterval === other.monitorInterval
+      this.monitorInterval === other.monitorInterval &&
+      this.dbHost === other.dbHost &&
+      this.dbPort === other.dbPort &&
+      this.dbUser === other.dbUser &&
+      this.dbPassword === other.dbPassword &&
+      this.dbName === other.dbName
     );
   }
 }

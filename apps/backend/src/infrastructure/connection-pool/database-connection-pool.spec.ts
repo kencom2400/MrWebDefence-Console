@@ -6,6 +6,7 @@
 
 import { DatabaseConnectionPool } from './database-connection-pool';
 import { ConnectionPoolConfig } from '../../domain/value-objects/connection-pool-config.value-object';
+import { PoolConnection } from 'mysql2/promise';
 
 // uuidをモック（各呼び出しで異なるIDを返す）
 let uuidCounter = 0;
@@ -13,11 +14,38 @@ jest.mock('uuid', () => ({
   v4: jest.fn(() => `mock-uuid-${++uuidCounter}`),
 }));
 
+// mysql2/promiseのcreatePoolをモック
+const mockGetConnection = jest.fn();
+const mockEnd = jest.fn();
+const mockPool = {
+  getConnection: mockGetConnection,
+  end: mockEnd,
+} as unknown as any;
+
+jest.mock('mysql2/promise', () => ({
+  createPool: jest.fn(() => mockPool),
+}));
+
 describe('DatabaseConnectionPool', () => {
   let pool: DatabaseConnectionPool;
   let config: ConnectionPoolConfig;
+  let mockConnection: PoolConnection;
 
   beforeEach(async () => {
+    // モックをリセット
+    jest.clearAllMocks();
+    mockGetConnection.mockReset();
+    mockEnd.mockReset();
+
+    // モック接続を作成
+    mockConnection = {
+      ping: jest.fn().mockResolvedValue(undefined),
+      release: jest.fn().mockResolvedValue(undefined),
+    } as unknown as PoolConnection;
+
+    // getConnectionをモック
+    mockGetConnection.mockResolvedValue(mockConnection);
+
     config = ConnectionPoolConfig.create(
       5, // maxConnections
       1, // minConnections
@@ -27,6 +55,11 @@ describe('DatabaseConnectionPool', () => {
       3, // retryAttempts
       100, // retryDelay (100ms)
       5000, // monitorInterval (5秒)
+      'localhost', // dbHost
+      3306, // dbPort
+      'root', // dbUser
+      'password', // dbPassword
+      'testdb', // dbName
     );
 
     pool = new DatabaseConnectionPool(config);
