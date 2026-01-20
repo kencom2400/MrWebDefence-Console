@@ -98,6 +98,15 @@ describe('ApiTokenService', () => {
         'Invalid token format: prefix not found',
       );
     });
+
+    it('正常系: シークレット部分にアンダースコアが含まれる場合でも正しく抽出できる', () => {
+      const fullToken = 'waf_abc_def_ghi';
+      const prefix = apiTokenService.extractPrefix(fullToken);
+      expect(prefix).toBe('waf_');
+      // シークレット部分は最初のアンダースコア以降すべて
+      const secret = apiTokenService.extractSecret(fullToken, prefix);
+      expect(secret).toBe('abc_def_ghi');
+    });
   });
 
   describe('extractSecret', () => {

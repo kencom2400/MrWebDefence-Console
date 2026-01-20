@@ -5165,3 +5165,105 @@ const matchingTokens = await this.apiTokenRepository.findByPrefix(tokenPrefix);
 - コードの意図が明確になる
 
 **参照**: PR #63 - MWD-101 WAFエンジン向けAPIトークン管理機能の実装（Geminiレビュー指摘）
+
+---
+
+## 13-23. APIトークン管理におけるセキュリティと堅牢性の向上（PR #63 - 第2回）
+
+### 問題点
+
+1. **重大なバグ: プレフィックス抽出ロジック**
+   - `split('_')`を使用した実装では、シークレット部分にアンダースコアが含まれる場合、正しく動作しない可能性がある
+   - 複数のアンダースコアが含まれる場合、最初のアンダースコア以降がすべてシークレットとして扱われるべき
+
+2. **セキュリティ問題: トークンプレビューからの情報漏洩**
+   - トークン作成時に返される`tokenPreview`が、シークレットの一部（最初の20文字）を含んでいた
+   - これにより、シークレットの一部が漏洩する可能性がある
+
+3. **テストの正確性**
+   - シークレット部分にアンダースコアが含まれる場合のテストケースが不足
+   - トークンプレビューがシークレットを含まないことを確認するテストが不足
+
+### 解決策
+
+#### 1. プレフィックス抽出ロジックの改善
+
+**❌ 悪い例**:
+```typescript
+// アンダースコアで分割し、最初の部分をプレフィックスとする
+const parts = fullToken.split('_');
+if (parts.length < 2) {
+  throw new Error('Invalid token format: prefix not found');
+}
+return `${parts[0]}_`;
+```
+
+**✅ 良い例**:
+```typescript
+// 最初のアンダースコアの位置を見つける
+const underscoreIndex = fullToken.indexOf('_');
+if (underscoreIndex === -1) {
+  throw new Error('Invalid token format: prefix not found (underscore not found)');
+}
+
+// 最初のアンダースコアの位置+1までをプレフィックスとする
+// これにより、シークレット部分にアンダースコアが含まれていても正しく動作する
+return fullToken.substring(0, underscoreIndex + 1);
+```
+
+#### 2. トークンプレビューのセキュリティ強化
+
+**❌ 悪い例**:
+```typescript
+// シークレットの一部が漏洩する可能性がある
+const tokenPreview = fullToken.substring(0, Math.min(20, fullToken.length)) + '...';
+```
+
+**✅ 良い例**:
+```typescript
+// プレフィックスのみ表示、シークレット部分は一切表示しない
+// セキュリティのため、シークレットの一部が漏洩しないようにする
+const previewLength = 10;
+const tokenPreview = prefix + 'x'.repeat(previewLength) + '...';
+```
+
+#### 3. テストケースの追加
+
+**✅ 良い例**:
+```typescript
+it('正常系: シークレット部分にアンダースコアが含まれる場合でも正しく抽出できる', () => {
+  const fullToken = 'waf_abc_def_ghi';
+  const prefix = apiTokenService.extractPrefix(fullToken);
+  expect(prefix).toBe('waf_');
+  const secret = apiTokenService.extractSecret(fullToken, prefix);
+  expect(secret).toBe('abc_def_ghi');
+});
+
+// セキュリティ: tokenPreviewはシークレットの一部を含まないことを確認
+expect(result.tokenPreview).toMatch(/^waf_x{10}\.\.\.$/);
+expect(result.tokenPreview).not.toContain(secret);
+```
+
+### ルール
+
+1. **文字列分割の安全性**
+   - `split()`を使用する場合、分割後の要素数に依存しない実装にする
+   - 最初の区切り文字の位置を使用して、より安全に抽出する
+   - シークレットや機密情報を含む文字列の処理では、特に注意する
+
+2. **情報漏洩の防止**
+   - トークンやシークレットのプレビュー表示では、実際の値の一部を含めない
+   - プレフィックスのみを表示し、シークレット部分は完全にマスクする
+   - テストで、情報漏洩がないことを確認する
+
+3. **エッジケースのテスト**
+   - シークレット部分に特殊文字（アンダースコアなど）が含まれる場合のテストを追加する
+   - セキュリティ関連の機能では、特にエッジケースを重視する
+
+**理由**:
+- セキュリティの堅牢性が向上する
+- 情報漏洩のリスクが低減する
+- エッジケースでも正しく動作することが保証される
+- テストの網羅性が向上する
+
+**参照**: PR #63 - MWD-101 WAFエンジン向けAPIトークン管理機能の実装（Geminiレビュー指摘 - 第2回）

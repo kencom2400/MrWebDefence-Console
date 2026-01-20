@@ -58,20 +58,23 @@ export class ApiTokenService {
    * フルトークンからプレフィックスを抽出する
    * @param fullToken フルトークン（例: "waf_xxxxx..."）
    * @returns プレフィックス（例: "waf_"）
+   * @note シークレット部分にアンダースコアが含まれる可能性があるため、
+   *       最初のアンダースコアの位置を使用してプレフィックスを抽出する
    */
   public extractPrefix(fullToken: string): string {
     if (!fullToken || fullToken.trim().length === 0) {
       throw new Error('Full token cannot be empty');
     }
 
-    // アンダースコアで分割し、最初の部分をプレフィックスとする
-    const parts = fullToken.split('_');
-    if (parts.length < 2) {
-      throw new Error('Invalid token format: prefix not found');
+    // 最初のアンダースコアの位置を見つける
+    const underscoreIndex = fullToken.indexOf('_');
+    if (underscoreIndex === -1) {
+      throw new Error('Invalid token format: prefix not found (underscore not found)');
     }
 
-    // 最初の部分とアンダースコアを結合してプレフィックスを作成
-    return `${parts[0]}_`;
+    // 最初のアンダースコアの位置+1までをプレフィックスとする
+    // これにより、シークレット部分にアンダースコアが含まれていても正しく動作する
+    return fullToken.substring(0, underscoreIndex + 1);
   }
 
   /**

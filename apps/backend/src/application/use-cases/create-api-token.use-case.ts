@@ -56,8 +56,10 @@ export class CreateApiTokenUseCase {
     // フルトークンを作成
     const fullToken = this.apiTokenService.buildFullToken(prefix, secret);
 
-    // トークンプレビューを作成（最初の20文字を表示）
-    const tokenPreview = fullToken.substring(0, Math.min(20, fullToken.length)) + '...';
+    // トークンプレビューを作成（プレフィックスのみ表示、シークレット部分は一切表示しない）
+    // セキュリティのため、シークレットの一部が漏洩しないようにする
+    const previewLength = 10;
+    const tokenPreview = prefix + 'x'.repeat(previewLength) + '...';
 
     // APIトークンエンティティを作成
     const tokenId = randomUUID();

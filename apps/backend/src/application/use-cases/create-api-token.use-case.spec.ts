@@ -79,6 +79,9 @@ describe('CreateApiTokenUseCase', () => {
       expect(result.description).toBe(command.description);
       expect(result.token).toBe(fullToken);
       expect(result.tokenPrefix).toBe(prefix);
+      // セキュリティ: tokenPreviewはシークレットの一部を含まないことを確認
+      expect(result.tokenPreview).toMatch(/^waf_x{10}\.\.\.$/);
+      expect(result.tokenPreview).not.toContain(secret);
       expect(result.expiresAt).toBeNull();
       expect(result.createdBy).toBe(command.createdBy);
 
