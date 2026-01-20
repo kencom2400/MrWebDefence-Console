@@ -12,7 +12,7 @@ sequenceDiagram
     participant CustomerRepository
     participant EngineConfig
 
-    WAFEngine->>EngineConfigController: GET /engine/v1/config<br/>(API Key or JWT)
+    WAFEngine->>EngineConfigController: GET /engine/v1/config\n(API Key or JWT)
     EngineConfigController->>EngineConfigController: validateAuth()
     
     alt 認証失敗
@@ -34,9 +34,9 @@ sequenceDiagram
         GetEngineConfigUseCase->>EngineConfig: EngineConfig.create(fqdns, ipAllowLists, customers)
         EngineConfig-->>GetEngineConfigUseCase: engineConfig
         
-        GetEngineConfigUseCase->>GetEngineConfigUseCase: toResponseDto(engineConfig)
-        GetEngineConfigUseCase-->>EngineConfigController: responseDto
+        GetEngineConfigUseCase-->>EngineConfigController: engineConfig
         
+        EngineConfigController->>EngineConfigController: toResponseDto(engineConfig)
         EngineConfigController-->>WAFEngine: 200 OK { config }
     end
 ```
@@ -66,7 +66,8 @@ sequenceDiagram
             EngineConfigController-->>WAFEngine: 500 Internal Server Error
         else 正常
             FqdnRepository-->>GetEngineConfigUseCase: fqdns[]
-            GetEngineConfigUseCase-->>EngineConfigController: responseDto
+            GetEngineConfigUseCase-->>EngineConfigController: engineConfig
+            EngineConfigController->>EngineConfigController: toResponseDto(engineConfig)
             EngineConfigController-->>WAFEngine: 200 OK { config }
         end
     end
@@ -96,7 +97,8 @@ sequenceDiagram
     CustomerRepository-->>GetEngineConfigUseCase: []
     
     GetEngineConfigUseCase->>GetEngineConfigUseCase: EngineConfig.create([], [], [])
-    GetEngineConfigUseCase-->>EngineConfigController: responseDto { fqdns: [], ipAllowLists: [], customers: [] }
+    GetEngineConfigUseCase-->>EngineConfigController: engineConfig
     
+    EngineConfigController->>EngineConfigController: toResponseDto(engineConfig)
     EngineConfigController-->>WAFEngine: 200 OK { config }
 ```

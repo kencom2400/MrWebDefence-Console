@@ -84,7 +84,7 @@ interface EngineConfigResponseDto {
   fqdns: FqdnConfig[];
   ipAllowLists: IpAllowListConfig[];
   customers: CustomerConfig[];
-  lastUpdated: Date;
+  lastUpdated: string; // ISO 8601形式の文字列
 }
 ```
 
@@ -122,7 +122,7 @@ interface CustomerConfig {
 - **fqdns**: 配列、有効なFQDN設定のみ（status = "ACTIVE"）を含む
 - **ipAllowLists**: 配列、すべてのIP AllowList設定を含む
 - **customers**: 配列、有効な顧客設定のみ（status = "ACTIVE"）を含む
-- **lastUpdated**: 現在の日時（ISO 8601形式）
+- **lastUpdated**: 設定データが最後に更新された日時（ISO 8601形式の文字列）
 
 ## フィルタリングルール
 

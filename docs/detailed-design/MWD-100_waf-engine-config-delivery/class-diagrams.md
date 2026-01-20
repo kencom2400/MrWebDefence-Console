@@ -6,14 +6,14 @@
 classDiagram
     %% Presentation Layer
     class EngineConfigController {
-        +getConfig(): Promise~EngineConfigResponseDto~
+        +getConfig(): Promise<EngineConfigResponseDto>
     }
     
     class EngineConfigResponseDto {
         +FqdnConfig[] fqdns
         +IpAllowListConfig[] ipAllowLists
         +CustomerConfig[] customers
-        +Date lastUpdated
+        +string lastUpdated
     }
     
     class FqdnConfig {
@@ -39,7 +39,7 @@ classDiagram
         -IFqdnRepository fqdnRepository
         -IIpAllowListRepository ipAllowListRepository
         -ICustomerRepository customerRepository
-        +execute(): Promise~EngineConfig~
+        +execute(): Promise<EngineConfig>
     }
     
     %% Domain Layer
@@ -128,7 +128,7 @@ classDiagram
 #### EngineConfigController
 WAFエンジン向け設定配信APIのHTTPエンドポイントを提供するコントローラー。
 
-- `getConfig`: 設定情報を取得して返却
+- `getConfig`: 設定情報を取得し、Domain LayerのEngineConfigをDTOに変換して返却
 
 #### DTOs
 - **EngineConfigResponseDto**: 設定配信レスポンスのDTO
@@ -142,7 +142,7 @@ WAFエンジン向け設定配信APIのHTTPエンドポイントを提供する�
 - **GetEngineConfigUseCase**: 設定情報を集約して返却するユースケース
   - 各リポジトリから設定情報を取得
   - EngineConfig Value Objectに集約
-  - レスポンスDTOに変換
+  - Domain LayerのEngineConfigを返却（DTOへの変換はPresentation Layerで実施）
 
 ### Domain Layer
 
