@@ -222,6 +222,22 @@ run_backend_test() {
   # -e REDIS_HOST: 接続先のRedisホストを指定（Dockerコンテナ内からはサービス名を使用）
   # -e DB_HOST: 接続先のMySQLホストを指定（Dockerコンテナ内からはサービス名を使用）
   # CI環境変数があればそれを使用、なければデフォルト値を使用
+  # 注意: CI環境ではソースコードをマウントしない（イメージ内のソースコードを使用）
+  # ローカル環境ではソースコードをマウントして、変更を即座に反映
+  # node_modulesは常にイメージ内のものを使用（マウントしない）
+  # CI環境では、Dockerイメージをビルドする際に最新のソースコードが含まれているため、マウント不要
+  local volume_args=""
+  local setup_cmd="${cmd}"
+  if [ "${CI:-false}" != "true" ]; then
+    # ローカル環境: ソースコードをマウント（node_modulesは除外）
+    # node_modulesをtmpfsでマウントして、イメージ内のnode_modulesをコピーして使用
+    volume_args="--tmpfs=/app/apps/backend/node_modules --tmpfs=/app/node_modules --volume=${PROJECT_ROOT}/apps/backend:/app/apps/backend:ro --volume=${PROJECT_ROOT}/package.json:/app/package.json:ro --volume=${PROJECT_ROOT}/pnpm-lock.yaml:/app/pnpm-lock.yaml:ro --volume=${PROJECT_ROOT}/pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro"
+    # イメージ内のnode_modulesをコピー（マウント後に実行）
+    # /app/node_modulesから必要なものをコピー
+    setup_cmd="if [ -d /app/node_modules/.bin ]; then mkdir -p /app/apps/backend/node_modules/.bin && cp -r /app/node_modules/.bin/* /app/apps/backend/node_modules/.bin/ 2>/dev/null || true; fi; if [ -d /app/apps/backend/node_modules ]; then cp -r /app/apps/backend/node_modules/* /app/apps/backend/node_modules/ 2>/dev/null || true; fi; ${cmd}"
+  fi
+  # CI環境ではvolume_argsは空（イメージ内のソースコードとnode_modulesを使用）
+  
   docker run --rm \
     --network="${network_name}" \
     -e REDIS_HOST="${redis_service}" \
@@ -235,22 +251,20 @@ run_backend_test() {
     -e JWT_SECRET="${JWT_SECRET:-test-jwt-secret-for-ci}" \
     -e JWT_EXPIRES_IN="${JWT_EXPIRES_IN:-1800}" \
     -e BCRYPT_SALT_ROUNDS="${BCRYPT_SALT_ROUNDS:-10}" \
-    --volume="${PROJECT_ROOT}/apps/backend:/app/apps/backend:ro" \
-    --volume="${PROJECT_ROOT}/package.json:/app/package.json:ro" \
-    --volume="${PROJECT_ROOT}/pnpm-lock.yaml:/app/pnpm-lock.yaml:ro" \
-    --volume="${PROJECT_ROOT}/pnpm-workspace.yaml:/app/pnpm-workspace.yaml:ro" \
+    ${volume_args} \
     --workdir="/app/apps/backend" \
-    "${backend_image}" ${cmd}
+    "${backend_image}" sh -c "${setup_cmd}"
 }
 
 # テスト実行関数（メイン）
+# 注意: すべての接続はDockerネットワーク内でサービス名とポート3306を使用
+# db_port引数は削除（コンテナ間通信ではホストマシンのポートマッピングは使用しない）
 run_test_in_docker() {
   local cmd=$1
   local redis_service=$2
   local mysql_service=$3
-  local db_port=$4  # 未使用（互換性のため保持）
-  local db_name=$5
-  local skip_migration="${6:-false}"  # マイグレーションをスキップするか（デフォルト: false）
+  local db_name=$4
+  local skip_migration="${5:-false}"  # マイグレーションをスキップするか（デフォルト: false）
   
   # 1. コンテナ起動
   if ! start_containers "${redis_service}" "${mysql_service}"; then
@@ -292,38 +306,38 @@ run_unit_test() {
   echo "📝 ユニットテストを実行中..."
   # 現在のRepository実装はインメモリだが、将来的にデータベース接続に移行する予定のため
   # マイグレーションも実行しておく（テストの一貫性と将来の変更への備え）
-  run_test_in_docker "pnpm run test" "redis-test" "mysql-test" "3307" "mrwebdefence_test" "false"
+  run_test_in_docker "pnpm run test" "redis-test" "mysql-test" "mrwebdefence_test" "false"
 }
 
 # ウォッチモードテスト実行関数
 run_watch_test() {
   echo "👀 ウォッチモードでテストを実行中..."
-  run_test_in_docker "pnpm run test:watch" "redis-test" "mysql-test" "3307" "mrwebdefence_test"
+  run_test_in_docker "pnpm run test:watch" "redis-test" "mysql-test" "mrwebdefence_test"
 }
 
 # カバレッジレポート生成関数
 run_coverage_test() {
   echo "📊 カバレッジレポートを生成中..."
-  run_test_in_docker "pnpm run test:cov" "redis-test" "mysql-test" "3307" "mrwebdefence_test"
+  run_test_in_docker "pnpm run test:cov" "redis-test" "mysql-test" "mrwebdefence_test"
 }
 
 # E2Eテスト実行関数
 run_e2e_test() {
   echo "🔗 E2Eテストを実行中..."
-  run_test_in_docker "pnpm run test:e2e" "redis-e2e" "mysql-e2e" "3308" "mrwebdefence_e2e"
+  run_test_in_docker "pnpm run test:e2e" "redis-e2e" "mysql-e2e" "mrwebdefence_e2e"
 }
 
 # 全テスト実行関数
 run_all_tests() {
   # ユニットテストはカバレッジレポート生成時に実行されるため重複を避ける
   echo "📊 カバレッジレポートを生成中 (ユニットテスト含む)..."
-  run_test_in_docker "pnpm run test:cov" "redis-test" "mysql-test" "3307" "mrwebdefence_test"
+  run_test_in_docker "pnpm run test:cov" "redis-test" "mysql-test" "mrwebdefence_test"
   
   echo ""
   echo "🔗 E2Eテストを実行中..."
   # redis-testとmysql-testを停止してredis-e2eとmysql-e2eを起動（リソース節約）
   $DOCKER_COMPOSE stop redis-test mysql-test
-  run_test_in_docker "pnpm run test:e2e" "redis-e2e" "mysql-e2e" "3308" "mrwebdefence_e2e"
+  run_test_in_docker "pnpm run test:e2e" "redis-e2e" "mysql-e2e" "mrwebdefence_e2e"
 }
 
 case "${TEST_TYPE}" in
