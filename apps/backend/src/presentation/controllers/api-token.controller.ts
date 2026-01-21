@@ -16,6 +16,7 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { Roles } from '../decorators/roles.decorator';
 import { UserRole } from '../../domain/entities/user-role.enum';
@@ -62,9 +63,11 @@ export class ApiTokenController {
     @Req() request: RequestWithUser,
   ): Promise<ApiTokenResponseDto> {
     // リクエストからユーザーIDを取得
+    // @Rolesガードが適用されているため、通常はrequest.userが存在するはず
+    // 万が一存在しない場合は、内部エラーとして扱う
     const createdBy = request.user?.sub;
     if (!createdBy) {
-      throw new Error('User ID not found in request');
+      throw new InternalServerErrorException('User ID not found in request');
     }
 
     // expiresAtをDateオブジェクトに変換（nullの場合はnullのまま）

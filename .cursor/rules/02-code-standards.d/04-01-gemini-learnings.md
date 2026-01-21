@@ -5267,3 +5267,72 @@ expect(result.tokenPreview).not.toContain(secret);
 - テストの網羅性が向上する
 
 **参照**: PR #63 - MWD-101 WAFエンジン向けAPIトークン管理機能の実装（Geminiレビュー指摘 - 第2回）
+
+## 13-24. プレゼンテーション層での例外処理の一貫性（PR #63 - 第3回）
+
+**学習元**: PR #63 - MWD-101 WAFエンジン向けAPIトークン管理機能の実装（Geminiレビュー指摘対応 - 第3回）
+
+### プレゼンテーション層での例外の使用
+
+**問題**: プレゼンテーション層（Controller）で、一般的な`Error`をスローすると、HTTPステータスコードが適切に設定されず、エラーハンドリングが一貫性を欠く。
+
+**解決策**: プレゼンテーション層では、NestJSの組み込み例外（`InternalServerErrorException`, `BadRequestException`, `UnauthorizedException`など）を使用する。これにより、適切なHTTPステータスコードが設定され、エラーハンドリングが一貫性を保つ。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: 一般的なErrorを使用
+const createdBy = request.user?.sub;
+if (!createdBy) {
+  throw new Error('User ID not found in request');
+}
+
+// ✅ 良い例: NestJSの例外を使用
+import { InternalServerErrorException } from '@nestjs/common';
+
+const createdBy = request.user?.sub;
+if (!createdBy) {
+  throw new InternalServerErrorException('User ID not found in request');
+}
+```
+
+**理由**:
+- 適切なHTTPステータスコードの設定
+- エラーハンドリングの一貫性
+- フレームワークの機能を活用
+
+### ドメイン層での例外処理の検討
+
+**問題**: ドメイン層で、一般的な`Error`を使用しているが、プロジェクト内でValue Objectでは`BadRequestException`（NestJS）を使用している箇所があり、一貫性が欠けている。
+
+**検討事項**: 
+1. **ドメイン層の独立性**: ドメイン層はフレームワークに依存しないべきなので、NestJSの例外を使うのは適切ではない。
+2. **カスタムドメイン例外**: ドメイン層専用のカスタム例外クラスを作成し、プレゼンテーション層で適切なHTTP例外に変換する。
+3. **既存の実装**: 現在は`Error`を使用しており、動作には問題ないが、将来的に改善の余地がある。
+
+**実装例（将来の改善案）**:
+```typescript
+// ドメイン層: カスタムドメイン例外
+export class DomainValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DomainValidationError';
+  }
+}
+
+// プレゼンテーション層: ドメイン例外をHTTP例外に変換
+try {
+  const token = ApiToken.create(...);
+} catch (error) {
+  if (error instanceof DomainValidationError) {
+    throw new BadRequestException(error.message);
+  }
+  throw error;
+}
+```
+
+**理由**:
+- ドメイン層の独立性の維持
+- エラーハンドリングの一貫性
+- 将来的な拡張性
+
+**参照**: PR #63 - MWD-101 WAFエンジン向けAPIトークン管理機能の実装（Geminiレビュー指摘対応 - 第3回）
