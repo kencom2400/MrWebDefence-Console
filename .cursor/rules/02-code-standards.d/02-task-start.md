@@ -79,9 +79,16 @@ run_terminal_cmd({
    - 具体的には、`.cursorrules`ファイルの`@include`ディレクティブで指定されているすべてのファイルを読み込む
 
 2. **ISSUE_TRACKERの確認と適切なスクリプトの実行**
-   - `scripts/github/config.sh`または`scripts/jira/config.sh`から`ISSUE_TRACKER`を確認
-   - `ISSUE_TRACKER=jira`の場合は`scripts/jira/workflow/start-task.sh`を実行
-   - `ISSUE_TRACKER=github`の場合は`scripts/github/workflow/start-task.sh`を実行
+   - **🔴 重要: 必ずルートディレクトリの`.issue-tracker`ファイルを最初に確認すること**
+   - `.issue-tracker`ファイルに`jira`と記載されていればJiraを使用、`github`と記載されていればGitHubを使用
+   - **判断手順（必須）:**
+     1. **ルートディレクトリの`.issue-tracker`ファイルの存在を確認** - `/.issue-tracker`ファイルが存在するかチェック
+     2. **`.issue-tracker`ファイルが存在する場合:**
+        - ファイル内容を読み込み、`jira`または`github`のいずれかが記載されているか確認
+        - `jira`が記載されている場合 → `scripts/jira/workflow/start-task.sh`を実行
+        - `github`が記載されている場合 → `scripts/github/workflow/start-task.sh`を実行
+     3. **`.issue-tracker`ファイルが存在しない場合（デフォルト動作）:**
+        - **デフォルトでJiraを使用** → `scripts/jira/workflow/start-task.sh`を実行
    - **必ず`required_permissions: ['all']`を指定**してください。これは必須事項です。サンドボックス環境の制限により、ネットワーク接続やGit操作が失敗するため、最初からall権限で実行する必要があります。
 
 ```typescript

@@ -5074,3 +5074,265 @@ interface ApiTokenResponseDto {
 - 設計書の理解しやすさが向上する
 
 **参照**: PR #62 - MWD-101 WAFエンジン向けAPIトークン管理機能の詳細設計書作成（Geminiレビュー指摘 - 第2回）
+
+---
+
+## 13-22. APIトークン認証ガードにおける検索効率化とテストコードの品質向上（PR #63）
+
+### 問題点
+
+1. **テストコード内の未使用変数**
+   - テストコードに未使用の変数（`tokenPreview`、`savedToken`など）が残っている
+   - コードの可読性と保守性に影響する
+
+2. **APIトークン認証ガードの検索効率**
+   - すべてのトークンを取得してからフィルタリングしていた
+   - 将来的にデータベース実装に移行する際、パフォーマンス上のボトルネックとなる可能性
+
+### 解決策
+
+#### 1. テストコードの未使用変数の削除
+
+**❌ 悪い例**:
+```typescript
+const tokenPreview = 'waf_random-secret...'; // 未使用
+const savedToken = ApiToken.create(...); // 未使用
+```
+
+**✅ 良い例**:
+```typescript
+// 未使用の変数を削除
+const secret = 'random-secret-string';
+const tokenHash = '$2b$10$...';
+const prefix = 'waf_';
+const fullToken = 'waf_random-secret-string';
+```
+
+#### 2. リポジトリインターフェースにfindByPrefixメソッドを追加
+
+**✅ 良い例**:
+```typescript
+export interface IApiTokenRepository {
+  // ... 既存のメソッド ...
+  
+  /**
+   * プレフィックスでAPIトークンを検索する
+   * @param prefix トークンプレフィックス（例: "waf_"）
+   * @returns APIトークンエンティティの配列
+   * @note 将来的にデータベース実装に移行する際、このメソッドを使用して検索効率を向上させる
+   */
+  findByPrefix(prefix: string): Promise<ApiToken[]>;
+}
+```
+
+#### 3. 認証ガードの検索ロジックの最適化
+
+**❌ 悪い例**:
+```typescript
+// すべてのトークンを取得してからフィルタリング
+const allTokens = await this.apiTokenRepository.findAll();
+const matchingTokens = allTokens.filter((token) => token.tokenPrefix === tokenPrefix);
+```
+
+**✅ 良い例**:
+```typescript
+// プレフィックスで絞り込んでから検証
+// bcryptは毎回異なるハッシュを生成するため、token_hashで直接検索することはできない
+// そのため、プレフィックスで絞り込んでからverifyTokenで検証する必要がある
+const matchingTokens = await this.apiTokenRepository.findByPrefix(tokenPrefix);
+```
+
+### ルール
+
+1. **テストコードの品質**
+   - 未使用の変数は削除する
+   - テストコードも本番コードと同様にクリーンに保つ
+
+2. **リポジトリインターフェースの設計**
+   - 検索条件に基づいたメソッドを提供する（例: `findByPrefix`）
+   - 将来的なデータベース実装を考慮した設計にする
+   - メソッドの目的と将来の最適化についてコメントを追加する
+
+3. **認証ガードのパフォーマンス**
+   - 可能な限り検索対象を絞り込んでから検証する
+   - bcryptの特性（毎回異なるハッシュを生成）を考慮した実装にする
+   - 将来的なデータベース実装への移行を考慮した設計にする
+
+**理由**:
+- テストコードの可読性と保守性が向上する
+- 認証ガードのパフォーマンスが向上する
+- 将来的なデータベース実装への移行が容易になる
+- コードの意図が明確になる
+
+**参照**: PR #63 - MWD-101 WAFエンジン向けAPIトークン管理機能の実装（Geminiレビュー指摘）
+
+---
+
+## 13-23. APIトークン管理におけるセキュリティと堅牢性の向上（PR #63 - 第2回）
+
+### 問題点
+
+1. **重大なバグ: プレフィックス抽出ロジック**
+   - `split('_')`を使用した実装では、シークレット部分にアンダースコアが含まれる場合、正しく動作しない可能性がある
+   - 複数のアンダースコアが含まれる場合、最初のアンダースコア以降がすべてシークレットとして扱われるべき
+
+2. **セキュリティ問題: トークンプレビューからの情報漏洩**
+   - トークン作成時に返される`tokenPreview`が、シークレットの一部（最初の20文字）を含んでいた
+   - これにより、シークレットの一部が漏洩する可能性がある
+
+3. **テストの正確性**
+   - シークレット部分にアンダースコアが含まれる場合のテストケースが不足
+   - トークンプレビューがシークレットを含まないことを確認するテストが不足
+
+### 解決策
+
+#### 1. プレフィックス抽出ロジックの改善
+
+**❌ 悪い例**:
+```typescript
+// アンダースコアで分割し、最初の部分をプレフィックスとする
+const parts = fullToken.split('_');
+if (parts.length < 2) {
+  throw new Error('Invalid token format: prefix not found');
+}
+return `${parts[0]}_`;
+```
+
+**✅ 良い例**:
+```typescript
+// 最初のアンダースコアの位置を見つける
+const underscoreIndex = fullToken.indexOf('_');
+if (underscoreIndex === -1) {
+  throw new Error('Invalid token format: prefix not found (underscore not found)');
+}
+
+// 最初のアンダースコアの位置+1までをプレフィックスとする
+// これにより、シークレット部分にアンダースコアが含まれていても正しく動作する
+return fullToken.substring(0, underscoreIndex + 1);
+```
+
+#### 2. トークンプレビューのセキュリティ強化
+
+**❌ 悪い例**:
+```typescript
+// シークレットの一部が漏洩する可能性がある
+const tokenPreview = fullToken.substring(0, Math.min(20, fullToken.length)) + '...';
+```
+
+**✅ 良い例**:
+```typescript
+// プレフィックスのみ表示、シークレット部分は一切表示しない
+// セキュリティのため、シークレットの一部が漏洩しないようにする
+const previewLength = 10;
+const tokenPreview = prefix + 'x'.repeat(previewLength) + '...';
+```
+
+#### 3. テストケースの追加
+
+**✅ 良い例**:
+```typescript
+it('正常系: シークレット部分にアンダースコアが含まれる場合でも正しく抽出できる', () => {
+  const fullToken = 'waf_abc_def_ghi';
+  const prefix = apiTokenService.extractPrefix(fullToken);
+  expect(prefix).toBe('waf_');
+  const secret = apiTokenService.extractSecret(fullToken, prefix);
+  expect(secret).toBe('abc_def_ghi');
+});
+
+// セキュリティ: tokenPreviewはシークレットの一部を含まないことを確認
+expect(result.tokenPreview).toMatch(/^waf_x{10}\.\.\.$/);
+expect(result.tokenPreview).not.toContain(secret);
+```
+
+### ルール
+
+1. **文字列分割の安全性**
+   - `split()`を使用する場合、分割後の要素数に依存しない実装にする
+   - 最初の区切り文字の位置を使用して、より安全に抽出する
+   - シークレットや機密情報を含む文字列の処理では、特に注意する
+
+2. **情報漏洩の防止**
+   - トークンやシークレットのプレビュー表示では、実際の値の一部を含めない
+   - プレフィックスのみを表示し、シークレット部分は完全にマスクする
+   - テストで、情報漏洩がないことを確認する
+
+3. **エッジケースのテスト**
+   - シークレット部分に特殊文字（アンダースコアなど）が含まれる場合のテストを追加する
+   - セキュリティ関連の機能では、特にエッジケースを重視する
+
+**理由**:
+- セキュリティの堅牢性が向上する
+- 情報漏洩のリスクが低減する
+- エッジケースでも正しく動作することが保証される
+- テストの網羅性が向上する
+
+**参照**: PR #63 - MWD-101 WAFエンジン向けAPIトークン管理機能の実装（Geminiレビュー指摘 - 第2回）
+
+## 13-24. プレゼンテーション層での例外処理の一貫性（PR #63 - 第3回）
+
+**学習元**: PR #63 - MWD-101 WAFエンジン向けAPIトークン管理機能の実装（Geminiレビュー指摘対応 - 第3回）
+
+### プレゼンテーション層での例外の使用
+
+**問題**: プレゼンテーション層（Controller）で、一般的な`Error`をスローすると、HTTPステータスコードが適切に設定されず、エラーハンドリングが一貫性を欠く。
+
+**解決策**: プレゼンテーション層では、NestJSの組み込み例外（`InternalServerErrorException`, `BadRequestException`, `UnauthorizedException`など）を使用する。これにより、適切なHTTPステータスコードが設定され、エラーハンドリングが一貫性を保つ。
+
+**実装例**:
+```typescript
+// ❌ 悪い例: 一般的なErrorを使用
+const createdBy = request.user?.sub;
+if (!createdBy) {
+  throw new Error('User ID not found in request');
+}
+
+// ✅ 良い例: NestJSの例外を使用
+import { InternalServerErrorException } from '@nestjs/common';
+
+const createdBy = request.user?.sub;
+if (!createdBy) {
+  throw new InternalServerErrorException('User ID not found in request');
+}
+```
+
+**理由**:
+- 適切なHTTPステータスコードの設定
+- エラーハンドリングの一貫性
+- フレームワークの機能を活用
+
+### ドメイン層での例外処理の検討
+
+**問題**: ドメイン層で、一般的な`Error`を使用しているが、プロジェクト内でValue Objectでは`BadRequestException`（NestJS）を使用している箇所があり、一貫性が欠けている。
+
+**検討事項**: 
+1. **ドメイン層の独立性**: ドメイン層はフレームワークに依存しないべきなので、NestJSの例外を使うのは適切ではない。
+2. **カスタムドメイン例外**: ドメイン層専用のカスタム例外クラスを作成し、プレゼンテーション層で適切なHTTP例外に変換する。
+3. **既存の実装**: 現在は`Error`を使用しており、動作には問題ないが、将来的に改善の余地がある。
+
+**実装例（将来の改善案）**:
+```typescript
+// ドメイン層: カスタムドメイン例外
+export class DomainValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DomainValidationError';
+  }
+}
+
+// プレゼンテーション層: ドメイン例外をHTTP例外に変換
+try {
+  const token = ApiToken.create(...);
+} catch (error) {
+  if (error instanceof DomainValidationError) {
+    throw new BadRequestException(error.message);
+  }
+  throw error;
+}
+```
+
+**理由**:
+- ドメイン層の独立性の維持
+- エラーハンドリングの一貫性
+- 将来的な拡張性
+
+**参照**: PR #63 - MWD-101 WAFエンジン向けAPIトークン管理機能の実装（Geminiレビュー指摘対応 - 第3回）

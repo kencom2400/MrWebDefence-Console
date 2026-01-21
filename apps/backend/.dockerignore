@@ -30,7 +30,7 @@ Thumbs.db
 # Test files
 *.spec.js
 *.spec.js.map
-test
+# Note: test directory is needed for E2E tests, so we don't exclude it
 
 # Documentation
 *.md

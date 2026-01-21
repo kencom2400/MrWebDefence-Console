@@ -11,6 +11,7 @@ import { CustomerModule } from './presentation/customer.module';
 import { UserModule } from './presentation/user.module';
 import { FqdnModule } from './presentation/fqdn.module';
 import { EngineModule } from './presentation/engine.module';
+import { ApiTokenModule } from './presentation/api-token.module';
 import { DatabaseModule } from './presentation/database.module';
 import { MigrationModule } from './presentation/migration.module';
 
@@ -26,6 +27,7 @@ import { MigrationModule } from './presentation/migration.module';
     UserModule,
     FqdnModule,
     EngineModule,
+    ApiTokenModule,
   ],
   controllers: [],
   providers: [],
