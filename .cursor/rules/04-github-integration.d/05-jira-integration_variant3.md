@@ -147,7 +147,11 @@ Backlog → To Do → In Progress → Done
 - **Backlog**: チケット作成時（自動設定）
 - **To Do**: 次に取り組むチケットとして選択した時
 - **In Progress**: 実際の作業を開始した時
-- **Done**: 作業が完了し、PRがマージされた時（Jira側でPRマージと連動するため、手動での変更は不要）
+  - **🚨 CRITICAL: `@start-task`コマンド実行時は必ず「In Progress」に変更**
+  - タスク開始時には必ずステータスを「In Progress」（日本語: 「進行中」）に変更すること
+  - `start-task.sh`スクリプトが自動的にステータスを変更するが、失敗した場合は手動で変更する
+  - ステータス変更に失敗した場合は警告を表示するが、作業は継続可能
+- **Done**: 作業が完了し、PRがマージされた時
 
 ## 3. フィールド定義の取得方法
 
@@ -214,31 +218,6 @@ GET /rest/api/3/issue/createmeta?projectKeys={projectKey}&expand=projects.issuet
   --status Backlog \
   --project-key TEST
 ```
-
-#### 方法4: Epicを親に指定してTask/Bug/Storyを作成（自動紐づけ）
-
-```bash
-# Epicを親に指定してTaskを作成（自動的にEpicに紐づけ）
-./scripts/jira/issues/create-issue.sh \
-  --title "Task 3.1: ユーザー認証機能実装" \
-  --issue-type Task \
-  --parent MWD-3 \
-  --status ToDo \
-  --project-key MWD
-
-# Epicを親に指定してBugを作成（自動的にEpicに紐づけ）
-./scripts/jira/issues/create-issue.sh \
-  --title "[bug] ログインエラー" \
-  --issue-type Bug \
-  --parent MWD-3 \
-  --status ToDo \
-  --project-key MWD
-```
-
-**自動紐づけの条件:**
-- 親タスクがEpicである（`--parent`で指定）
-- 作成するIssueTypeがBug, Story, Taskのいずれかである
-- 上記の条件を満たす場合、Issue作成後に自動的にEpicに紐づけられます
 
 **詳細**: `./scripts/jira/issues/create-issue.README.md`
 
@@ -429,6 +408,78 @@ source scripts/jira/config.sh
 ./scripts/jira/transition-issue.sh <issue_key> <status_name>
 ```
 
+## 9.5. @start-task コマンド（Jira統合）
+
+### 🚨 CRITICAL: タスク開始時のステータス変更
+
+**`@start-task`コマンド実行時は、必ずステータスを「In Progress」に変更すること**
+
+#### 必須事項
+
+1. **ステータス変更は必須**
+   - タスク開始時には必ずステータスを「In Progress」（日本語: 「進行中」）に変更すること
+   - `start-task.sh`スクリプトが自動的にステータスを変更する
+   - ステータス変更に失敗した場合は警告を表示するが、作業は継続可能
+
+2. **実行タイミング**
+   - ブランチ作成後、作業開始前に必ずステータスを変更
+   - ステータス変更は`start-task.sh`スクリプト内で自動実行される
+
+3. **ステータス変更の確認**
+   - ステータス変更が成功したかどうかを確認する
+   - 失敗した場合は手動で変更するか、JiraのUIから変更する
+
+#### start-task.sh スクリプトの動作
+
+```bash
+# 最優先Issueを自動選択して開始
+./scripts/jira/workflow/start-task.sh
+
+# 特定のIssueを指定して開始
+./scripts/jira/workflow/start-task.sh MWD-123
+```
+
+**スクリプトが実行する処理:**
+
+1. Issue情報の取得と確認
+2. 自分にアサイン（未アサインの場合）
+3. mainブランチの最新化
+4. フィーチャーブランチの作成（`feature/{ISSUE_KEY}-{タイトル}`）
+5. **🚨 CRITICAL: Jiraのステータスを「In Progress」に変更**
+   - `set-issue-in-progress.sh`スクリプトを呼び出してステータスを変更
+   - ステータス変更に失敗した場合は警告を表示するが、作業は継続可能
+
+#### ステータス変更が失敗した場合の対処
+
+1. **手動でステータスを変更**
+   ```bash
+   ./scripts/jira/transition-issue.sh <issue_key> "In Progress"
+   ```
+
+2. **JiraのUIから変更**
+   - JiraのIssueページにアクセス
+   - ステータスを「進行中」（In Progress）に手動で変更
+
+3. **遷移可能なステータスを確認**
+   ```bash
+   ./scripts/jira/projects/get-transitions.sh <issue_key>
+   ```
+
+#### AIアシスタントへの指示
+
+`@start-task`コマンドを受け取った際は、以下を必ず実行してください：
+
+1. **`required_permissions: ['all']`を指定して実行**
+   - サンドボックス環境の制限により、ネットワーク接続やGit操作が失敗するため
+
+2. **ステータス変更の確認**
+   - スクリプト実行後、ステータスが「In Progress」に変更されたか確認
+   - 警告が表示された場合は、手動でステータスを変更する
+
+3. **作業開始前の確認**
+   - ブランチが正しく作成されたか確認
+   - ステータスが「In Progress」になっているか確認
+
 ## 10. セキュリティのベストプラクティス
 
 1. **APIトークンの管理**
@@ -466,207 +517,4 @@ source scripts/jira/config.sh
 - プロジェクト単位でIssueを管理したい
 - 複数のリポジトリを1つのプロジェクトで管理したい
 - エンタープライズ環境
-
-## 13. @start-task統合（Jira版）
-
-### 🚨 トリガー: `@start-task` コマンド
-
-**🔴 重要: 実行権限について**
-
-`@start-task`コマンドの実行時は、以下の理由から**必ず`required_permissions: ['all']`を指定**してください：
-
-1. **API呼び出し**: Issue情報の取得、ステータス遷移（GitHub API / Jira API）
-2. **Git操作**: ブランチの作成、チェックアウト、プル
-3. **ネットワーク接続**: HTTPSでのAPI接続、証明書検証
-
-**サンドボックス環境ではこれらの操作がエラーになるため、最初からall権限で実行すること。**
-
-```typescript
-// ✅ 正しい実行方法（Jiraプロジェクトの場合）
-run_terminal_cmd({
-  command: 'bash scripts/jira/workflow/start-task.sh',
-  required_permissions: ['all'],
-});
-
-// ✅ 正しい実行方法（GitHubプロジェクトの場合）
-run_terminal_cmd({
-  command: 'bash scripts/github/workflow/start-task.sh',
-  required_permissions: ['all'],
-});
-```
-
-**🚨 CRITICAL: AIアシスタントへの指示**
-
-**🔴 重要**: `@start-task`コマンドの詳細な実行手順については、**`.cursor/rules/02-code-standards.d/02-task-start.md`** を参照してください。
-
-**実行内容:**
-
-1. **Issue取得**
-   - Jiraから「To Do」ステータスのIssueを取得
-   - 現在のユーザーにアサインされているIssueをフィルタリング
-
-2. **優先順位判定とソート**
-   - `Critical` → レベル4
-   - `High` → レベル3
-   - `Medium` → レベル2
-   - `Low` → レベル1
-   - 優先度なし → レベル0
-   - 同じ優先度の場合、Issueキーでソート
-
-3. **最優先Issueの選択と開始**
-   - ソート後の最初のIssueを選択
-   - Issueの詳細を表示
-   - mainブランチを最新化してからブランチを作成
-   - **🚨 CRITICAL: JiraのステータスをIn Progressに変更（必須）**
-     - チケット開始時には必ずステータスを「In Progress」（日本語: 「進行中」）に変更すること
-     - ステータス変更に失敗した場合は警告を表示するが、作業は継続可能
-   - Issueの内容に従って作業を即座に開始
-
-### ✨ 新機能: start-task.sh スクリプト（Jira版）
-
-Jira統合で実装された`start-task.sh`スクリプトを使用して、Issue開始を自動化できます。
-
-#### 基本的な使い方
-
-```bash
-# 最優先Issueを自動選択
-./scripts/jira/workflow/start-task.sh
-
-# Issueキーを指定して開始
-./scripts/jira/workflow/start-task.sh MWD-123
-
-# ヘルプ表示
-./scripts/jira/workflow/start-task.sh --help
-```
-
-#### 機能
-
-**自動選択モード（引数なし）:**
-
-- Jiraから「To Do」ステータスのIssueを取得
-- 現在のユーザーにアサインされているIssueのみを対象
-- 優先度順に自動ソート
-- 最優先Issueを自動的に開始
-
-**Issueキー指定モード（引数あり）:**
-
-- 指定したIssueキー（例：MWD-123）で作業を開始
-- Issue存在確認、ステータス確認を自動実行
-
-#### スクリプトが実行する処理
-
-1. Issue情報の取得と確認
-   - Issue存在確認
-   - 完了ステータス確認（statusCategory.key = "done"）
-   - アサイン状況確認
-2. 自分にアサイン（未アサインの場合）
-3. mainブランチの最新化
-4. フィーチャーブランチの作成（`feature/{ISSUE_KEY}-{タイトル}`）
-5. **🚨 CRITICAL: JiraでステータスをIn Progressに変更（必須）**
-   - **詳細**: `.cursor/rules/00-workflow-checklist.d/02-task-start.md`の「🚨 CRITICAL: 必ずステータスを「In Progress」に変更」を参照
-
-#### エラーハンドリング
-
-- Issue不存在時: エラーメッセージを表示して終了
-- 完了済みIssue: エラーメッセージを表示して終了
-- 既にアサイン済み: 確認プロンプトを表示
-- 他の人にアサイン済み: エラーメッセージを表示して終了
-- 無効な形式: エラーメッセージと正しい形式を表示
-
-#### プロジェクト設定
-
-スクリプトは以下の環境変数または設定ファイルからプロジェクトキーを取得します：
-
-- `JIRA_PROJECT_KEY`: 優先的に使用
-- `TEST_PROJECT_KEY`: フォールバック
-- `config/projects/*.yaml`の`jira.project_key`: プロジェクト設定から取得
-
-### Issue取得コマンド（手動実行の場合）
-
-**🔴 重要: Issue詳細取得のベストプラクティス**
-
-Issue詳細を取得する際は、**必ず`required_permissions: ['all']`を指定**してください。
-サンドボックス環境では証明書検証やネットワークアクセスの制限により、Jira API呼び出しが失敗します。
-
-```typescript
-// ✅ 正しい実行方法
-run_terminal_cmd({
-  command: './scripts/jira/get-issue.sh MWD-123',
-  required_permissions: ['all'],
-});
-```
-
-**Jira API (`curl`) コマンドを実行する際は、常に`all`権限を使用すること。**
-
-```bash
-# JQLで「To Do」ステータスのIssueを取得
-JQL="project = MWD AND status = \"To Do\" AND assignee = currentUser() ORDER BY priority DESC, created ASC"
-JQL_ENCODED=$(echo "$JQL" | jq -sRr @uri)
-
-# Jira APIで検索
-curl -s -X GET \
-  -H "Authorization: Basic $(echo -n "${JIRA_EMAIL}:${JIRA_API_TOKEN}" | base64)" \
-  -H "Accept: application/json" \
-  "${JIRA_BASE_URL}/rest/api/3/search?jql=${JQL_ENCODED}&maxResults=50&fields=summary,status,priority,assignee"
-```
-
-### ブランチ作成とステータス更新
-
-```bash
-# mainブランチを最新化
-git checkout main
-git pull origin main
-
-# 新しいブランチを作成
-git checkout -b feature/MWD-123-<説明>
-
-# JiraのステータスをIn Progressに変更
-./scripts/jira/projects/set-issue-in-progress.sh MWD-123
-```
-
-**重要事項:**
-
-- ✅ 質問・確認なしで即座に実行
-- ✅ JiraのステータスをIn Progressに変更
-- ✅ 各IssueのAssignee情報を確認し、自分にアサインされているものをフィルタリング
-- ✅ 完了済みIssueは除外（statusCategory.key != "done"）
-
-### 自動実行の対象外
-
-以下のIssueは自動的に除外される：
-
-- ✅ 完了済みのIssue（statusCategory.key = "done"）
-- 👤 他のユーザーにアサインされているIssue（Assignee情報で除外）
-- 📝 「To Do」ステータス以外のIssue
-- 📋 「Backlog」ステータスのIssue
-
-### 🚨 重要な方針: 該当するチケットがない場合の動作
-
-**意図しないタスクが実行されることを防ぐため、以下の方針を厳守すること：**
-
-1. **「To Do」ステータスのIssueがない場合**
-   - 自動的に「Backlog」から選択することは**禁止**
-   - その旨を伝えたうえで**終了する**
-   - ユーザーが明示的にIssueキーを指定した場合のみ開始可能
-
-2. **理由**
-   - 意図しないタスクの実行を防ぐ
-   - ユーザーが明示的に選択したIssueのみを開始する
-   - 自動選択の範囲を明確に定義する
-
-3. **実装**
-   - `start-task.sh`スクリプトは「To Do」ステータスのIssueのみを自動選択
-   - 該当するIssueがない場合は、エラーメッセージを表示して終了
-   - 手動でIssueキーを指定する場合は、ステータスに関わらず開始可能
-
-### GitHub版との違い
-
-| 項目 | GitHub版 | Jira版 |
-|------|----------|--------|
-| Issue識別子 | Issue番号（例：#198） | Issueキー（例：MWD-123） |
-| ステータス名 | 「📝 To Do」 | 「To Do」 |
-| 優先度 | ラベル（priority: critical等） | フィールド（Priority） |
-| アサイン | GitHubユーザー名 | JiraアカウントID |
-| ステータス更新 | GitHub Projects API | Jira Transitions API |
-| スクリプトパス | `./scripts/github/workflow/start-task.sh` | `./scripts/jira/workflow/start-task.sh` |
 
